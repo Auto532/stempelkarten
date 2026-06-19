@@ -9,6 +9,7 @@ export default defineSchema({
     rewardText: v.string(),
     adminLoginToken: v.string(),
     showLeads: v.optional(v.boolean()),
+    bonusProgramEnabled: v.optional(v.boolean()),
     rewardTiers: v.optional(v.array(v.object({
       stamps: v.number(),
       text: v.string(),
