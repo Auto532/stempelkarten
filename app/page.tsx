@@ -10,7 +10,7 @@ export default function Home() {
     if (token) {
       router.replace("/me");
     } else {
-      router.replace("/setup");
+      router.replace("/admin");
     }
   }, [router]);
 
