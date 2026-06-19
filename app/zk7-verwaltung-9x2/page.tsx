@@ -15,6 +15,109 @@ import { QRImage } from "@/app/components/QRImage";
 
 const SUPERADMIN_PIN = "1337";
 
+// ─── TierEditor ──────────────────────────────────────────────────────────────
+
+type Tier = { stamps: number; text: string; enabled: boolean };
+
+function TierEditor({
+  shop,
+  onSave,
+}: {
+  shop: { stampsRequired: number; rewardText: string; rewardTiers?: Tier[] };
+  onSave: (tiers: Tier[]) => Promise<void>;
+}) {
+  const [tiers, setTiers] = useState<Tier[]>(() => {
+    if (shop.rewardTiers && shop.rewardTiers.length > 0) return [...shop.rewardTiers];
+    return [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true }];
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const updateTier = (i: number, patch: Partial<Tier>) =>
+    setTiers(prev => prev.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
+
+  const addTier = () => {
+    const last = tiers[tiers.length - 1];
+    setTiers(prev => [...prev, { stamps: (last?.stamps ?? 10) + 5, text: "", enabled: true }]);
+  };
+
+  const removeTier = (i: number) => {
+    if (tiers.length <= 1) return;
+    setTiers(prev => prev.filter((_, idx) => idx !== i));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const sorted = [...tiers].sort((a, b) => a.stamps - b.stamps);
+      await onSave(sorted);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="px-4 pb-4 space-y-3">
+      <p className="text-[11px] text-zinc-500 leading-relaxed">
+        Mehrere Belohnungsstufen — je mehr Stempel, desto wertvoller die Belohnung.
+      </p>
+      {tiers.map((tier, i) => (
+        <div key={i} className="bg-zinc-800/60 rounded-xl p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-zinc-400">Stufe {i + 1}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => updateTier(i, { enabled: !tier.enabled })}
+                className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                  tier.enabled
+                    ? "bg-amber-400/15 border-amber-400/30 text-amber-400"
+                    : "bg-zinc-700/50 border-zinc-600/50 text-zinc-500"
+                }`}
+              >
+                {tier.enabled ? "Aktiv" : "Inaktiv"}
+              </button>
+              {tiers.length > 1 && (
+                <button onClick={() => removeTier(i)} className="text-zinc-600 hover:text-red-400 transition-colors">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="number" min={1} max={100} value={tier.stamps}
+              onChange={(e) => updateTier(i, { stamps: Number(e.target.value) })}
+              className="w-16 px-2 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-sm focus:outline-none focus:border-amber-400/40 text-center"
+            />
+            <input
+              value={tier.text}
+              onChange={(e) => updateTier(i, { text: e.target.value })}
+              placeholder="Belohnung beschreiben…"
+              className="flex-1 px-3 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-sm placeholder-zinc-500 focus:outline-none focus:border-amber-400/40"
+            />
+          </div>
+          <p className="text-[10px] text-zinc-600">Bei {tier.stamps} Stempeln: {tier.text || "…"}</p>
+        </div>
+      ))}
+      <button
+        onClick={addTier}
+        className="w-full py-2 border border-dashed border-zinc-700 hover:border-amber-400/40 rounded-xl text-xs text-zinc-500 hover:text-amber-400/70 transition-colors flex items-center justify-center gap-1.5"
+      >
+        <Plus size={12} /> Stufe hinzufügen
+      </button>
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+      >
+        {saving ? "Speichert…" : saved ? <><Check size={14} /> Gespeichert!</> : "Speichern"}
+      </button>
+    </div>
+  );
+}
+
 // ─── ShopCard ────────────────────────────────────────────────────────────────
 
 async function printQR(shopName: string, url: string) {
@@ -40,6 +143,8 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
   const [showLogin, setShowLogin] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [togglingLeads, setTogglingLeads] = useState(false);
+  const updateSettings = useMutation(api.shops.updateSettings);
+  const [showTiers, setShowTiers] = useState(false);
 
   if (!shop) return null;
 
@@ -168,6 +273,40 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
                 </div>
                 <p className="text-[11px] text-zinc-600 mt-2">Nur einmalig an den Betrieb senden — Link loggt automatisch ein.</p>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Bonus-Programme accordion */}
+      <div className="border-t border-zinc-800/50">
+        <button onClick={() => setShowTiers(!showTiers)}
+          className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+          <TrendingUp size={14} className="text-amber-400 shrink-0" />
+          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Bonus-Programme</span>
+          {shop.rewardTiers && shop.rewardTiers.filter(t => t.enabled).length > 1 && (
+            <span className="text-[10px] bg-amber-400/15 text-amber-400 border border-amber-400/20 px-1.5 py-0.5 rounded-full mr-1">
+              {shop.rewardTiers.filter(t => t.enabled).length} Stufen
+            </span>
+          )}
+          <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showTiers ? "rotate-90" : ""}`} />
+        </button>
+        <AnimatePresence>
+          {showTiers && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <TierEditor
+                shop={shop}
+                onSave={async (tiers) => {
+                  const enabled = tiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps);
+                  const primary = enabled[0] ?? { stamps: shop.stampsRequired, text: shop.rewardText };
+                  await updateSettings({
+                    shopId: shop._id,
+                    stampsRequired: primary.stamps,
+                    rewardText: primary.text,
+                    rewardTiers: tiers.length > 1 ? tiers : undefined,
+                  });
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>

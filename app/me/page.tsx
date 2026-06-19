@@ -146,9 +146,11 @@ function QRMini({ qrToken }: { qrToken: string }) {
 
 // ─── Physical Loyalty Card ────────────────────────────────────────────────────
 
+type CardTier = { stamps: number; text: string; enabled: boolean };
+
 function LoyaltyCard({
   shopName, rewardText, stampsRequired, currentStamps, rewardsRedeemed,
-  animateIndex, onShowQR, qrToken,
+  animateIndex, onShowQR, qrToken, rewardTiers,
 }: {
   shopName: string;
   rewardText: string;
@@ -158,10 +160,16 @@ function LoyaltyCard({
   animateIndex: number | null;
   onShowQR: () => void;
   qrToken: string;
+  rewardTiers?: CardTier[];
 }) {
-  const cols = stampsRequired <= 6 ? 3 : stampsRequired <= 8 ? 4 : stampsRequired <= 10 ? 5 : 4;
+  const activeTiers: CardTier[] = rewardTiers && rewardTiers.some(t => t.enabled)
+    ? rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps)
+    : [{ stamps: stampsRequired, text: rewardText, enabled: true }];
+  const maxStamps = activeTiers[activeTiers.length - 1].stamps;
+  const tierThresholds = new Set(activeTiers.map(t => t.stamps));
+  const cols = maxStamps <= 6 ? 3 : maxStamps <= 8 ? 4 : maxStamps <= 10 ? 5 : 4;
   const iconSize = cols <= 3 ? 20 : cols <= 4 ? 17 : 13;
-  const isComplete = currentStamps >= stampsRequired;
+  const isComplete = activeTiers.some(t => currentStamps >= t.stamps);
 
   return (
     <motion.div
@@ -183,7 +191,7 @@ function LoyaltyCard({
           </p>
           <p className="text-zinc-100 font-bold text-xl leading-tight">{shopName}</p>
           <p className="text-[11px] text-zinc-600 mt-1">
-            {currentStamps} von {stampsRequired} Stempel
+            {currentStamps} von {maxStamps} Stempel
           </p>
         </div>
         <button onClick={onShowQR} className="shrink-0 flex flex-col items-center gap-1 group mt-0.5">
@@ -200,9 +208,10 @@ function LoyaltyCard({
       {/* ── Stempel-Raster ── */}
       <div className="px-5 pb-4">
         <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-          {Array.from({ length: stampsRequired }).map((_, i) => {
+          {Array.from({ length: maxStamps }).map((_, i) => {
             const filled = i < currentStamps;
             const isNew = animateIndex === i;
+            const isTierEnd = tierThresholds.has(i + 1);
             return (
               <motion.div
                 key={i}
@@ -212,10 +221,12 @@ function LoyaltyCard({
                     ? "linear-gradient(135deg, #8a6820 0%, #4e3610 100%)"
                     : "rgba(30,24,12,0.5)",
                   border: filled
-                    ? "1px solid rgba(170,130,50,0.3)"
-                    : "1px solid rgba(100,80,30,0.18)",
+                    ? isTierEnd ? "1.5px solid rgba(251,146,60,0.6)" : "1px solid rgba(170,130,50,0.3)"
+                    : isTierEnd ? "1.5px solid rgba(251,146,60,0.22)" : "1px solid rgba(100,80,30,0.18)",
                   boxShadow: filled
-                    ? "0 2px 8px rgba(70,50,10,0.45), inset 0 1px 0 rgba(220,175,70,0.18)"
+                    ? isTierEnd
+                      ? "0 2px 10px rgba(251,146,60,0.35), inset 0 1px 0 rgba(220,175,70,0.18)"
+                      : "0 2px 8px rgba(70,50,10,0.45), inset 0 1px 0 rgba(220,175,70,0.18)"
                     : "none",
                 }}
                 animate={isNew ? { scale: [1, 1.35, 0.94, 1.06, 1] } : {}}
@@ -231,8 +242,8 @@ function LoyaltyCard({
                   </motion.div>
                 ) : (
                   <span
-                    className="select-none leading-none text-zinc-700/50 font-medium"
-                    style={{ fontSize: "9px" }}
+                    className="select-none leading-none font-medium"
+                    style={{ fontSize: "9px", color: isTierEnd ? "rgba(251,146,60,0.4)" : "rgba(161,161,170,0.35)" }}
                   >
                     {i + 1}
                   </span>
@@ -253,40 +264,46 @@ function LoyaltyCard({
       </div>
 
       {/* ── Belohnungs-Abschnitt ── */}
-      <div className="px-4 pb-5">
-        <div
-          className="rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-500"
-          style={{
-            background: isComplete ? "rgba(140,110,35,0.09)" : "rgba(0,0,0,0.15)",
-            border: isComplete ? "1.5px solid rgba(251,146,60,0.55)" : "1px solid rgba(251,146,60,0.18)",
-          }}
-        >
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
-            isComplete ? "bg-amber-500/90" : "bg-zinc-800/80 border border-zinc-700/50"
-          }`}>
-            <Gift size={17} className={isComplete ? "text-zinc-900" : "text-zinc-600"} />
-          </div>
+      <div className="px-4 pb-5 space-y-2">
+        {activeTiers.map((tier, i) => {
+          const reached = currentStamps >= tier.stamps;
+          return (
+            <div
+              key={i}
+              className="rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-500"
+              style={{
+                background: reached ? "rgba(140,110,35,0.09)" : "rgba(0,0,0,0.15)",
+                border: reached ? "1.5px solid rgba(251,146,60,0.55)" : "1px solid rgba(251,146,60,0.18)",
+              }}
+            >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
+                reached ? "bg-amber-500/90" : "bg-zinc-800/80 border border-zinc-700/50"
+              }`}>
+                <Gift size={17} className={reached ? "text-zinc-900" : "text-zinc-600"} />
+              </div>
 
-          <div className="flex-1 min-w-0">
-            <p className={`text-[9px] font-semibold uppercase tracking-widest mb-0.5 transition-colors ${
-              isComplete ? "text-amber-400/90" : "text-zinc-600"
-            }`}>
-              {isComplete ? "Bereit zum Einlösen" : "Deine Belohnung"}
-            </p>
-            <p className={`text-sm font-semibold leading-snug transition-colors ${
-              isComplete ? "text-zinc-100" : "text-zinc-500"
-            }`}>
-              {rewardText}
-            </p>
-          </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-[9px] font-semibold uppercase tracking-widest mb-0.5 transition-colors ${
+                  reached ? "text-amber-400/90" : "text-zinc-600"
+                }`}>
+                  {reached ? "Bereit zum Einlösen" : `Ab ${tier.stamps} Stempeln`}
+                </p>
+                <p className={`text-sm font-semibold leading-snug transition-colors ${
+                  reached ? "text-zinc-100" : "text-zinc-500"
+                }`}>
+                  {tier.text}
+                </p>
+              </div>
 
-          {rewardsRedeemed > 0 && (
-            <div className="shrink-0 border border-zinc-700/50 rounded-xl px-2.5 py-1.5 text-center">
-              <p className="text-xs text-zinc-400 font-bold">{rewardsRedeemed}×</p>
-              <p className="text-[8px] text-zinc-600 mt-0.5">genutzt</p>
+              {i === activeTiers.length - 1 && rewardsRedeemed > 0 && (
+                <div className="shrink-0 border border-zinc-700/50 rounded-xl px-2.5 py-1.5 text-center">
+                  <p className="text-xs text-zinc-400 font-bold">{rewardsRedeemed}×</p>
+                  <p className="text-[8px] text-zinc-600 mt-0.5">genutzt</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })}
       </div>
     </motion.div>
   );
@@ -439,6 +456,7 @@ export default function MePage() {
               animateIndex={stampAnim}
               onShowQR={() => setView("qr")}
               qrToken={qrToken}
+              rewardTiers={activeEntry.shop?.rewardTiers}
             />
           </motion.div>
         )}

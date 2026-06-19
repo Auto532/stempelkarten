@@ -7,6 +7,15 @@ import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Stamp, Gift, UserPlus, ArrowLeft, LogIn } from "lucide-react";
 
+type Tier = { stamps: number; text: string; enabled: boolean };
+
+function getActiveTiers(shop: { stampsRequired: number; rewardText: string; rewardTiers?: Tier[] }): Tier[] {
+  if (shop.rewardTiers && shop.rewardTiers.some(t => t.enabled)) {
+    return shop.rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps);
+  }
+  return [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true }];
+}
+
 export default function StampPage() {
   const { qrToken } = useParams<{ qrToken: string }>();
   const router = useRouter();
@@ -16,6 +25,7 @@ export default function StampPage() {
   const [done, setDone] = useState<"stamped" | "redeemed" | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [redeemedTierText, setRedeemedTierText] = useState<string | null>(null);
 
   useEffect(() => {
     const adminToken = localStorage.getItem("adminToken");
@@ -49,11 +59,12 @@ export default function StampPage() {
     finally { setLoading(false); }
   };
 
-  const handleRedeem = async () => {
+  const handleRedeem = async (tierText?: string) => {
     if (!data?.membership) return;
     setLoading(true); setError("");
     try {
       await redeemReward({ membershipId: data.membership._id });
+      setRedeemedTierText(tierText ?? null);
       setDone("redeemed");
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
     finally { setLoading(false); }
@@ -106,14 +117,19 @@ export default function StampPage() {
   }
 
   const { customer, membership } = data;
-  const stampsRequired = shop.stampsRequired;
   const currentStamps = membership?.currentStamps ?? 0;
-  const rewardReady = !!membership && currentStamps >= stampsRequired;
+  const activeTiers = getActiveTiers(shop);
+  const maxStamps = activeTiers[activeTiers.length - 1].stamps;
+  const reachedTiers = activeTiers.filter(t => currentStamps >= t.stamps);
+  const nextTier = activeTiers.find(t => currentStamps < t.stamps);
+  const rewardReady = !!membership && reachedTiers.length > 0;
 
   // Erfolg: Stempel gesetzt
   if (done === "stamped") {
     const newStamps = currentStamps + 1;
-    const nowRewardReady = newStamps >= stampsRequired;
+    const newReached = activeTiers.filter(t => newStamps >= t.stamps);
+    const nowRewardReady = newReached.length > 0;
+    const topReached = newReached[newReached.length - 1];
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-6">
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}>
@@ -125,10 +141,10 @@ export default function StampPage() {
           <h1 className="text-2xl font-bold text-zinc-100">
             {nowRewardReady ? "Belohnung erreicht! 🎉" : "Stempel gesetzt!"}
           </h1>
-          <p className="text-zinc-400 mt-1">{customer.name} · {newStamps}/{stampsRequired}</p>
-          {nowRewardReady && (
+          <p className="text-zinc-400 mt-1">{customer.name} · {newStamps}/{maxStamps}</p>
+          {nowRewardReady && topReached && (
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              className="text-amber-400 font-semibold mt-2">{shop.rewardText}</motion.p>
+              className="text-amber-400 font-semibold mt-2">{topReached.text}</motion.p>
           )}
         </div>
         <button onClick={() => router.push(`/betrieb/${shopSlug}`)}
@@ -151,7 +167,7 @@ export default function StampPage() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">Belohnung eingelöst! 🏆</h1>
           <p className="text-zinc-400 mt-1">{customer.name} erhält:</p>
-          <p className="text-amber-400 font-semibold mt-1">{shop.rewardText}</p>
+          <p className="text-amber-400 font-semibold mt-1">{redeemedTierText ?? shop.rewardText}</p>
         </div>
         <button onClick={() => router.push(`/betrieb/${shopSlug}`)}
           className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
@@ -196,21 +212,34 @@ export default function StampPage() {
 
         {/* Stamp dots */}
         <div className="flex flex-wrap gap-2">
-          {Array.from({ length: stampsRequired }).map((_, i) => (
-            <div key={i}
-              className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
-                i < currentStamps ? "bg-amber-400 border-amber-400 text-zinc-900" : "border-zinc-700 bg-zinc-800/50"
-              }`}>
-              {i < currentStamps && "✓"}
-            </div>
-          ))}
+          {Array.from({ length: maxStamps }).map((_, i) => {
+            const isFilled = i < currentStamps;
+            const isTierBoundary = activeTiers.some(t => t.stamps === i + 1);
+            return (
+              <div key={i}
+                className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                  isFilled
+                    ? isTierBoundary ? "bg-amber-300 border-amber-300 text-zinc-900 ring-2 ring-amber-400/50 ring-offset-1 ring-offset-zinc-900"
+                      : "bg-amber-400 border-amber-400 text-zinc-900"
+                    : isTierBoundary ? "border-amber-700/40 bg-amber-900/10"
+                      : "border-zinc-700 bg-zinc-800/50"
+                }`}>
+                {isFilled ? "✓" : isTierBoundary ? <Gift size={14} className="text-amber-700/60" /> : null}
+              </div>
+            );
+          })}
         </div>
 
         <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-          <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((currentStamps / stampsRequired) * 100, 100)}%` }}
+          <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((currentStamps / maxStamps) * 100, 100)}%` }}
             transition={{ duration: 0.6 }} className="h-full bg-amber-400 rounded-full" />
         </div>
-        <p className="text-xs text-zinc-500">{currentStamps} / {stampsRequired} Stempel</p>
+        <p className="text-xs text-zinc-500">
+          {currentStamps} / {maxStamps} Stempel
+          {nextTier && !rewardReady && (
+            <span className="text-zinc-600"> · noch {nextTier.stamps - currentStamps} bis {nextTier.text}</span>
+          )}
+        </p>
       </motion.div>
 
       {error && <p className="text-red-400 text-sm text-center">{error}</p>}
@@ -229,17 +258,34 @@ export default function StampPage() {
           </motion.div>
         ) : rewardReady ? (
           <motion.div key="reward" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center">
-              <p className="text-amber-400 font-semibold">🎉 {shop.rewardText}</p>
-            </div>
-            <button onClick={handleRedeem} disabled={loading}
-              className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-base">
-              {loading ? <Spinner /> : <><Gift size={20} /> Belohnung einlösen</>}
-            </button>
-            <button onClick={handleStamp} disabled={loading}
-              className="w-full py-2.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-              Stempel hinzufügen (ohne einlösen)
-            </button>
+            {reachedTiers.length > 1 && (
+              <p className="text-xs text-zinc-500 text-center">Mehrere Stufen erreicht — welche Belohnung einlösen?</p>
+            )}
+            {[...reachedTiers].reverse().map((tier, i) => (
+              <button key={tier.stamps} onClick={() => handleRedeem(tier.text)} disabled={loading}
+                className={`w-full py-4 disabled:opacity-50 font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-base ${
+                  i === 0
+                    ? "bg-amber-400 hover:bg-amber-300 text-zinc-900"
+                    : "bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 text-amber-400"
+                }`}>
+                {loading && i === 0 ? <Spinner /> : <><Gift size={20} /> {tier.text}</>}
+                <span className={`text-xs font-normal ml-1 ${i === 0 ? "text-zinc-700" : "text-amber-600"}`}>
+                  ({tier.stamps} Stempel)
+                </span>
+              </button>
+            ))}
+            {nextTier && (
+              <button onClick={handleStamp} disabled={loading}
+                className="w-full py-2.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+                Weiterstempeln → {nextTier.text} bei {nextTier.stamps} Stempeln
+              </button>
+            )}
+            {!nextTier && (
+              <button onClick={handleStamp} disabled={loading}
+                className="w-full py-2.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+                Stempel hinzufügen (ohne einlösen)
+              </button>
+            )}
           </motion.div>
         ) : (
           <motion.button key="stamp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}

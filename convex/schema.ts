@@ -9,6 +9,11 @@ export default defineSchema({
     rewardText: v.string(),
     adminLoginToken: v.string(),
     showLeads: v.optional(v.boolean()),
+    rewardTiers: v.optional(v.array(v.object({
+      stamps: v.number(),
+      text: v.string(),
+      enabled: v.boolean(),
+    }))),
     createdAt: v.number(),
   }).index("by_slug", ["slug"]).index("by_adminLoginToken", ["adminLoginToken"]),
 

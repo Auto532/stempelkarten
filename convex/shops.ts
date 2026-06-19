@@ -33,9 +33,14 @@ export const updateSettings = mutation({
     shopId: v.id("shops"),
     stampsRequired: v.number(),
     rewardText: v.string(),
+    rewardTiers: v.optional(v.array(v.object({
+      stamps: v.number(),
+      text: v.string(),
+      enabled: v.boolean(),
+    }))),
   },
-  handler: async (ctx, { shopId, stampsRequired, rewardText }) => {
-    await ctx.db.patch(shopId, { stampsRequired, rewardText });
+  handler: async (ctx, { shopId, stampsRequired, rewardText, rewardTiers }) => {
+    await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers });
   },
 });
 
