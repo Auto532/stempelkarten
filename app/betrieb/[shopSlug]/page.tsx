@@ -31,6 +31,10 @@ export default function BetriebDashboard() {
   const router = useRouter();
   const shop = useQuery(api.shops.getBySlug, { slug: shopSlug });
   const customers = useQuery(api.shops.listCustomersForShop, shop ? { shopId: shop._id } : "skip");
+  const redemptions = useQuery(
+    api.memberships.getRedemptionsForShop,
+    shop?.bonusProgramEnabled && shop ? { shopId: shop._id } : "skip"
+  );
   const updateSettings = useMutation(api.shops.updateSettings);
 
   const [authorized, setAuthorized] = useState(false);
@@ -358,6 +362,49 @@ export default function BetriebDashboard() {
               >
                 {tierSaving ? "Speichert…" : "Speichern"}
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Vergebene Geschenke (nur wenn Bonus aktiv) */}
+      <AnimatePresence>
+        {shop.bonusProgramEnabled && (
+          <motion.div
+            key="gifts"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
+          >
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800">
+              <Gift size={15} className="text-amber-400" />
+              <span className="font-medium text-zinc-200 text-sm">Vergebene Geschenke</span>
+              {redemptions && redemptions.length > 0 && (
+                <span className="ml-auto text-xs text-zinc-600">{redemptions.length}</span>
+              )}
+            </div>
+            <div className="divide-y divide-zinc-800/40 max-h-[320px] overflow-y-auto">
+              {redemptions === undefined && (
+                <div className="px-5 py-6 text-center text-zinc-600 text-sm">Laden…</div>
+              )}
+              {redemptions?.length === 0 && (
+                <div className="px-5 py-6 text-center text-zinc-600 text-sm">Noch keine Geschenke vergeben</div>
+              )}
+              {redemptions?.map((r) => (
+                <div key={r._id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-400/15 border border-amber-400/20 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-amber-400">{r.customerName.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-zinc-200 truncate">{r.customerName}</p>
+                    <p className="text-xs text-amber-400/80 truncate">{r.rewardText ?? shop.rewardText}</p>
+                  </div>
+                  <p className="text-[11px] text-zinc-600 shrink-0">
+                    {new Date(r.timestamp).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                  </p>
+                </div>
+              ))}
             </div>
           </motion.div>
         )}

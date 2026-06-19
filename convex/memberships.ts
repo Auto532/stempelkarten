@@ -78,8 +78,8 @@ export const addStamp = mutation({
 });
 
 export const redeemReward = mutation({
-  args: { membershipId: v.id("memberships") },
-  handler: async (ctx, { membershipId }) => {
+  args: { membershipId: v.id("memberships"), rewardText: v.optional(v.string()) },
+  handler: async (ctx, { membershipId, rewardText }) => {
     const membership = await ctx.db.get(membershipId);
     if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
 
@@ -92,7 +92,36 @@ export const redeemReward = mutation({
       membershipId,
       shopId: membership.shopId,
       type: "redeem",
+      rewardText,
       timestamp: Date.now(),
     });
+  },
+});
+
+export const getRedemptionsForShop = query({
+  args: { shopId: v.id("shops") },
+  handler: async (ctx, { shopId }) => {
+    const events = await ctx.db
+      .query("stampEvents")
+      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
+      .filter((q) => q.eq(q.field("type"), "redeem"))
+      .order("desc")
+      .take(50);
+
+    const results = await Promise.all(
+      events.map(async (event) => {
+        const membership = await ctx.db.get(event.membershipId);
+        if (!membership) return null;
+        const customer = await ctx.db.get(membership.customerId);
+        if (!customer) return null;
+        return {
+          _id: event._id,
+          customerName: customer.name,
+          rewardText: event.rewardText ?? null,
+          timestamp: event.timestamp,
+        };
+      })
+    );
+    return results.filter((r): r is NonNullable<typeof r> => r !== null);
   },
 });

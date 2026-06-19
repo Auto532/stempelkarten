@@ -41,6 +41,7 @@ export default defineSchema({
     membershipId: v.id("memberships"),
     shopId: v.id("shops"),
     type: v.union(v.literal("stamp"), v.literal("redeem")),
+    rewardText: v.optional(v.string()),
     timestamp: v.number(),
-  }).index("by_membership", ["membershipId"]),
+  }).index("by_membership", ["membershipId"]).index("by_shop", ["shopId"]),
 });

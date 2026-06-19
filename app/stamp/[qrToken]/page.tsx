@@ -63,7 +63,7 @@ export default function StampPage() {
     if (!data?.membership) return;
     setLoading(true); setError("");
     try {
-      await redeemReward({ membershipId: data.membership._id });
+      await redeemReward({ membershipId: data.membership._id, rewardText: tierText });
       setRedeemedTierText(tierText ?? null);
       setDone("redeemed");
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
