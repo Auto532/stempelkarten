@@ -20,7 +20,7 @@ const PARTICLES = Array.from({ length: 12 }, (_, i) => {
 
 function StampOverlay({ onDone }: { onDone: () => void }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 2400);
+    const t = setTimeout(onDone, 1500);
     return () => clearTimeout(t);
   }, [onDone]);
 
@@ -253,7 +253,7 @@ export default function MePage() {
       setStampAnim(newDotIndex);
       setShowStampOverlay(true);
       setView("dashboard");
-      setTimeout(() => setStampAnim(null), 2000);
+      setTimeout(() => setStampAnim(null), 1200);
     }
     prevStamps.current = current;
   }, [activeEntry?.membership.currentStamps]); // eslint-disable-line react-hooks/exhaustive-deps
