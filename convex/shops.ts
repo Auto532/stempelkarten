@@ -39,6 +39,13 @@ export const updateSettings = mutation({
   },
 });
 
+export const toggleShowLeads = mutation({
+  args: { shopId: v.id("shops"), showLeads: v.boolean() },
+  handler: async (ctx, { shopId, showLeads }) => {
+    await ctx.db.patch(shopId, { showLeads });
+  },
+});
+
 export const createShop = mutation({
   args: {
     name: v.string(),

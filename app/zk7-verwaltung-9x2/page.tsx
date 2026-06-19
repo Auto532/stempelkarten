@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check, QrCode } from "lucide-react";
+import { Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check, QrCode, Eye, EyeOff } from "lucide-react";
 import { QRImage } from "@/app/components/QRImage";
 
 const SUPERADMIN_PIN = "1337"; // In Produktion: Env-Variable
@@ -12,8 +12,10 @@ const SUPERADMIN_PIN = "1337"; // In Produktion: Env-Variable
 function ShopCard({ slug, index }: { slug: string; index: number }) {
   const shop = useQuery(api.shops.getBySlug, { slug });
   const customers = useQuery(api.shops.listCustomersForShop, shop ? { shopId: shop._id } : "skip");
+  const toggleShowLeads = useMutation(api.shops.toggleShowLeads);
   const [showLinks, setShowLinks] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [togglingLeads, setTogglingLeads] = useState(false);
 
   if (!shop) return null;
 
@@ -25,6 +27,15 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleToggleLeads = async () => {
+    setTogglingLeads(true);
+    try {
+      await toggleShowLeads({ shopId: shop._id, showLeads: !shop.showLeads });
+    } finally {
+      setTogglingLeads(false);
+    }
   };
 
   return (
@@ -58,6 +69,26 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
             <span className="text-[10px] text-zinc-600">{label}</span>
           </div>
         ))}
+      </div>
+
+      {/* Leads toggle */}
+      <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-800/50">
+        <div className="flex items-center gap-2">
+          {shop.showLeads ? <Eye size={14} className="text-amber-400" /> : <EyeOff size={14} className="text-zinc-600" />}
+          <span className="text-xs text-zinc-400">Kunden-Leads für Betrieb sichtbar</span>
+        </div>
+        <button
+          onClick={handleToggleLeads}
+          disabled={togglingLeads}
+          className={`relative w-10 h-5.5 rounded-full transition-colors duration-200 flex items-center px-0.5 ${shop.showLeads ? "bg-amber-400" : "bg-zinc-700"}`}
+          style={{ minWidth: "2.5rem", height: "1.375rem" }}
+        >
+          <motion.div
+            animate={{ x: shop.showLeads ? 18 : 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className="w-4 h-4 rounded-full bg-white shadow-sm"
+          />
+        </button>
       </div>
 
       {/* Links panel */}

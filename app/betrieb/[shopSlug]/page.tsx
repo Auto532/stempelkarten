@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScanLine, Users, Settings, ChevronRight, Award, Stamp, X, Check, QrCode } from "lucide-react";
+import { ScanLine, Users, Settings, ChevronRight, Award, Stamp, X, Check, QrCode, Phone, Eye } from "lucide-react";
 import { QRImage } from "@/app/components/QRImage";
 
 export default function BetriebDashboard() {
@@ -21,6 +21,7 @@ export default function BetriebDashboard() {
   const [rewardText, setRewardText] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
@@ -205,6 +206,11 @@ export default function BetriebDashboard() {
         <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800">
           <Users size={16} className="text-zinc-400" />
           <span className="font-medium text-zinc-200 text-sm">Kunden</span>
+          {shop.showLeads && (
+            <span className="flex items-center gap-1 text-[10px] text-amber-400 ml-1">
+              <Eye size={10} /> Leads aktiv
+            </span>
+          )}
           <span className="text-xs text-zinc-600 ml-auto">{customers?.length ?? "–"}</span>
         </div>
 
@@ -218,31 +224,78 @@ export default function BetriebDashboard() {
           {customers?.map(({ customer, membership }, i) => {
             if (!customer) return null;
             const pct = Math.min((membership.currentStamps / shop.stampsRequired) * 100, 100);
+            const isSelected = selectedCustomerId === customer._id;
             return (
               <motion.div
                 key={membership._id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 + i * 0.05 }}
-                className="flex items-center gap-3 px-5 py-3.5"
               >
-                <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold text-amber-400 shrink-0">
-                  {customer.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-zinc-200 truncate">{customer.name}</span>
-                    <span className="text-xs text-zinc-500 ml-2 shrink-0">{membership.currentStamps}/{shop.stampsRequired}</span>
+                <button
+                  onClick={() => shop.showLeads ? setSelectedCustomerId(isSelected ? null : customer._id) : undefined}
+                  className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${shop.showLeads ? "hover:bg-zinc-800/50 cursor-pointer" : "cursor-default"}`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold text-amber-400 shrink-0">
+                    {customer.name.charAt(0).toUpperCase()}
                   </div>
-                  <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium text-zinc-200 truncate">{customer.name}</span>
+                      <span className="text-xs text-zinc-500 ml-2 shrink-0">{membership.currentStamps}/{shop.stampsRequired}</span>
+                    </div>
+                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ delay: 0.5 + i * 0.05, duration: 0.6 }}
+                        className="h-full bg-amber-400/70 rounded-full"
+                      />
+                    </div>
+                  </div>
+                  {shop.showLeads && (
+                    <ChevronRight size={14} className={`text-zinc-600 shrink-0 transition-transform ${isSelected ? "rotate-90" : ""}`} />
+                  )}
+                </button>
+
+                {/* Lead detail panel */}
+                <AnimatePresence>
+                  {shop.showLeads && isSelected && (
                     <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ delay: 0.5 + i * 0.05, duration: 0.6 }}
-                      className="h-full bg-amber-400/70 rounded-full"
-                    />
-                  </div>
-                </div>
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mx-5 mb-3 bg-zinc-800 rounded-xl p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Phone size={13} className="text-amber-400" />
+                          <a href={`tel:${customer.phone}`} className="text-sm text-zinc-200 hover:text-amber-400 transition-colors">
+                            {customer.phone}
+                          </a>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          {[
+                            { label: "Aktuelle Stempel", value: membership.currentStamps },
+                            { label: "Stempel gesamt", value: membership.totalStampsEver },
+                            { label: "Belohnungen", value: membership.rewardsRedeemed },
+                          ].map(({ label, value }) => (
+                            <div key={label} className="bg-zinc-700/50 rounded-lg py-2">
+                              <p className="text-sm font-bold text-zinc-100">{value}</p>
+                              <p className="text-[10px] text-zinc-500 mt-0.5">{label}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {membership.lastStampAt && (
+                          <p className="text-[11px] text-zinc-500">
+                            Letzter Stempel: {new Date(membership.lastStampAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             );
           })}
