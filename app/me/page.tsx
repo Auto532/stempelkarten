@@ -181,7 +181,7 @@ function LoyaltyCard({
           <p className="text-[8px] font-semibold uppercase tracking-[0.28em] text-zinc-600 mb-1">
             Digitale Stempelkarte
           </p>
-          <p className="text-zinc-100 font-bold text-xl leading-tight truncate">{shopName}</p>
+          <p className="text-zinc-100 font-bold text-xl leading-tight">{shopName}</p>
           <p className="text-[11px] text-zinc-600 mt-1">
             {currentStamps} von {stampsRequired} Stempel
           </p>
