@@ -70,6 +70,24 @@ export const listAllShops = query({
   },
 });
 
+export const getGlobalStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const shops = await ctx.db.query("shops").collect();
+    const customers = await ctx.db.query("customers").collect();
+    const memberships = await ctx.db.query("memberships").collect();
+    const totalStamps = memberships.reduce((s, m) => s + m.totalStampsEver, 0);
+    const totalRewards = memberships.reduce((s, m) => s + m.rewardsRedeemed, 0);
+    const shopsWithCounts = await Promise.all(
+      shops.map(async (shop) => {
+        const mems = await ctx.db.query("memberships").withIndex("by_shop", (q) => q.eq("shopId", shop._id)).collect();
+        return { ...shop, customerCount: mems.length };
+      })
+    );
+    return { totalShops: shops.length, totalCustomers: customers.length, totalStamps, totalRewards, shops: shopsWithCounts };
+  },
+});
+
 export const listCustomersForShop = query({
   args: { shopId: v.id("shops") },
   handler: async (ctx, { shopId }) => {

@@ -1,4 +1,18 @@
-import { internalMutation } from "./_generated/server";
+import { internalMutation, mutation } from "./_generated/server";
+
+export const clearAllData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const tables = ["stampEvents", "memberships", "customers", "shops"] as const;
+    for (const table of tables) {
+      const docs = await ctx.db.query(table).collect();
+      for (const doc of docs) {
+        await ctx.db.delete(doc._id);
+      }
+    }
+    return "Alles gelöscht";
+  },
+});
 
 export const clearAll = internalMutation({
   args: {},
