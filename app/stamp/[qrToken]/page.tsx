@@ -120,31 +120,50 @@ export default function StampPage() {
   const currentStamps = membership?.currentStamps ?? 0;
   const activeTiers = getActiveTiers(shop);
   const maxStamps = activeTiers[activeTiers.length - 1].stamps;
-  const reachedTiers = activeTiers.filter(t => currentStamps >= t.stamps);
-  const nextTier = activeTiers.find(t => currentStamps < t.stamps);
-  const rewardReady = !!membership && reachedTiers.length > 0;
+
+  // The tier the customer is currently sitting on EXACTLY
+  const exactTier = activeTiers.find(t => currentStamps === t.stamps);
+  // The next tier above that (if any) — this is when we offer the choice
+  const nextTierUp = exactTier ? activeTiers.find(t => t.stamps > exactTier.stamps) : undefined;
+  // The highest tier with no further tier above — plain redeem
+  const topTier = activeTiers[activeTiers.length - 1];
+  const atTopTier = currentStamps >= topTier.stamps;
+
+  // Show one-time choice: exactly AT a tier threshold AND a higher tier exists
+  const showTierChoice = !!membership && !!exactTier && !!nextTierUp;
+  // Show plain redeem: at or past highest tier (no higher tier to continue to)
+  const showRedeem = !!membership && atTopTier && !nextTierUp;
+  // Show badge when any kind of decision is pending
+  const rewardReady = showTierChoice || showRedeem;
 
   // Erfolg: Stempel gesetzt
   if (done === "stamped") {
     const newStamps = currentStamps + 1;
-    const newReached = activeTiers.filter(t => newStamps >= t.stamps);
-    const nowRewardReady = newReached.length > 0;
-    const topReached = newReached[newReached.length - 1];
+    // Did this stamp land exactly on a tier boundary with a next tier?
+    const landedOnTier = activeTiers.find(t => newStamps === t.stamps);
+    const landedNextTier = landedOnTier ? activeTiers.find(t => t.stamps > landedOnTier.stamps) : undefined;
+    const landedOnTop = newStamps >= topTier.stamps;
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-6">
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}>
-          <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto ${nowRewardReady ? "bg-amber-400" : "bg-green-500"}`}>
-            {nowRewardReady ? <Gift size={44} className="text-zinc-900" /> : <Stamp size={44} className="text-white" />}
+          <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto ${landedOnTop ? "bg-amber-400" : landedOnTier ? "bg-amber-400" : "bg-green-500"}`}>
+            {(landedOnTop || landedOnTier) ? <Gift size={44} className="text-zinc-900" /> : <Stamp size={44} className="text-white" />}
           </div>
         </motion.div>
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">
-            {nowRewardReady ? "Belohnung erreicht! 🎉" : "Stempel gesetzt!"}
+            {landedOnTop ? "Belohnung erreicht! 🎉" : landedOnTier ? "Stufe erreicht! ✨" : "Stempel gesetzt!"}
           </h1>
           <p className="text-zinc-400 mt-1">{customer.name} · {newStamps}/{maxStamps}</p>
-          {nowRewardReady && topReached && (
+          {landedOnTier && !landedOnTop && landedNextTier && (
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              className="text-amber-400 font-semibold mt-2">{topReached.text}</motion.p>
+              className="text-zinc-400 text-sm mt-2">
+              Beim nächsten Scan: einlösen oder weiter zu {landedNextTier.stamps} Stempeln
+            </motion.p>
+          )}
+          {landedOnTop && (
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+              className="text-amber-400 font-semibold mt-2">{topTier.text}</motion.p>
           )}
         </div>
         <button onClick={() => router.push(`/betrieb/${shopSlug}`)}
@@ -205,7 +224,7 @@ export default function StampPage() {
           {rewardReady && (
             <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
               className="text-xs bg-amber-400 text-zinc-900 font-bold px-2.5 py-1 rounded-full shrink-0">
-              Belohnung!
+              {showTierChoice ? "Wahl!" : "Belohnung!"}
             </motion.span>
           )}
         </div>
@@ -236,9 +255,10 @@ export default function StampPage() {
         </div>
         <p className="text-xs text-zinc-500">
           {currentStamps} / {maxStamps} Stempel
-          {nextTier && !rewardReady && (
-            <span className="text-zinc-600"> · noch {nextTier.stamps - currentStamps} bis {nextTier.text}</span>
-          )}
+          {!rewardReady && (() => {
+            const next = activeTiers.find(t => t.stamps > currentStamps);
+            return next ? <span className="text-zinc-600"> · noch {next.stamps - currentStamps} bis {next.text}</span> : null;
+          })()}
         </p>
       </motion.div>
 
@@ -256,38 +276,45 @@ export default function StampPage() {
               <UserPlus size={18} /> Zum Laden hinzufügen
             </button>
           </motion.div>
-        ) : rewardReady ? (
-          <motion.div key="reward" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            {reachedTiers.length > 1 && (
-              <p className="text-xs text-zinc-500 text-center">Mehrere Stufen erreicht — welche Belohnung einlösen?</p>
-            )}
-            {[...reachedTiers].reverse().map((tier, i) => (
-              <button key={tier.stamps} onClick={() => handleRedeem(tier.text)} disabled={loading}
-                className={`w-full py-4 disabled:opacity-50 font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-base ${
-                  i === 0
-                    ? "bg-amber-400 hover:bg-amber-300 text-zinc-900"
-                    : "bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 text-amber-400"
-                }`}>
-                {loading && i === 0 ? <Spinner /> : <><Gift size={20} /> {tier.text}</>}
-                <span className={`text-xs font-normal ml-1 ${i === 0 ? "text-zinc-700" : "text-amber-600"}`}>
-                  ({tier.stamps} Stempel)
-                </span>
-              </button>
-            ))}
-            {nextTier && (
-              <button onClick={handleStamp} disabled={loading}
-                className="w-full py-2.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-                Weiterstempeln → {nextTier.text} bei {nextTier.stamps} Stempeln
-              </button>
-            )}
-            {!nextTier && (
-              <button onClick={handleStamp} disabled={loading}
-                className="w-full py-2.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-                Stempel hinzufügen (ohne einlösen)
-              </button>
-            )}
+
+        ) : showTierChoice ? (
+          /* One-time choice: exactly at a tier boundary with a higher tier available */
+          <motion.div key="choice" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center">
+              <p className="text-xs text-zinc-400 mb-1">
+                Stufe {activeTiers.indexOf(exactTier!) + 1} von {activeTiers.length} erreicht
+              </p>
+              <p className="text-amber-400 font-semibold">{exactTier!.text}</p>
+            </div>
+            <button onClick={() => handleRedeem(exactTier!.text)} disabled={loading}
+              className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-base">
+              {loading ? <Spinner /> : <><Gift size={20} /> Jetzt einlösen</>}
+            </button>
+            <button onClick={handleStamp} disabled={loading}
+              className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 border border-zinc-700 text-zinc-200 font-semibold rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-colors text-sm">
+              <span>Weiter zu Stufe {activeTiers.indexOf(nextTierUp!) + 1}</span>
+              <span className="text-xs text-zinc-500 font-normal">{nextTierUp!.stamps} Stempel → {nextTierUp!.text}</span>
+            </button>
           </motion.div>
+
+        ) : showRedeem ? (
+          /* At highest tier — plain redeem (no further tiers) */
+          <motion.div key="reward" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center">
+              <p className="text-amber-400 font-semibold">🎉 {topTier.text}</p>
+            </div>
+            <button onClick={() => handleRedeem(topTier.text)} disabled={loading}
+              className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-base">
+              {loading ? <Spinner /> : <><Gift size={20} /> Belohnung einlösen</>}
+            </button>
+            <button onClick={handleStamp} disabled={loading}
+              className="w-full py-2.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+              Stempel hinzufügen (ohne einlösen)
+            </button>
+          </motion.div>
+
         ) : (
+          /* Normal: stamp */
           <motion.button key="stamp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             onClick={handleStamp} disabled={loading}
             whileTap={{ scale: 0.97 }}
