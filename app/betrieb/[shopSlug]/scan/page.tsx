@@ -259,7 +259,13 @@ export default function ScanPage() {
         {!scannedToken ? (
           <motion.div key="scanner" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
             <div className="relative overflow-hidden rounded-2xl border border-zinc-800">
-              <Scanner onScan={(codes: IDetectedBarcode[]) => { if (codes.length > 0 && !scannedToken) setScannedToken(codes[0].rawValue); }} sound={false} />
+              <Scanner onScan={(codes: IDetectedBarcode[]) => {
+                if (codes.length > 0 && !scannedToken) {
+                  const raw = codes[0].rawValue;
+                  const token = raw.includes("/stamp/") ? raw.split("/stamp/").pop()! : raw;
+                  setScannedToken(token);
+                }
+              }} sound={false} />
               {/* Scan overlay */}
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute inset-8 border-2 border-amber-400/40 rounded-2xl" />

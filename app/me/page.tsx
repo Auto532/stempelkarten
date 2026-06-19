@@ -12,7 +12,8 @@ function QRCard({ qrToken, customerName }: { qrToken: string; customerName: stri
 
   useEffect(() => {
     if (canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, qrToken, {
+      const url = `${window.location.origin}/stamp/${qrToken}`;
+      QRCode.toCanvas(canvasRef.current, url, {
         width: 200,
         margin: 1,
         color: { dark: "#09090b", light: "#fafafa" },
