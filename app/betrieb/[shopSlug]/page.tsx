@@ -5,7 +5,8 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScanLine, Users, Settings, ChevronRight, Award, Stamp, X, Check } from "lucide-react";
+import { ScanLine, Users, Settings, ChevronRight, Award, Stamp, X, Check, QrCode } from "lucide-react";
+import { QRImage } from "@/app/components/QRImage";
 
 export default function BetriebDashboard() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -104,6 +105,25 @@ export default function BetriebDashboard() {
             <p className="text-[11px] text-zinc-500 mt-0.5">{label}</p>
           </div>
         ))}
+      </motion.div>
+
+      {/* Join QR Code */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4"
+      >
+        <div className="flex items-center gap-2">
+          <QrCode size={16} className="text-zinc-400" />
+          <span className="font-medium text-zinc-200 text-sm">Kunden-QR-Code</span>
+        </div>
+        <div className="flex justify-center">
+          <QRImage value={`${typeof window !== "undefined" ? window.location.origin : ""}/join/${shopSlug}`} size={160} />
+        </div>
+        <p className="text-center text-xs text-zinc-500">
+          Ausdrucken & am Tresen aufhängen — Kunden scannen diesen Code
+        </p>
       </motion.div>
 
       {/* Settings */}

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check } from "lucide-react";
+import { Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check, QrCode } from "lucide-react";
+import { QRImage } from "@/app/components/QRImage";
 
 const SUPERADMIN_PIN = "1337"; // In Produktion: Env-Variable
 
@@ -68,18 +69,36 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden border-t border-zinc-800"
           >
-            <div className="p-4 space-y-2">
+            <div className="p-4 space-y-4">
+              {/* Join QR Code */}
+              <div className="bg-zinc-800 rounded-xl p-4 text-center space-y-3">
+                <div className="flex items-center gap-2 justify-center">
+                  <QrCode size={14} className="text-amber-400" />
+                  <p className="text-xs text-zinc-300 font-medium">Kunden-QR-Code (ausdrucken & aufhängen)</p>
+                </div>
+                <div className="flex justify-center">
+                  <QRImage value={`${base}/join/${shop.slug}`} size={160} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="text-[11px] text-amber-300 flex-1 truncate">{`${base}/join/${shop.slug}`}</code>
+                  <button onClick={() => copy(`${base}/join/${shop.slug}`, "join")}
+                    className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
+                    {copied === "join" ? <Check size={14} className="text-green-400" /> : <Link size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Admin Login */}
               {[
-                { label: "Kunden-QR-Code (Join)", url: `${base}/join/${shop.slug}` },
-                { label: "Admin-Login (Betrieb)", url: `${base}/betrieb/login/${shop.adminLoginToken}` },
-              ].map(({ label, url }) => (
-                <div key={label} className="bg-zinc-800 rounded-xl p-3">
+                { label: "Admin-Login (Betrieb)", url: `${base}/betrieb/login/${shop.adminLoginToken}`, key: "admin" },
+              ].map(({ label, url, key }) => (
+                <div key={key} className="bg-zinc-800 rounded-xl p-3">
                   <p className="text-[11px] text-zinc-500 mb-1.5">{label}</p>
                   <div className="flex items-center gap-2">
                     <code className="text-[11px] text-amber-300 flex-1 truncate">{url}</code>
-                    <button onClick={() => copy(url, label)}
+                    <button onClick={() => copy(url, key)}
                       className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
-                      {copied === label ? <Check size={14} className="text-green-400" /> : <Link size={14} />}
+                      {copied === key ? <Check size={14} className="text-green-400" /> : <Link size={14} />}
                     </button>
                   </div>
                 </div>
