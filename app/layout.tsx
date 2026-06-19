@@ -35,7 +35,11 @@ export default function RootLayout({
   return (
     <html lang="de">
       <body className={`${geistSans.variable} antialiased bg-zinc-950 text-zinc-100 min-h-screen`}>
-        <ConvexClientProvider>{children}</ConvexClientProvider>
+        <ConvexClientProvider>
+          <div className="max-w-sm mx-auto min-h-screen relative">
+            {children}
+          </div>
+        </ConvexClientProvider>
       </body>
     </html>
   );

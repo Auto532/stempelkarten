@@ -5,8 +5,24 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScanLine, Users, Settings, ChevronRight, Award, Stamp, X, Check, QrCode, Phone, Eye } from "lucide-react";
+import { ScanLine, Users, Settings, ChevronRight, Award, Stamp, X, Check, QrCode, Phone, Eye, Printer } from "lucide-react";
 import { QRImage } from "@/app/components/QRImage";
+import QRCode from "qrcode";
+
+async function printQR(shopName: string, url: string) {
+  const dataUrl = await QRCode.toDataURL(url, { width: 400, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
+  const w = window.open("", "_blank", "width=520,height=640");
+  if (!w) return;
+  w.document.write(`<!DOCTYPE html><html><head><title>${shopName} – QR Code</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#fff;font-family:-apple-system,sans-serif;gap:20px;padding:40px;text-align:center}img{width:300px;height:300px}h2{font-size:24px;font-weight:700;color:#111}p{font-size:14px;color:#555}.url{font-size:11px;color:#aaa;font-family:monospace;margin-top:4px;word-break:break-all}</style>
+  </head><body>
+  <h2>${shopName}</h2>
+  <img src="${dataUrl}" alt="QR Code" />
+  <div><p>Digitale Stempelkarte</p><p class="url">${url}</p></div>
+  <script>setTimeout(()=>window.print(),400)</script>
+  </body></html>`);
+  w.document.close();
+}
 
 export default function BetriebDashboard() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -125,6 +141,13 @@ export default function BetriebDashboard() {
         <p className="text-center text-xs text-zinc-500">
           Ausdrucken & am Tresen aufhängen — Kunden scannen diesen Code
         </p>
+        <button
+          onClick={() => printQR(shop.name, `${window.location.origin}/join/${shopSlug}`)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-300 text-sm transition-colors"
+        >
+          <Printer size={15} className="text-amber-400" />
+          Drucken / Druckvorschau
+        </button>
       </motion.div>
 
       {/* Settings */}

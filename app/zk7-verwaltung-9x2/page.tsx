@@ -543,7 +543,7 @@ export default function SuperAdminPage() {
       </div>
 
       {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-0 right-0 bg-zinc-900/95 backdrop-blur border-t border-zinc-800 flex max-w-sm mx-auto" style={{ width: "100%" }}>
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm bg-zinc-900/95 backdrop-blur border-t border-zinc-800 flex">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
