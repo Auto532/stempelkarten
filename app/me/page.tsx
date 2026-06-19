@@ -5,17 +5,19 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import QRCode from "qrcode";
 import { motion, AnimatePresence } from "framer-motion";
-import { Smartphone, LayoutGrid } from "lucide-react";
+import { Smartphone, LayoutGrid, ChevronRight, Stamp, Gift, QrCode } from "lucide-react";
+
+const AWAY_THRESHOLD_MS = 4 * 60 * 60 * 1000; // 4 Stunden
+
+// ─── QR Card (groß) ───────────────────────────────────────────────────────────
 
 function QRCard({ qrToken, customerName }: { qrToken: string; customerName: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (canvasRef.current) {
-      const url = `${window.location.origin}/stamp/${qrToken}`;
-      QRCode.toCanvas(canvasRef.current, url, {
-        width: 200,
-        margin: 1,
+      QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
+        width: 210, margin: 1,
         color: { dark: "#09090b", light: "#fafafa" },
       });
     }
@@ -23,7 +25,7 @@ function QRCard({ qrToken, customerName }: { qrToken: string; customerName: stri
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
       className="relative mx-auto w-full max-w-xs"
@@ -57,15 +59,84 @@ function QRCard({ qrToken, customerName }: { qrToken: string; customerName: stri
   );
 }
 
+// ─── QR Mini (klein, für Dashboard) ─────────────────────────────────────────
+
+function QRMini({ qrToken }: { qrToken: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (canvasRef.current) {
+      QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
+        width: 80, margin: 1,
+        color: { dark: "#09090b", light: "#fafafa" },
+      });
+    }
+  }, [qrToken]);
+  return (
+    <div className="bg-zinc-50 rounded-xl p-1.5 inline-block shadow">
+      <canvas ref={canvasRef} className="rounded-lg" />
+    </div>
+  );
+}
+
+// ─── Stamp Dots ──────────────────────────────────────────────────────────────
+
+function StampDots({ current, total, animateIndex }: { current: number; total: number; animateIndex: number | null }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {Array.from({ length: total }).map((_, i) => {
+        const filled = i < current;
+        const isNew = animateIndex !== null && i === animateIndex;
+        return (
+          <motion.div
+            key={i}
+            animate={isNew ? { scale: [1, 1.4, 1], backgroundColor: ["#fbbf24", "#fbbf24", "#fbbf24"] } : {}}
+            transition={isNew ? { duration: 0.5, ease: "easeOut" } : {}}
+            className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-colors duration-300 ${
+              filled ? "bg-amber-400 border-amber-400 text-zinc-900" : "border-zinc-700 bg-zinc-800/50"
+            }`}
+          >
+            {filled && (
+              <motion.span
+                initial={isNew ? { scale: 0 } : { scale: 1 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 300, delay: 0.1 }}
+              >
+                ✓
+              </motion.span>
+            )}
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function MePage() {
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [view, setView] = useState<"qr" | "dashboard">("qr");
   const [showInstallHint, setShowInstallHint] = useState(false);
+  const [stampAnim, setStampAnim] = useState<number | null>(null); // index of new stamp dot
+  const [showStampToast, setShowStampToast] = useState(false);
+  const prevStamps = useRef<number | null>(null);
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
     setMounted(true);
     const token = localStorage.getItem("qrToken");
     setQrToken(token);
+
+    const lastVisit = localStorage.getItem("lastVisit");
+    const now = Date.now();
+    if (lastVisit && now - parseInt(lastVisit) < AWAY_THRESHOLD_MS) {
+      setView("dashboard");
+    } else {
+      setView("qr");
+    }
+    localStorage.setItem("lastVisit", String(now));
+
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
     const seen = localStorage.getItem("installHintSeen");
     if (!isStandalone && !seen) setShowInstallHint(true);
@@ -75,6 +146,33 @@ export default function MePage() {
     api.customers.getMembershipsForCustomer,
     qrToken ? { qrToken } : "skip"
   );
+
+  // Pick most recently stamped shop
+  const activeEntry = data?.memberships
+    ?.slice()
+    .sort((a, b) => (b.membership.lastStampAt ?? 0) - (a.membership.lastStampAt ?? 0))[0];
+
+  // Detect new stamp in real-time
+  useEffect(() => {
+    if (!activeEntry) return;
+    const current = activeEntry.membership.currentStamps;
+
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      prevStamps.current = current;
+      return;
+    }
+
+    if (prevStamps.current !== null && current > prevStamps.current) {
+      const newDotIndex = current - 1;
+      setStampAnim(newDotIndex);
+      setShowStampToast(true);
+      setView("dashboard");
+      setTimeout(() => setStampAnim(null), 1500);
+      setTimeout(() => setShowStampToast(false), 2500);
+    }
+    prevStamps.current = current;
+  }, [activeEntry?.membership.currentStamps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!mounted) return null;
 
@@ -97,13 +195,8 @@ export default function MePage() {
   if (data === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <motion.div
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          className="text-zinc-500 text-sm"
-        >
-          Laden...
-        </motion.div>
+        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
+          className="text-zinc-500 text-sm">Laden...</motion.div>
       </div>
     );
   }
@@ -114,46 +207,127 @@ export default function MePage() {
   return (
     <div className="min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto flex flex-col">
 
+      {/* Install hint */}
       <AnimatePresence>
         {showInstallHint && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="mb-6 bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 flex items-start gap-3"
-          >
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            className="mb-5 bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 flex items-start gap-3">
             <Smartphone size={18} className="text-amber-400 mt-0.5 shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-medium text-zinc-200">Zum Homescreen hinzufügen</p>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Tippe auf "Teilen" → "Zum Homescreen" – immer griffbereit.
-              </p>
+              <p className="text-xs text-zinc-500 mt-0.5">Tippe auf "Teilen" → "Zum Homescreen"</p>
             </div>
-            <button
-              onClick={() => { setShowInstallHint(false); localStorage.setItem("installHintSeen", "1"); }}
-              className="text-zinc-600 hover:text-zinc-400 text-lg leading-none"
-            >×</button>
+            <button onClick={() => { setShowInstallHint(false); localStorage.setItem("installHintSeen", "1"); }}
+              className="text-zinc-600 hover:text-zinc-400 text-lg leading-none">×</button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8 text-center">
+      {/* Stamp toast */}
+      <AnimatePresence>
+        {showStampToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-amber-400 text-zinc-900 font-bold px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-sm"
+          >
+            <Stamp size={16} /> Stempel erhalten!
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Greeting */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 text-center">
         <p className="text-zinc-500 text-sm">Hallo,</p>
         <h1 className="text-2xl font-bold text-zinc-100 mt-0.5">{customer.name} 👋</h1>
       </motion.div>
 
-      <div className="flex-1 flex items-center justify-center">
-        <QRCard qrToken={qrToken} customerName={customer.name} />
-      </div>
+      {/* Views */}
+      <AnimatePresence mode="wait">
 
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="text-center text-xs text-zinc-600 mt-8"
-      >
-        QR-Code im Laden vorzeigen zum Stempel sammeln
-      </motion.p>
+        {/* ── QR View ── */}
+        {view === "qr" && (
+          <motion.div key="qr" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
+            className="flex-1 flex flex-col items-center justify-center gap-6">
+            <QRCard qrToken={qrToken} customerName={customer.name} />
+            {activeEntry && (
+              <button onClick={() => setView("dashboard")}
+                className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+                Zur Übersicht <ChevronRight size={15} />
+              </button>
+            )}
+          </motion.div>
+        )}
+
+        {/* ── Dashboard View ── */}
+        {view === "dashboard" && activeEntry && (
+          <motion.div key="dashboard" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
+            className="flex-1 flex flex-col gap-4">
+
+            {/* Shop + QR mini row */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-zinc-100 truncate">{activeEntry.shop?.name}</p>
+                <p className="text-xs text-zinc-500 mt-0.5 truncate">{activeEntry.shop?.rewardText}</p>
+                {activeEntry.membership.currentStamps >= (activeEntry.shop?.stampsRequired ?? 99) && (
+                  <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                    className="inline-flex items-center gap-1 mt-2 text-[11px] bg-amber-400 text-zinc-900 font-bold px-2.5 py-1 rounded-full">
+                    <Gift size={10} /> Belohnung bereit!
+                  </motion.span>
+                )}
+              </div>
+              <button onClick={() => setView("qr")} className="shrink-0 flex flex-col items-center gap-1 group">
+                <QRMini qrToken={qrToken} />
+                <span className="text-[10px] text-zinc-600 group-hover:text-zinc-400 transition-colors flex items-center gap-0.5">
+                  <QrCode size={10} /> Zeigen
+                </span>
+              </button>
+            </motion.div>
+
+            {/* Stamp card */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
+              <StampDots
+                current={activeEntry.membership.currentStamps}
+                total={activeEntry.shop?.stampsRequired ?? 8}
+                animateIndex={stampAnim}
+              />
+              <div>
+                <div className="flex justify-between text-xs text-zinc-500 mb-2">
+                  <span>{activeEntry.membership.currentStamps} / {activeEntry.shop?.stampsRequired} Stempel</span>
+                  {activeEntry.membership.rewardsRedeemed > 0 && (
+                    <span>{activeEntry.membership.rewardsRedeemed}× eingelöst</span>
+                  )}
+                </div>
+                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((activeEntry.membership.currentStamps / (activeEntry.shop?.stampsRequired ?? 8)) * 100, 100)}%` }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="h-full bg-amber-400 rounded-full"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* ── No membership yet ── */}
+        {view === "dashboard" && !activeEntry && (
+          <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="flex-1 flex flex-col items-center justify-center gap-6">
+            <QRCard qrToken={qrToken} customerName={customer.name} />
+            <p className="text-zinc-600 text-sm text-center">
+              Noch keine Stempel. Scanne den QR-Code im Laden!
+            </p>
+          </motion.div>
+        )}
+
+      </AnimatePresence>
     </div>
   );
 }
