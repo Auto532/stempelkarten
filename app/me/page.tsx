@@ -171,7 +171,7 @@ function LoyaltyCard({
       className="card-3d rounded-3xl overflow-hidden"
       style={{
         background: "linear-gradient(150deg, #141109 0%, #0c0a07 60%, #111009 100%)",
-        border: "1px solid rgba(160,130,55,0.13)",
+        border: "1.5px solid rgba(251,146,60,0.55)",
         boxShadow: "0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(200,160,60,0.04)",
       }}
     >
@@ -258,7 +258,7 @@ function LoyaltyCard({
           className="rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-500"
           style={{
             background: isComplete ? "rgba(140,110,35,0.09)" : "rgba(0,0,0,0.15)",
-            border: isComplete ? "1px solid rgba(160,125,45,0.22)" : "1px solid rgba(60,50,30,0.28)",
+            border: isComplete ? "1.5px solid rgba(251,146,60,0.55)" : "1px solid rgba(251,146,60,0.18)",
           }}
         >
           <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
