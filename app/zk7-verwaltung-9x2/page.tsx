@@ -66,7 +66,7 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08 }}
-      className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
+      className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
     >
       {/* Header */}
       <div className="px-5 py-4 flex items-center gap-3">
@@ -199,7 +199,7 @@ function CreateShopForm({ onDone }: { onDone: () => void }) {
 
   return (
     <motion.form onSubmit={handleCreate} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4 mb-4">
+      className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4 mb-4">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-zinc-100">Neuer Shop</h2>
         <button type="button" onClick={onDone} className="text-zinc-500 hover:text-zinc-300"><X size={18} /></button>
@@ -254,7 +254,7 @@ function OverviewTab() {
       <div className="grid grid-cols-2 gap-3">
         {statCards.map(({ icon: Icon, label, value, color }, i) => (
           <motion.div key={label} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.07 }}
-            className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+            className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
             <Icon size={20} className={`${color} mb-3`} />
             <p className="text-3xl font-bold text-zinc-100">{value}</p>
             <p className="text-xs text-zinc-500 mt-1">{label}</p>
@@ -264,7 +264,7 @@ function OverviewTab() {
 
       {/* Shop activity list */}
       {globalStats.shops.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <div className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800">
             <TrendingUp size={15} className="text-zinc-400" />
             <span className="text-sm font-medium text-zinc-200">Shops nach Kunden</span>
@@ -371,7 +371,7 @@ function SettingsTab({ adminPin }: { adminPin: string }) {
     <motion.div key="settings" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
 
       {/* Admin URL */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800">
           <Shield size={15} className="text-zinc-400" />
           <span className="text-sm font-medium text-zinc-200">Admin-Zugang</span>
@@ -395,7 +395,7 @@ function SettingsTab({ adminPin }: { adminPin: string }) {
       </div>
 
       {/* App Info */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800">
           <BarChart2 size={15} className="text-zinc-400" />
           <span className="text-sm font-medium text-zinc-200">App-Info</span>

@@ -116,7 +116,7 @@ export default function BetriebDashboard() {
           { label: "Stempel", value: totalStamps, icon: Stamp },
           { label: "Belohnungen", value: totalRewards, icon: Award },
         ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center">
+          <div key={label} className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center">
             <Icon size={18} className="text-amber-400 mx-auto mb-2" />
             <p className="text-xl font-bold text-zinc-100">{value}</p>
             <p className="text-[11px] text-zinc-500 mt-0.5">{label}</p>
@@ -129,7 +129,7 @@ export default function BetriebDashboard() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4"
+        className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4"
       >
         <div className="flex items-center gap-2">
           <QrCode size={16} className="text-zinc-400" />
@@ -155,7 +155,7 @@ export default function BetriebDashboard() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
+        className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export default function BetriebDashboard() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
+        className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
       >
         <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800">
           <Users size={16} className="text-zinc-400" />

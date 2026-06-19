@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "./providers";
+import { StarField } from "./components/StarField";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -34,8 +36,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
-      <body className={`${geistSans.variable} antialiased bg-zinc-950 text-zinc-100 min-h-screen`}>
+      <body className={`${jakarta.variable} antialiased bg-zinc-950 text-zinc-100 min-h-screen`}>
         <ConvexClientProvider>
+          <StarField />
           <div className="max-w-sm mx-auto min-h-screen relative">
             {children}
           </div>

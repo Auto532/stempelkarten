@@ -346,7 +346,7 @@ export default function MePage() {
 
             {/* Shop + QR mini row */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
+              className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-zinc-100 truncate">{activeEntry.shop?.name}</p>
                 <p className="text-xs text-zinc-500 mt-0.5 truncate">{activeEntry.shop?.rewardText}</p>
@@ -367,7 +367,7 @@ export default function MePage() {
 
             {/* Stamp card */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
+              className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
               <StampDots
                 current={activeEntry.membership.currentStamps}
                 total={activeEntry.shop?.stampsRequired ?? 8}
