@@ -5,18 +5,17 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import QRCode from "qrcode";
 import { motion, AnimatePresence } from "framer-motion";
-import { Smartphone, LayoutGrid, ChevronRight, Stamp, Gift, QrCode } from "lucide-react";
+import { Smartphone, LayoutGrid, Stamp, Gift, ChevronRight } from "lucide-react";
 
 const AWAY_THRESHOLD_MS = 4 * 60 * 60 * 1000;
 
-// Predetermined particle positions (no Math.random — deterministic)
 const PARTICLES = Array.from({ length: 12 }, (_, i) => {
   const angle = (i / 12) * Math.PI * 2;
   const dist = 90 + (i % 4) * 18;
   return { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist };
 });
 
-// ─── Full-Screen Stamp Animation ─────────────────────────────────────────────
+// ─── Stamp Overlay (amber circle stamp from center) ───────────────────────────
 
 function StampOverlay({ onDone }: { onDone: () => void }) {
   useEffect(() => {
@@ -30,52 +29,41 @@ function StampOverlay({ onDone }: { onDone: () => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.4 } }}
       onClick={onDone}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/88 backdrop-blur-sm cursor-pointer"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/90 backdrop-blur-sm cursor-pointer"
     >
-      {/* Ink ripple rings */}
       {[0, 1, 2, 3].map(i => (
         <motion.div key={i}
-          initial={{ scale: 0.3, opacity: 0.8 }}
-          animate={{ scale: 5, opacity: 0 }}
-          transition={{ delay: 0.18 + i * 0.1, duration: 1, ease: "easeOut" }}
-          className="absolute w-24 h-24 rounded-full border-2 border-amber-400/50"
+          initial={{ scale: 0.2, opacity: 0.85 }}
+          animate={{ scale: 5.5, opacity: 0 }}
+          transition={{ delay: 0.1 + i * 0.11, duration: 1.0, ease: "easeOut" }}
+          className="absolute w-28 h-28 rounded-full border-2 border-amber-400/55"
         />
       ))}
 
-      {/* Particles */}
       {PARTICLES.map((p, i) => (
         <motion.div key={i}
           initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
           animate={{ x: p.x, y: p.y, opacity: 0, scale: 0 }}
-          transition={{ delay: 0.22, duration: 0.65, ease: "easeOut" }}
+          transition={{ delay: 0.08, duration: 0.7, ease: "easeOut" }}
           className="absolute w-2.5 h-2.5 rounded-full"
           style={{ backgroundColor: i % 3 === 0 ? "#fbbf24" : i % 3 === 1 ? "#f59e0b" : "#fde68a" }}
         />
       ))}
 
-      {/* Stamp icon */}
       <div className="relative flex flex-col items-center select-none">
         <motion.div
-          initial={{ y: -320, rotate: -12, scale: 1.1 }}
-          animate={{ y: 0, rotate: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 380, damping: 22 }}
+          initial={{ scale: 0.1, opacity: 0 }}
+          animate={{ scale: [0.1, 1.2, 0.88, 1.08, 1], opacity: [0, 1, 1, 1, 1] }}
+          transition={{ duration: 0.42, ease: "easeOut" }}
+          className="w-36 h-36 bg-amber-400 rounded-full flex items-center justify-center shadow-2xl shadow-amber-400/50"
         >
-          {/* Impact squish */}
-          <motion.div
-            animate={{ scaleY: [1, 0.78, 1.1, 1], scaleX: [1, 1.12, 0.95, 1] }}
-            transition={{ delay: 0.17, duration: 0.28, ease: "easeOut" }}
-            className="w-36 h-36 bg-amber-400 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-amber-400/40"
-            style={{ transformOrigin: "bottom center" }}
-          >
-            <Stamp size={72} className="text-zinc-900" strokeWidth={1.5} />
-          </motion.div>
+          <Stamp size={68} className="text-zinc-900" strokeWidth={1.5} />
         </motion.div>
 
-        {/* "Stempel!" text */}
         <motion.p
           initial={{ opacity: 0, scale: 0.4, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ delay: 0.32, type: "spring", stiffness: 280 }}
+          transition={{ delay: 0.3, type: "spring", stiffness: 280 }}
           className="text-4xl font-black text-amber-400 mt-6 tracking-tight"
         >
           Stempel!
@@ -84,7 +72,7 @@ function StampOverlay({ onDone }: { onDone: () => void }) {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
+          transition={{ delay: 0.75 }}
           className="text-zinc-500 text-sm mt-2"
         >
           Tippe um fortzufahren
@@ -94,7 +82,7 @@ function StampOverlay({ onDone }: { onDone: () => void }) {
   );
 }
 
-// ─── QR Card (groß) ───────────────────────────────────────────────────────────
+// ─── QR Card (big, QR-Ansicht) ────────────────────────────────────────────────
 
 function QRCard({ qrToken, customerName }: { qrToken: string; customerName: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -132,67 +120,189 @@ function QRCard({ qrToken, customerName }: { qrToken: string; customerName: stri
         <p className="text-center text-[11px] text-zinc-400 mt-4 font-medium">
           Im Laden vorzeigen zum Stempel sammeln
         </p>
-        <div className="absolute top-4 right-4 w-16 h-16 opacity-5">
-          <div className="grid grid-cols-4 gap-1">
-            {Array.from({ length: 16 }).map((_, i) => (
-              <div key={i} className="w-1.5 h-1.5 rounded-full bg-zinc-900" />
-            ))}
-          </div>
-        </div>
       </div>
     </motion.div>
   );
 }
 
-// ─── QR Mini (klein, für Dashboard) ─────────────────────────────────────────
+// ─── QR Mini (eingebettet in LoyaltyCard) ────────────────────────────────────
 
 function QRMini({ qrToken }: { qrToken: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
-        width: 80, margin: 1,
+        width: 72, margin: 1,
         color: { dark: "#09090b", light: "#fafafa" },
       });
     }
   }, [qrToken]);
   return (
-    <div className="bg-zinc-50 rounded-xl p-1.5 inline-block shadow">
-      <canvas ref={canvasRef} className="rounded-lg" />
+    <div className="bg-zinc-50 rounded-xl p-1.5 inline-block shadow-md">
+      <canvas ref={canvasRef} className="rounded-lg block" />
     </div>
   );
 }
 
-// ─── Stamp Dots ──────────────────────────────────────────────────────────────
+// ─── Physical Loyalty Card ────────────────────────────────────────────────────
 
-function StampDots({ current, total, animateIndex }: { current: number; total: number; animateIndex: number | null }) {
+function LoyaltyCard({
+  shopName, rewardText, stampsRequired, currentStamps, rewardsRedeemed,
+  animateIndex, onShowQR, qrToken,
+}: {
+  shopName: string;
+  rewardText: string;
+  stampsRequired: number;
+  currentStamps: number;
+  rewardsRedeemed: number;
+  animateIndex: number | null;
+  onShowQR: () => void;
+  qrToken: string;
+}) {
+  const cols = stampsRequired <= 6 ? 3 : stampsRequired <= 8 ? 4 : stampsRequired <= 10 ? 5 : 4;
+  const starSize = cols <= 4 ? 15 : 12;
+  const isComplete = currentStamps >= stampsRequired;
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {Array.from({ length: total }).map((_, i) => {
-        const filled = i < current;
-        const isNew = animateIndex !== null && i === animateIndex;
-        return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 }}
+      className="card-3d rounded-3xl overflow-hidden"
+      style={{
+        background: "linear-gradient(145deg, #1c1409 0%, #0e0b06 55%, #131108 100%)",
+        border: "1px solid rgba(251,191,36,0.18)",
+        boxShadow: "0 6px 40px rgba(0,0,0,0.65), inset 0 1px 0 rgba(251,191,36,0.07)",
+      }}
+    >
+      {/* ── Karten-Kopf ── */}
+      <div className="px-5 pt-5 pb-3 flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-[8px] font-bold uppercase tracking-[0.25em] text-amber-400/45 mb-0.5">
+            Digitale Stempelkarte
+          </p>
+          <p className="text-white font-bold text-[22px] leading-tight truncate">{shopName}</p>
+          <p className="text-[11px] text-amber-400/40 mt-0.5">
+            {currentStamps} von {stampsRequired} Stempel
+          </p>
+        </div>
+        <button onClick={onShowQR} className="shrink-0 flex flex-col items-center gap-1 group mt-0.5">
+          <QRMini qrToken={qrToken} />
+          <span className="text-[9px] text-zinc-600 group-hover:text-amber-400/60 transition-colors">
+            QR zeigen
+          </span>
+        </button>
+      </div>
+
+      {/* Trennlinie */}
+      <div className="mx-5 border-t border-amber-400/10 mb-4" />
+
+      {/* ── Stempel-Raster ── */}
+      <div className="px-5 pb-4">
+        <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+          {Array.from({ length: stampsRequired }).map((_, i) => {
+            const filled = i < currentStamps;
+            const isNew = animateIndex === i;
+            return (
+              <motion.div
+                key={i}
+                className="aspect-square rounded-full flex items-center justify-center"
+                style={{
+                  background: filled
+                    ? "radial-gradient(circle at 36% 30%, #fcd34d, #d97706)"
+                    : "rgba(28, 22, 8, 0.7)",
+                  border: filled
+                    ? "1.5px solid rgba(253,211,77,0.45)"
+                    : "1.5px dashed rgba(120,90,30,0.35)",
+                  boxShadow: filled
+                    ? "0 2px 10px rgba(217,119,6,0.4), inset 0 1px 0 rgba(253,230,138,0.35)"
+                    : "inset 0 1px 3px rgba(0,0,0,0.4)",
+                }}
+                animate={isNew ? { scale: [1, 1.4, 0.92, 1.08, 1] } : {}}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              >
+                {filled ? (
+                  <motion.span
+                    initial={isNew ? { scale: 0, rotate: -45 } : { scale: 1 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 300, delay: isNew ? 0.06 : 0 }}
+                    className="text-zinc-900 font-black select-none leading-none"
+                    style={{ fontSize: `${starSize}px` }}
+                  >
+                    ✦
+                  </motion.span>
+                ) : (
+                  <span
+                    className="select-none leading-none text-amber-900/30 font-medium"
+                    style={{ fontSize: "9px" }}
+                  >
+                    {i + 1}
+                  </span>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Perforierte Trennlinie (Coupon-Style) ── */}
+      <div className="relative mx-4 mb-3">
+        <div className="border-t-2 border-dashed border-amber-400/12" />
+        <div className="absolute -left-5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full"
+          style={{ background: "rgb(9,9,11)" }} />
+        <div className="absolute -right-5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full"
+          style={{ background: "rgb(9,9,11)" }} />
+      </div>
+
+      {/* ── Belohnungs-Abschnitt ── */}
+      <div className="px-4 pb-5">
+        <motion.div
+          animate={isComplete ? { borderColor: "rgba(251,191,36,0.3)" } : {}}
+          className={`rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-500 ${
+            isComplete
+              ? "border border-amber-400/25"
+              : "border border-zinc-800/50"
+          }`}
+          style={{
+            background: isComplete
+              ? "rgba(251,191,36,0.07)"
+              : "rgba(0,0,0,0.2)",
+          }}
+        >
           <motion.div
-            key={i}
-            animate={isNew ? { scale: [1, 1.4, 1], backgroundColor: ["#fbbf24", "#fbbf24", "#fbbf24"] } : {}}
-            transition={isNew ? { duration: 0.5, ease: "easeOut" } : {}}
-            className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-colors duration-300 ${
-              filled ? "bg-amber-400 border-amber-400 text-zinc-900" : "border-zinc-700 bg-zinc-800/50"
+            animate={isComplete ? { scale: [1, 1.1, 1] } : {}}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
+              isComplete
+                ? "bg-amber-400 shadow-lg shadow-amber-400/35"
+                : "bg-zinc-800 border border-zinc-700"
             }`}
           >
-            {filled && (
-              <motion.span
-                initial={isNew ? { scale: 0 } : { scale: 1 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 300, delay: 0.1 }}
-              >
-                ✓
-              </motion.span>
-            )}
+            <Gift size={19} className={isComplete ? "text-zinc-900" : "text-amber-400/35"} />
           </motion.div>
-        );
-      })}
-    </div>
+
+          <div className="flex-1 min-w-0">
+            <p className={`text-[9px] font-bold uppercase tracking-widest mb-1 transition-colors ${
+              isComplete ? "text-amber-400" : "text-zinc-600"
+            }`}>
+              {isComplete ? "🎁 Bereit zum Einlösen!" : "Deine Belohnung"}
+            </p>
+            <p className={`text-sm font-semibold leading-snug transition-colors ${
+              isComplete ? "text-amber-100" : "text-zinc-400"
+            }`}>
+              {rewardText}
+            </p>
+          </div>
+
+          {rewardsRedeemed > 0 && (
+            <div className="shrink-0 border border-amber-400/20 rounded-xl px-2.5 py-1.5 text-center">
+              <p className="text-xs text-amber-400 font-bold">{rewardsRedeemed}×</p>
+              <p className="text-[8px] text-zinc-600 mt-0.5">genutzt</p>
+            </div>
+          )}
+        </motion.div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -232,12 +342,10 @@ export default function MePage() {
     qrToken ? { qrToken } : "skip"
   );
 
-  // Pick most recently stamped shop
   const activeEntry = data?.memberships
     ?.slice()
     .sort((a, b) => (b.membership.lastStampAt ?? 0) - (a.membership.lastStampAt ?? 0))[0];
 
-  // Detect new stamp in real-time
   useEffect(() => {
     if (!activeEntry) return;
     const current = activeEntry.membership.currentStamps;
@@ -249,8 +357,7 @@ export default function MePage() {
     }
 
     if (prevStamps.current !== null && current > prevStamps.current) {
-      const newDotIndex = current - 1;
-      setStampAnim(newDotIndex);
+      setStampAnim(current - 1);
       setShowStampOverlay(true);
       setView("dashboard");
       setTimeout(() => setStampAnim(null), 1200);
@@ -291,7 +398,6 @@ export default function MePage() {
   return (
     <div className="min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto flex flex-col">
 
-      {/* Install hint */}
       <AnimatePresence>
         {showInstallHint && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
@@ -307,23 +413,18 @@ export default function MePage() {
         )}
       </AnimatePresence>
 
-      {/* Stamp overlay animation */}
       <AnimatePresence>
-        {showStampOverlay && (
-          <StampOverlay onDone={() => setShowStampOverlay(false)} />
-        )}
+        {showStampOverlay && <StampOverlay onDone={() => setShowStampOverlay(false)} />}
       </AnimatePresence>
 
-      {/* Greeting */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 text-center">
         <p className="text-zinc-500 text-sm">Hallo,</p>
         <h1 className="text-2xl font-bold text-zinc-100 mt-0.5">{customer.name} 👋</h1>
       </motion.div>
 
-      {/* Views */}
       <AnimatePresence mode="wait">
 
-        {/* ── QR View ── */}
+        {/* QR-Ansicht */}
         {view === "qr" && (
           <motion.div key="qr" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
@@ -338,62 +439,25 @@ export default function MePage() {
           </motion.div>
         )}
 
-        {/* ── Dashboard View ── */}
+        {/* Dashboard: Stempelkarte */}
         {view === "dashboard" && activeEntry && (
           <motion.div key="dashboard" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
-            className="flex-1 flex flex-col gap-4">
-
-            {/* Shop + QR mini row */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-zinc-100 truncate">{activeEntry.shop?.name}</p>
-                <p className="text-xs text-zinc-500 mt-0.5 truncate">{activeEntry.shop?.rewardText}</p>
-                {activeEntry.membership.currentStamps >= (activeEntry.shop?.stampsRequired ?? 99) && (
-                  <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
-                    className="inline-flex items-center gap-1 mt-2 text-[11px] bg-amber-400 text-zinc-900 font-bold px-2.5 py-1 rounded-full">
-                    <Gift size={10} /> Belohnung bereit!
-                  </motion.span>
-                )}
-              </div>
-              <button onClick={() => setView("qr")} className="shrink-0 flex flex-col items-center gap-1 group">
-                <QRMini qrToken={qrToken} />
-                <span className="text-[10px] text-zinc-600 group-hover:text-zinc-400 transition-colors flex items-center gap-0.5">
-                  <QrCode size={10} /> Zeigen
-                </span>
-              </button>
-            </motion.div>
-
-            {/* Stamp card */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-              className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
-              <StampDots
-                current={activeEntry.membership.currentStamps}
-                total={activeEntry.shop?.stampsRequired ?? 8}
-                animateIndex={stampAnim}
-              />
-              <div>
-                <div className="flex justify-between text-xs text-zinc-500 mb-2">
-                  <span>{activeEntry.membership.currentStamps} / {activeEntry.shop?.stampsRequired} Stempel</span>
-                  {activeEntry.membership.rewardsRedeemed > 0 && (
-                    <span>{activeEntry.membership.rewardsRedeemed}× eingelöst</span>
-                  )}
-                </div>
-                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min((activeEntry.membership.currentStamps / (activeEntry.shop?.stampsRequired ?? 8)) * 100, 100)}%` }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
-                    className="h-full bg-amber-400 rounded-full"
-                  />
-                </div>
-              </div>
-            </motion.div>
+            className="flex-1 flex flex-col">
+            <LoyaltyCard
+              shopName={activeEntry.shop?.name ?? ""}
+              rewardText={activeEntry.shop?.rewardText ?? ""}
+              stampsRequired={activeEntry.shop?.stampsRequired ?? 8}
+              currentStamps={activeEntry.membership.currentStamps}
+              rewardsRedeemed={activeEntry.membership.rewardsRedeemed}
+              animateIndex={stampAnim}
+              onShowQR={() => setView("qr")}
+              qrToken={qrToken}
+            />
           </motion.div>
         )}
 
-        {/* ── No membership yet ── */}
+        {/* Noch keine Mitgliedschaft */}
         {view === "dashboard" && !activeEntry && (
           <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="flex-1 flex flex-col items-center justify-center gap-6">

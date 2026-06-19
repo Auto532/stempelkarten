@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScanLine, Users, Settings, ChevronRight, Award, Stamp, X, Check, QrCode, Phone, Eye, Printer } from "lucide-react";
+import { ScanLine, Users, Settings, ChevronRight, Award, Stamp, X, Check, QrCode, Phone, Eye, Printer, Search, Gift } from "lucide-react";
 import { QRImage } from "@/app/components/QRImage";
 import QRCode from "qrcode";
 
@@ -38,6 +38,7 @@ export default function BetriebDashboard() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
@@ -75,6 +76,19 @@ export default function BetriebDashboard() {
 
   const totalStamps = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
   const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
+
+  const filteredCustomers = customers?.filter(({ customer }) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      customer?.name.toLowerCase().includes(q) ||
+      (shop.showLeads && customer?.phone.includes(q))
+    );
+  }) ?? [];
+
+  const readyCount = customers?.filter(
+    ({ membership }) => membership.currentStamps >= shop.stampsRequired
+  ).length ?? 0;
 
   return (
     <div className="min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto space-y-6">
@@ -226,62 +240,114 @@ export default function BetriebDashboard() {
         transition={{ delay: 0.4 }}
         className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
       >
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800">
-          <Users size={16} className="text-zinc-400" />
-          <span className="font-medium text-zinc-200 text-sm">Kunden</span>
-          {shop.showLeads && (
-            <span className="flex items-center gap-1 text-[10px] text-amber-400 ml-1">
-              <Eye size={10} /> Leads aktiv
-            </span>
-          )}
-          <span className="text-xs text-zinc-600 ml-auto">{customers?.length ?? "–"}</span>
+        {/* Header */}
+        <div className="px-5 pt-4 pb-3 border-b border-zinc-800 space-y-3">
+          <div className="flex items-center gap-2">
+            <Users size={15} className="text-zinc-400" />
+            <span className="font-medium text-zinc-200 text-sm">Kunden</span>
+            {shop.showLeads && (
+              <span className="flex items-center gap-1 text-[10px] text-amber-400">
+                <Eye size={10} /> Leads
+              </span>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              {readyCount > 0 && (
+                <span className="flex items-center gap-1 text-[10px] bg-amber-400/10 border border-amber-400/20 text-amber-400 px-2 py-0.5 rounded-full">
+                  <Gift size={9} /> {readyCount} bereit
+                </span>
+              )}
+              <span className="text-xs text-zinc-600">{customers?.length ?? "–"}</span>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Suchen…"
+              className="w-full pl-8 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40"
+            />
+            {search && (
+              <button onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400">
+                <X size={13} />
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="divide-y divide-zinc-800/50">
+        <div className="divide-y divide-zinc-800/40 max-h-[420px] overflow-y-auto">
           {customers === undefined && (
             <div className="px-5 py-6 text-center text-zinc-600 text-sm">Laden...</div>
           )}
           {customers?.length === 0 && (
             <div className="px-5 py-6 text-center text-zinc-600 text-sm">Noch keine Kunden</div>
           )}
-          {customers?.map(({ customer, membership }, i) => {
+          {customers !== undefined && filteredCustomers.length === 0 && search && (
+            <div className="px-5 py-6 text-center text-zinc-600 text-sm">Keine Treffer für „{search}"</div>
+          )}
+
+          {filteredCustomers.map(({ customer, membership }, i) => {
             if (!customer) return null;
             const pct = Math.min((membership.currentStamps / shop.stampsRequired) * 100, 100);
             const isSelected = selectedCustomerId === customer._id;
+            const isReady = membership.currentStamps >= shop.stampsRequired;
+
             return (
               <motion.div
                 key={membership._id}
-                initial={{ opacity: 0, x: -10 }}
+                initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 + i * 0.05 }}
+                transition={{ delay: Math.min(i * 0.04, 0.3) }}
               >
                 <button
                   onClick={() => shop.showLeads ? setSelectedCustomerId(isSelected ? null : customer._id) : undefined}
-                  className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${shop.showLeads ? "hover:bg-zinc-800/50 cursor-pointer" : "cursor-default"}`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${shop.showLeads ? "hover:bg-zinc-800/50 cursor-pointer" : "cursor-default"}`}
                 >
-                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold text-amber-400 shrink-0">
+                  {/* Avatar */}
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                    isReady ? "bg-amber-400 text-zinc-900" : "bg-zinc-800 text-amber-400 border border-zinc-700"
+                  }`}>
                     {customer.name.charAt(0).toUpperCase()}
                   </div>
+
+                  {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-medium text-zinc-200 truncate">{customer.name}</span>
-                      <span className="text-xs text-zinc-500 ml-2 shrink-0">{membership.currentStamps}/{shop.stampsRequired}</span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-zinc-200 truncate">{customer.name}</span>
+                      {isReady && (
+                        <span className="shrink-0 text-[9px] bg-amber-400/15 text-amber-400 border border-amber-400/20 px-1.5 py-0.5 rounded-full font-bold">
+                          BEREIT
+                        </span>
+                      )}
                     </div>
-                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ delay: 0.5 + i * 0.05, duration: 0.6 }}
-                        className="h-full bg-amber-400/70 rounded-full"
-                      />
+                    {/* Mini stamp dots */}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: shop.stampsRequired }).map((_, di) => (
+                        <div
+                          key={di}
+                          className={`rounded-full transition-colors ${
+                            di < membership.currentStamps
+                              ? "bg-amber-400"
+                              : "bg-zinc-700"
+                          }`}
+                          style={{ width: `${Math.min(10, Math.floor(220 / shop.stampsRequired))}px`, height: "6px" }}
+                        />
+                      ))}
+                      <span className="text-[10px] text-zinc-600 ml-1 shrink-0">
+                        {membership.currentStamps}/{shop.stampsRequired}
+                      </span>
                     </div>
                   </div>
+
                   {shop.showLeads && (
-                    <ChevronRight size={14} className={`text-zinc-600 shrink-0 transition-transform ${isSelected ? "rotate-90" : ""}`} />
+                    <ChevronRight size={14} className={`text-zinc-700 shrink-0 transition-transform ${isSelected ? "rotate-90" : ""}`} />
                   )}
                 </button>
 
-                {/* Lead detail panel */}
+                {/* Lead detail */}
                 <AnimatePresence>
                   {shop.showLeads && isSelected && (
                     <motion.div
@@ -291,7 +357,7 @@ export default function BetriebDashboard() {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      <div className="mx-5 mb-3 bg-zinc-800 rounded-xl p-4 space-y-3">
+                      <div className="mx-4 mb-3 bg-zinc-800/70 rounded-xl p-4 space-y-3">
                         <div className="flex items-center gap-2">
                           <Phone size={13} className="text-amber-400" />
                           <a href={`tel:${customer.phone}`} className="text-sm text-zinc-200 hover:text-amber-400 transition-colors">
@@ -300,18 +366,18 @@ export default function BetriebDashboard() {
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-center">
                           {[
-                            { label: "Aktuelle Stempel", value: membership.currentStamps },
-                            { label: "Stempel gesamt", value: membership.totalStampsEver },
-                            { label: "Belohnungen", value: membership.rewardsRedeemed },
+                            { label: "Aktuell", value: membership.currentStamps },
+                            { label: "Gesamt", value: membership.totalStampsEver },
+                            { label: "Belohnt", value: membership.rewardsRedeemed },
                           ].map(({ label, value }) => (
-                            <div key={label} className="bg-zinc-700/50 rounded-lg py-2">
-                              <p className="text-sm font-bold text-zinc-100">{value}</p>
-                              <p className="text-[10px] text-zinc-500 mt-0.5">{label}</p>
+                            <div key={label} className="bg-zinc-700/50 rounded-xl py-2.5">
+                              <p className="text-base font-bold text-zinc-100">{value}</p>
+                              <p className="text-[9px] text-zinc-500 mt-0.5 uppercase tracking-wide">{label}</p>
                             </div>
                           ))}
                         </div>
                         {membership.lastStampAt && (
-                          <p className="text-[11px] text-zinc-500">
+                          <p className="text-[11px] text-zinc-600">
                             Letzter Stempel: {new Date(membership.lastStampAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
                           </p>
                         )}
