@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import QRCode from "qrcode";
 import { motion, AnimatePresence } from "framer-motion";
-import { Smartphone, LayoutGrid, Stamp, Gift, ChevronRight } from "lucide-react";
+import { Smartphone, LayoutGrid, Stamp, Gift, ChevronRight, Scissors } from "lucide-react";
 
 const AWAY_THRESHOLD_MS = 4 * 60 * 60 * 1000;
 
@@ -160,7 +160,7 @@ function LoyaltyCard({
   qrToken: string;
 }) {
   const cols = stampsRequired <= 6 ? 3 : stampsRequired <= 8 ? 4 : stampsRequired <= 10 ? 5 : 4;
-  const starSize = cols <= 4 ? 15 : 12;
+  const iconSize = cols <= 3 ? 20 : cols <= 4 ? 17 : 13;
   const isComplete = currentStamps >= stampsRequired;
 
   return (
@@ -170,32 +170,32 @@ function LoyaltyCard({
       transition={{ delay: 0.05 }}
       className="card-3d rounded-3xl overflow-hidden"
       style={{
-        background: "linear-gradient(145deg, #1c1409 0%, #0e0b06 55%, #131108 100%)",
-        border: "1px solid rgba(251,191,36,0.18)",
-        boxShadow: "0 6px 40px rgba(0,0,0,0.65), inset 0 1px 0 rgba(251,191,36,0.07)",
+        background: "linear-gradient(150deg, #141109 0%, #0c0a07 60%, #111009 100%)",
+        border: "1px solid rgba(160,130,55,0.13)",
+        boxShadow: "0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(200,160,60,0.04)",
       }}
     >
       {/* ── Karten-Kopf ── */}
       <div className="px-5 pt-5 pb-3 flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-[8px] font-bold uppercase tracking-[0.25em] text-amber-400/45 mb-0.5">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.28em] text-zinc-600 mb-1">
             Digitale Stempelkarte
           </p>
-          <p className="text-white font-bold text-[22px] leading-tight truncate">{shopName}</p>
-          <p className="text-[11px] text-amber-400/40 mt-0.5">
+          <p className="text-zinc-100 font-bold text-xl leading-tight truncate">{shopName}</p>
+          <p className="text-[11px] text-zinc-600 mt-1">
             {currentStamps} von {stampsRequired} Stempel
           </p>
         </div>
         <button onClick={onShowQR} className="shrink-0 flex flex-col items-center gap-1 group mt-0.5">
           <QRMini qrToken={qrToken} />
-          <span className="text-[9px] text-zinc-600 group-hover:text-amber-400/60 transition-colors">
+          <span className="text-[9px] text-zinc-700 group-hover:text-zinc-500 transition-colors">
             QR zeigen
           </span>
         </button>
       </div>
 
       {/* Trennlinie */}
-      <div className="mx-5 border-t border-amber-400/10 mb-4" />
+      <div className="mx-5 border-t border-zinc-800/70 mb-4" />
 
       {/* ── Stempel-Raster ── */}
       <div className="px-5 pb-4">
@@ -209,31 +209,29 @@ function LoyaltyCard({
                 className="aspect-square rounded-full flex items-center justify-center"
                 style={{
                   background: filled
-                    ? "radial-gradient(circle at 36% 30%, #fcd34d, #d97706)"
-                    : "rgba(28, 22, 8, 0.7)",
+                    ? "linear-gradient(135deg, #8a6820 0%, #4e3610 100%)"
+                    : "rgba(30,24,12,0.5)",
                   border: filled
-                    ? "1.5px solid rgba(253,211,77,0.45)"
-                    : "1.5px dashed rgba(120,90,30,0.35)",
+                    ? "1px solid rgba(170,130,50,0.3)"
+                    : "1px solid rgba(100,80,30,0.18)",
                   boxShadow: filled
-                    ? "0 2px 10px rgba(217,119,6,0.4), inset 0 1px 0 rgba(253,230,138,0.35)"
-                    : "inset 0 1px 3px rgba(0,0,0,0.4)",
+                    ? "0 2px 8px rgba(70,50,10,0.45), inset 0 1px 0 rgba(220,175,70,0.18)"
+                    : "none",
                 }}
-                animate={isNew ? { scale: [1, 1.4, 0.92, 1.08, 1] } : {}}
-                transition={{ duration: 0.5, ease: "easeOut" }}
+                animate={isNew ? { scale: [1, 1.35, 0.94, 1.06, 1] } : {}}
+                transition={{ duration: 0.45, ease: "easeOut" }}
               >
                 {filled ? (
-                  <motion.span
-                    initial={isNew ? { scale: 0, rotate: -45 } : { scale: 1 }}
+                  <motion.div
+                    initial={isNew ? { scale: 0, rotate: -20 } : { scale: 1 }}
                     animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: "spring", stiffness: 300, delay: isNew ? 0.06 : 0 }}
-                    className="text-zinc-900 font-black select-none leading-none"
-                    style={{ fontSize: `${starSize}px` }}
+                    transition={{ type: "spring", stiffness: 320, delay: isNew ? 0.06 : 0 }}
                   >
-                    ✦
-                  </motion.span>
+                    <Scissors size={iconSize} className="text-amber-100/80" strokeWidth={1.6} />
+                  </motion.div>
                 ) : (
                   <span
-                    className="select-none leading-none text-amber-900/30 font-medium"
+                    className="select-none leading-none text-zinc-700/50 font-medium"
                     style={{ fontSize: "9px" }}
                   >
                     {i + 1}
@@ -245,9 +243,9 @@ function LoyaltyCard({
         </div>
       </div>
 
-      {/* ── Perforierte Trennlinie (Coupon-Style) ── */}
+      {/* ── Coupon-Trennlinie ── */}
       <div className="relative mx-4 mb-3">
-        <div className="border-t-2 border-dashed border-amber-400/12" />
+        <div className="border-t border-dashed border-zinc-700/40" />
         <div className="absolute -left-5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full"
           style={{ background: "rgb(9,9,11)" }} />
         <div className="absolute -right-5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full"
@@ -256,51 +254,39 @@ function LoyaltyCard({
 
       {/* ── Belohnungs-Abschnitt ── */}
       <div className="px-4 pb-5">
-        <motion.div
-          animate={isComplete ? { borderColor: "rgba(251,191,36,0.3)" } : {}}
-          className={`rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-500 ${
-            isComplete
-              ? "border border-amber-400/25"
-              : "border border-zinc-800/50"
-          }`}
+        <div
+          className="rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-500"
           style={{
-            background: isComplete
-              ? "rgba(251,191,36,0.07)"
-              : "rgba(0,0,0,0.2)",
+            background: isComplete ? "rgba(140,110,35,0.09)" : "rgba(0,0,0,0.15)",
+            border: isComplete ? "1px solid rgba(160,125,45,0.22)" : "1px solid rgba(60,50,30,0.28)",
           }}
         >
-          <motion.div
-            animate={isComplete ? { scale: [1, 1.1, 1] } : {}}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
-              isComplete
-                ? "bg-amber-400 shadow-lg shadow-amber-400/35"
-                : "bg-zinc-800 border border-zinc-700"
-            }`}
-          >
-            <Gift size={19} className={isComplete ? "text-zinc-900" : "text-amber-400/35"} />
-          </motion.div>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
+            isComplete ? "bg-amber-500/90" : "bg-zinc-800/80 border border-zinc-700/50"
+          }`}>
+            <Gift size={17} className={isComplete ? "text-zinc-900" : "text-zinc-600"} />
+          </div>
 
           <div className="flex-1 min-w-0">
-            <p className={`text-[9px] font-bold uppercase tracking-widest mb-1 transition-colors ${
-              isComplete ? "text-amber-400" : "text-zinc-600"
+            <p className={`text-[9px] font-semibold uppercase tracking-widest mb-0.5 transition-colors ${
+              isComplete ? "text-amber-400/90" : "text-zinc-600"
             }`}>
-              {isComplete ? "🎁 Bereit zum Einlösen!" : "Deine Belohnung"}
+              {isComplete ? "Bereit zum Einlösen" : "Deine Belohnung"}
             </p>
             <p className={`text-sm font-semibold leading-snug transition-colors ${
-              isComplete ? "text-amber-100" : "text-zinc-400"
+              isComplete ? "text-zinc-100" : "text-zinc-500"
             }`}>
               {rewardText}
             </p>
           </div>
 
           {rewardsRedeemed > 0 && (
-            <div className="shrink-0 border border-amber-400/20 rounded-xl px-2.5 py-1.5 text-center">
-              <p className="text-xs text-amber-400 font-bold">{rewardsRedeemed}×</p>
+            <div className="shrink-0 border border-zinc-700/50 rounded-xl px-2.5 py-1.5 text-center">
+              <p className="text-xs text-zinc-400 font-bold">{rewardsRedeemed}×</p>
               <p className="text-[8px] text-zinc-600 mt-0.5">genutzt</p>
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
     </motion.div>
   );
