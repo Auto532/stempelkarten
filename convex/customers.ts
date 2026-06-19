@@ -65,13 +65,23 @@ export const registerCustomer = mutation({
     }
 
     if (!customerId) {
-      qrToken = crypto.randomUUID();
-      customerId = await ctx.db.insert("customers", {
-        name,
-        phone,
-        qrToken: qrToken!,
-        createdAt: Date.now(),
-      });
+      // Deduplicate by phone: returning customer gets their old card back
+      const byPhone = await ctx.db
+        .query("customers")
+        .withIndex("by_phone", (q) => q.eq("phone", phone))
+        .first();
+      if (byPhone) {
+        customerId = byPhone._id;
+        qrToken = byPhone.qrToken;
+      } else {
+        qrToken = crypto.randomUUID();
+        customerId = await ctx.db.insert("customers", {
+          name,
+          phone,
+          qrToken: qrToken!,
+          createdAt: Date.now(),
+        });
+      }
     }
 
     const existingMembership = await ctx.db

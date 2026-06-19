@@ -339,7 +339,7 @@ function ShopsTab() {
 
 // ─── Tab: Einstellungen ───────────────────────────────────────────────────────
 
-function SettingsTab() {
+function SettingsTab({ adminPin }: { adminPin: string }) {
   const clearAllData = useMutation(api.admin.clearAllData);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteText, setDeleteText] = useState("");
@@ -359,7 +359,7 @@ function SettingsTab() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await clearAllData();
+      await clearAllData({ adminSecret: adminPin });
       setDeleted(true);
       setConfirmDelete(false);
     } finally {
@@ -538,7 +538,7 @@ export default function SuperAdminPage() {
         <AnimatePresence mode="wait">
           {activeTab === "overview" && <OverviewTab key="overview" />}
           {activeTab === "shops" && <ShopsTab key="shops" />}
-          {activeTab === "settings" && <SettingsTab key="settings" />}
+          {activeTab === "settings" && <SettingsTab key="settings" adminPin={pin} />}
         </AnimatePresence>
       </div>
 
