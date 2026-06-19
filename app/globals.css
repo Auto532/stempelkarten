@@ -2,26 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: rgb(9 9 11);
+  color: rgb(244 244 245);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .stamp-dot {
+    @apply w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300;
+  }
+  .stamp-dot-filled {
+    @apply bg-amber-400 border-amber-400 text-zinc-900;
+  }
+  .stamp-dot-empty {
+    @apply bg-transparent border-zinc-600;
   }
 }
