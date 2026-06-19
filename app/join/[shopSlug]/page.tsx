@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Phone, Gift, Stamp, ArrowRight, CheckCircle } from "lucide-react";
 
@@ -18,8 +18,19 @@ export default function JoinPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [autoJoining, setAutoJoining] = useState(false);
 
   const registerCustomer = useMutation(api.customers.registerCustomer);
+  const joinShop = useMutation(api.memberships.createMembershipForExistingCustomer);
+
+  // Bereits registrierte Nutzer: direkt zur Stempelkarte weiterleiten
+  useEffect(() => {
+    if (shop === undefined || shop === null) return;
+    const qrToken = localStorage.getItem("qrToken");
+    if (!qrToken) return;
+    setAutoJoining(true);
+    joinShop({ qrToken, shopId: shop._id }).finally(() => router.replace("/me"));
+  }, [shop]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,16 +55,21 @@ export default function JoinPage() {
     }
   };
 
-  if (shop === undefined) {
+  if (shop === undefined || autoJoining) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6">
         <motion.div
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          className="text-zinc-500 text-sm"
+          animate={{ scale: [1, 1.12, 1], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 1.2, repeat: Infinity }}
         >
-          Laden...
+          <Stamp size={48} className="text-amber-400" />
         </motion.div>
+        {autoJoining && shop && (
+          <>
+            <p className="text-zinc-200 font-semibold">{shop.name}</p>
+            <p className="text-zinc-500 text-sm">Stempelkarte öffnen...</p>
+          </>
+        )}
       </div>
     );
   }

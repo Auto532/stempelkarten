@@ -7,19 +7,37 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
-  Shield, TrendingUp, type LucideIcon,
+  Shield, TrendingUp, ArrowLeft, Printer, type LucideIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
 
 const SUPERADMIN_PIN = "1337";
 
 // ─── ShopCard ────────────────────────────────────────────────────────────────
 
+async function printQR(shopName: string, url: string) {
+  const dataUrl = await QRCode.toDataURL(url, { width: 400, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
+  const w = window.open("", "_blank", "width=520,height=640");
+  if (!w) return;
+  w.document.write(`<!DOCTYPE html><html><head><title>${shopName} – QR Code</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#fff;font-family:-apple-system,sans-serif;gap:20px;padding:40px;text-align:center}img{width:300px;height:300px}h2{font-size:24px;font-weight:700;color:#111}p{font-size:14px;color:#555}.url{font-size:11px;color:#aaa;font-family:monospace;margin-top:4px;word-break:break-all}</style>
+  </head><body>
+  <h2>${shopName}</h2>
+  <img src="${dataUrl}" alt="QR Code" />
+  <div><p>Digitale Stempelkarte</p><p class="url">${url}</p></div>
+  <script>setTimeout(()=>window.print(),400)</script>
+  </body></html>`);
+  w.document.close();
+}
+
 function ShopCard({ slug, index }: { slug: string; index: number }) {
   const shop = useQuery(api.shops.getBySlug, { slug });
   const customers = useQuery(api.shops.listCustomersForShop, shop ? { shopId: shop._id } : "skip");
   const toggleShowLeads = useMutation(api.shops.toggleShowLeads);
-  const [showLinks, setShowLinks] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [togglingLeads, setTogglingLeads] = useState(false);
 
@@ -28,6 +46,8 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
   const totalStamps = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
   const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
   const base = typeof window !== "undefined" ? window.location.origin : "";
+  const joinUrl = `${base}/join/${shop.slug}`;
+  const loginUrl = `${base}/betrieb/login/${shop.adminLoginToken}`;
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -48,7 +68,8 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
       transition={{ delay: index * 0.08 }}
       className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
     >
-      <button onClick={() => setShowLinks(!showLinks)} className="w-full px-5 py-4 flex items-center gap-3 text-left">
+      {/* Header */}
+      <div className="px-5 py-4 flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
           <Store size={18} className="text-amber-400" />
         </div>
@@ -56,9 +77,9 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
           <p className="font-semibold text-zinc-100">{shop.name}</p>
           <p className="text-xs text-zinc-500">{shop.slug} · {shop.stampsRequired} Stempel</p>
         </div>
-        <ChevronRight size={16} className={`text-zinc-600 transition-transform ${showLinks ? "rotate-90" : ""}`} />
-      </button>
+      </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-3 border-t border-zinc-800/50">
         {[
           { icon: Users, value: customers?.length ?? "–", label: "Kunden" },
@@ -73,6 +94,7 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
         ))}
       </div>
 
+      {/* Leads toggle */}
       <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-800/50">
         <div className="flex items-center gap-2">
           {shop.showLeads ? <Eye size={14} className="text-amber-400" /> : <EyeOff size={14} className="text-zinc-600" />}
@@ -92,43 +114,64 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
         </button>
       </div>
 
-      <AnimatePresence>
-        {showLinks && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-zinc-800"
-          >
-            <div className="p-4 space-y-4">
-              <div className="bg-zinc-800 rounded-xl p-4 text-center space-y-3">
-                <div className="flex items-center gap-2 justify-center">
-                  <QrCode size={14} className="text-amber-400" />
-                  <p className="text-xs text-zinc-300 font-medium">Kunden-QR-Code</p>
-                </div>
+      {/* QR Code accordion */}
+      <div className="border-t border-zinc-800/50">
+        <button onClick={() => setShowQR(!showQR)}
+          className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+          <QrCode size={14} className="text-amber-400 shrink-0" />
+          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Kunden-QR-Code</span>
+          <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showQR ? "rotate-90" : ""}`} />
+        </button>
+        <AnimatePresence>
+          {showQR && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="px-4 pb-4 space-y-3">
                 <div className="flex justify-center">
-                  <QRImage value={`${base}/join/${shop.slug}`} size={160} />
+                  <QRImage value={joinUrl} size={160} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <code className="text-[11px] text-amber-300 flex-1 truncate">{`${base}/join/${shop.slug}`}</code>
-                  <button onClick={() => copy(`${base}/join/${shop.slug}`, "join")} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
-                    {copied === "join" ? <Check size={14} className="text-green-400" /> : <Link size={14} />}
+                <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2">
+                  <code className="text-[11px] text-amber-300 flex-1 truncate">{joinUrl}</code>
+                  <button onClick={() => copy(joinUrl, "join")} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
+                    {copied === "join" ? <Check size={13} className="text-green-400" /> : <Link size={13} />}
                   </button>
                 </div>
+                <button
+                  onClick={() => printQR(shop.name, joinUrl)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-300 text-sm transition-colors"
+                >
+                  <Printer size={15} className="text-amber-400" />
+                  Drucken / Druckvorschau
+                </button>
               </div>
-              <div className="bg-zinc-800 rounded-xl p-3">
-                <p className="text-[11px] text-zinc-500 mb-1.5">Admin-Login (Betrieb)</p>
-                <div className="flex items-center gap-2">
-                  <code className="text-[11px] text-amber-300 flex-1 truncate">{`${base}/betrieb/login/${shop.adminLoginToken}`}</code>
-                  <button onClick={() => copy(`${base}/betrieb/login/${shop.adminLoginToken}`, "admin")} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
-                    {copied === "admin" ? <Check size={14} className="text-green-400" /> : <Link size={14} />}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Betrieb-Login accordion */}
+      <div className="border-t border-zinc-800/50">
+        <button onClick={() => setShowLogin(!showLogin)}
+          className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+          <Link size={14} className="text-zinc-500 shrink-0" />
+          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Betrieb-Login-Link</span>
+          <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showLogin ? "rotate-90" : ""}`} />
+        </button>
+        <AnimatePresence>
+          {showLogin && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="px-4 pb-4">
+                <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2.5">
+                  <code className="text-[11px] text-amber-300 flex-1 truncate">{loginUrl}</code>
+                  <button onClick={() => copy(loginUrl, "login")} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
+                    {copied === "login" ? <Check size={13} className="text-green-400" /> : <Link size={13} />}
                   </button>
                 </div>
+                <p className="text-[11px] text-zinc-600 mt-2">Nur einmalig an den Betrieb senden — Link loggt automatisch ein.</p>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.div>
   );
 }
@@ -299,6 +342,7 @@ function ShopsTab() {
 function SettingsTab() {
   const clearAllData = useMutation(api.admin.clearAllData);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -383,23 +427,29 @@ function SettingsTab() {
               <p className="text-sm text-green-400">Alle Daten gelöscht.</p>
             </motion.div>
           ) : !confirmDelete ? (
-            <div className="space-y-2">
-              <p className="text-xs text-zinc-500 mb-3">Löscht alle Shops, Kunden, Stempel und Ereignisse unwiderruflich.</p>
+            <div className="space-y-3">
+              <p className="text-xs text-zinc-500">Löscht alle Shops, Kunden, Stempel und Ereignisse — inkl. aller Nutzerdaten. Unwiderruflich.</p>
               <button onClick={() => setConfirmDelete(true)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-red-900/30 hover:bg-red-900/50 border border-red-900/50 text-red-400 rounded-xl text-sm transition-colors">
-                <Trash2 size={15} /> Alle Daten löschen
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-red-900/30 border border-zinc-700 hover:border-red-900/50 text-zinc-500 hover:text-red-400 rounded-xl text-sm transition-colors">
+                <Trash2 size={14} /> Alle Daten löschen
               </button>
             </div>
           ) : (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-              <p className="text-sm text-red-300 font-medium text-center">Wirklich alles löschen?</p>
-              <p className="text-xs text-zinc-500 text-center">Das kann nicht rückgängig gemacht werden.</p>
+              <p className="text-sm text-red-300 font-medium">Wirklich alles löschen?</p>
+              <p className="text-xs text-zinc-500">Alle Shops, Kunden und Stempel werden permanent gelöscht. Tippe zur Bestätigung:</p>
+              <input
+                value={deleteText}
+                onChange={(e) => setDeleteText(e.target.value)}
+                placeholder='LÖSCHEN'
+                className="w-full px-4 py-2.5 bg-zinc-800 border border-red-900/50 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-500/50 text-sm font-mono tracking-wider"
+              />
               <div className="flex gap-2">
-                <button onClick={handleDelete} disabled={deleting}
-                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-colors">
-                  {deleting ? "Löscht..." : "Ja, löschen"}
+                <button onClick={handleDelete} disabled={deleting || deleteText !== "LÖSCHEN"}
+                  className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-xl text-sm transition-colors">
+                  {deleting ? "Löscht..." : "Endgültig löschen"}
                 </button>
-                <button onClick={() => setConfirmDelete(false)}
+                <button onClick={() => { setConfirmDelete(false); setDeleteText(""); }}
                   className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-colors">
                   Abbrechen
                 </button>
@@ -423,6 +473,7 @@ const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
 ];
 
 export default function SuperAdminPage() {
+  const router = useRouter();
   const [pin, setPin] = useState("");
   const [authed, setAuthed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -457,20 +508,33 @@ export default function SuperAdminPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
-      {/* Header */}
-      <div className="px-5 pt-12 pb-5">
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Admin</p>
-          <h1 className="text-2xl font-bold text-zinc-100 mt-0.5">
+      {/* Top nav bar */}
+      <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur border-b border-zinc-800/60 px-4 py-3 flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={activeTab}
+            initial={{ opacity: 0, x: 6 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -6 }}
+            transition={{ duration: 0.15 }}
+            className="font-semibold text-zinc-100 text-base"
+          >
             {activeTab === "overview" && "Übersicht"}
             {activeTab === "shops" && "Shops"}
             {activeTab === "settings" && "Einstellungen"}
-          </h1>
-        </motion.div>
+          </motion.span>
+        </AnimatePresence>
+        <span className="ml-auto text-[10px] text-zinc-600 uppercase tracking-widest font-medium">Admin</span>
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-5 pb-28 overflow-y-auto">
+      <div className="flex-1 px-5 pt-5 pb-28 overflow-y-auto">
         <AnimatePresence mode="wait">
           {activeTab === "overview" && <OverviewTab key="overview" />}
           {activeTab === "shops" && <ShopsTab key="shops" />}
