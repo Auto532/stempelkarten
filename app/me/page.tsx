@@ -7,7 +7,92 @@ import QRCode from "qrcode";
 import { motion, AnimatePresence } from "framer-motion";
 import { Smartphone, LayoutGrid, ChevronRight, Stamp, Gift, QrCode } from "lucide-react";
 
-const AWAY_THRESHOLD_MS = 4 * 60 * 60 * 1000; // 4 Stunden
+const AWAY_THRESHOLD_MS = 4 * 60 * 60 * 1000;
+
+// Predetermined particle positions (no Math.random — deterministic)
+const PARTICLES = Array.from({ length: 12 }, (_, i) => {
+  const angle = (i / 12) * Math.PI * 2;
+  const dist = 90 + (i % 4) * 18;
+  return { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist };
+});
+
+// ─── Full-Screen Stamp Animation ─────────────────────────────────────────────
+
+function StampOverlay({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2400);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.4 } }}
+      onClick={onDone}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/88 backdrop-blur-sm cursor-pointer"
+    >
+      {/* Ink ripple rings */}
+      {[0, 1, 2, 3].map(i => (
+        <motion.div key={i}
+          initial={{ scale: 0.3, opacity: 0.8 }}
+          animate={{ scale: 5, opacity: 0 }}
+          transition={{ delay: 0.18 + i * 0.1, duration: 1, ease: "easeOut" }}
+          className="absolute w-24 h-24 rounded-full border-2 border-amber-400/50"
+        />
+      ))}
+
+      {/* Particles */}
+      {PARTICLES.map((p, i) => (
+        <motion.div key={i}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+          animate={{ x: p.x, y: p.y, opacity: 0, scale: 0 }}
+          transition={{ delay: 0.22, duration: 0.65, ease: "easeOut" }}
+          className="absolute w-2.5 h-2.5 rounded-full"
+          style={{ backgroundColor: i % 3 === 0 ? "#fbbf24" : i % 3 === 1 ? "#f59e0b" : "#fde68a" }}
+        />
+      ))}
+
+      {/* Stamp icon */}
+      <div className="relative flex flex-col items-center select-none">
+        <motion.div
+          initial={{ y: -320, rotate: -12, scale: 1.1 }}
+          animate={{ y: 0, rotate: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 380, damping: 22 }}
+        >
+          {/* Impact squish */}
+          <motion.div
+            animate={{ scaleY: [1, 0.78, 1.1, 1], scaleX: [1, 1.12, 0.95, 1] }}
+            transition={{ delay: 0.17, duration: 0.28, ease: "easeOut" }}
+            className="w-36 h-36 bg-amber-400 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-amber-400/40"
+            style={{ transformOrigin: "bottom center" }}
+          >
+            <Stamp size={72} className="text-zinc-900" strokeWidth={1.5} />
+          </motion.div>
+        </motion.div>
+
+        {/* "Stempel!" text */}
+        <motion.p
+          initial={{ opacity: 0, scale: 0.4, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ delay: 0.32, type: "spring", stiffness: 280 }}
+          className="text-4xl font-black text-amber-400 mt-6 tracking-tight"
+        >
+          Stempel!
+        </motion.p>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+          className="text-zinc-500 text-sm mt-2"
+        >
+          Tippe um fortzufahren
+        </motion.p>
+      </div>
+    </motion.div>
+  );
+}
 
 // ─── QR Card (groß) ───────────────────────────────────────────────────────────
 
@@ -118,8 +203,8 @@ export default function MePage() {
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<"qr" | "dashboard">("qr");
   const [showInstallHint, setShowInstallHint] = useState(false);
-  const [stampAnim, setStampAnim] = useState<number | null>(null); // index of new stamp dot
-  const [showStampToast, setShowStampToast] = useState(false);
+  const [stampAnim, setStampAnim] = useState<number | null>(null);
+  const [showStampOverlay, setShowStampOverlay] = useState(false);
   const prevStamps = useRef<number | null>(null);
   const isFirstLoad = useRef(true);
 
@@ -166,10 +251,9 @@ export default function MePage() {
     if (prevStamps.current !== null && current > prevStamps.current) {
       const newDotIndex = current - 1;
       setStampAnim(newDotIndex);
-      setShowStampToast(true);
+      setShowStampOverlay(true);
       setView("dashboard");
-      setTimeout(() => setStampAnim(null), 1500);
-      setTimeout(() => setShowStampToast(false), 2500);
+      setTimeout(() => setStampAnim(null), 2000);
     }
     prevStamps.current = current;
   }, [activeEntry?.membership.currentStamps]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -223,17 +307,10 @@ export default function MePage() {
         )}
       </AnimatePresence>
 
-      {/* Stamp toast */}
+      {/* Stamp overlay animation */}
       <AnimatePresence>
-        {showStampToast && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-amber-400 text-zinc-900 font-bold px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-sm"
-          >
-            <Stamp size={16} /> Stempel erhalten!
-          </motion.div>
+        {showStampOverlay && (
+          <StampOverlay onDone={() => setShowStampOverlay(false)} />
         )}
       </AnimatePresence>
 
