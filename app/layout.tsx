@@ -15,6 +15,10 @@ export const metadata: Metadata = {
   title: "Stempelkarte",
   description: "Deine digitale Treuekarte",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/Icon.png",
+    apple: "/Icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
