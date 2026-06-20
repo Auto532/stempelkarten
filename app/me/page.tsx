@@ -151,11 +151,18 @@ function QRMini({ qrToken }: { qrToken: string }) {
 
 // ─── Physical Loyalty Card ────────────────────────────────────────────────────
 
+function hexToRgba(hex: string, alpha: number) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 type CardTier = { stamps: number; text: string; enabled: boolean };
 
 function LoyaltyCard({
   shopName, rewardText, stampsRequired, currentStamps, rewardsRedeemed,
-  animateIndex, onShowQR, qrToken, rewardTiers,
+  animateIndex, onShowQR, qrToken, rewardTiers, accentColor,
 }: {
   shopName: string;
   rewardText: string;
@@ -166,7 +173,9 @@ function LoyaltyCard({
   onShowQR: () => void;
   qrToken: string;
   rewardTiers?: CardTier[];
+  accentColor?: string;
 }) {
+  const accent = accentColor ?? "#fbbf24";
   const activeTiers: CardTier[] = rewardTiers && rewardTiers.some(t => t.enabled)
     ? rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps)
     : [{ stamps: stampsRequired, text: rewardText, enabled: true }];
@@ -184,8 +193,8 @@ function LoyaltyCard({
       className="card-3d rounded-3xl overflow-hidden"
       style={{
         background: "linear-gradient(150deg, #2e2010 0%, #211508 60%, #291c0d 100%)",
-        border: "1.5px solid rgba(251,146,60,0.55)",
-        boxShadow: "0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(200,160,60,0.08)",
+        border: `1.5px solid ${hexToRgba(accent, 0.55)}`,
+        boxShadow: `0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 ${hexToRgba(accent, 0.08)}`,
       }}
     >
       {/* ── Karten-Kopf ── */}
@@ -226,12 +235,12 @@ function LoyaltyCard({
                     ? "linear-gradient(135deg, #8a6820 0%, #4e3610 100%)"
                     : "rgba(62,46,20,0.75)",
                   border: filled
-                    ? isTierEnd ? "1.5px solid rgba(251,146,60,0.6)" : "1px solid rgba(170,130,50,0.3)"
-                    : isTierEnd ? "1.5px solid rgba(251,146,60,0.4)" : "1px solid rgba(150,112,45,0.38)",
+                    ? isTierEnd ? `1.5px solid ${hexToRgba(accent, 0.6)}` : `1px solid ${hexToRgba(accent, 0.3)}`
+                    : isTierEnd ? `1.5px solid ${hexToRgba(accent, 0.4)}` : `1px solid ${hexToRgba(accent, 0.38)}`,
                   boxShadow: filled
                     ? isTierEnd
-                      ? "0 2px 10px rgba(251,146,60,0.35), inset 0 1px 0 rgba(220,175,70,0.18)"
-                      : "0 2px 8px rgba(70,50,10,0.45), inset 0 1px 0 rgba(220,175,70,0.18)"
+                      ? `0 2px 10px ${hexToRgba(accent, 0.35)}, inset 0 1px 0 ${hexToRgba(accent, 0.18)}`
+                      : `0 2px 8px rgba(70,50,10,0.45), inset 0 1px 0 ${hexToRgba(accent, 0.18)}`
                     : "none",
                 }}
                 animate={isNew ? { scale: [1, 1.35, 0.94, 1.06, 1] } : {}}
@@ -248,7 +257,7 @@ function LoyaltyCard({
                 ) : (
                   <span
                     className="select-none leading-none font-medium"
-                    style={{ fontSize: "9px", color: isTierEnd ? "rgba(251,146,60,0.4)" : "rgba(161,161,170,0.35)" }}
+                    style={{ fontSize: "9px", color: isTierEnd ? hexToRgba(accent, 0.4) : "rgba(161,161,170,0.35)" }}
                   >
                     {i + 1}
                   </span>
@@ -277,20 +286,22 @@ function LoyaltyCard({
               key={i}
               className="rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-500"
               style={{
-                background: reached ? "rgba(140,110,35,0.09)" : "rgba(0,0,0,0.15)",
-                border: reached ? "1.5px solid rgba(251,146,60,0.55)" : "1px solid rgba(251,146,60,0.18)",
+                background: reached ? hexToRgba(accent, 0.08) : "rgba(0,0,0,0.15)",
+                border: reached ? `1.5px solid ${hexToRgba(accent, 0.55)}` : `1px solid ${hexToRgba(accent, 0.18)}`,
               }}
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
-                reached ? "bg-amber-500/90" : "bg-zinc-800/80 border border-zinc-700/50"
-              }`}>
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${!reached ? "bg-zinc-800/80 border border-zinc-700/50" : ""}`}
+                style={reached ? { backgroundColor: hexToRgba(accent, 0.9) } : {}}
+              >
                 <Gift size={17} className={reached ? "text-zinc-900" : "text-zinc-600"} />
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className={`text-[9px] font-semibold uppercase tracking-widest mb-0.5 transition-colors ${
-                  reached ? "text-amber-400/90" : "text-zinc-600"
-                }`}>
+                <p
+                  className={`text-[9px] font-semibold uppercase tracking-widest mb-0.5 transition-colors ${!reached ? "text-zinc-600" : ""}`}
+                  style={reached ? { color: hexToRgba(accent, 0.9) } : {}}
+                >
                   {reached ? "Bereit zum Einlösen" : `Ab ${tier.stamps} Stempeln`}
                 </p>
                 <p className={`text-sm font-semibold leading-snug transition-colors ${
@@ -497,6 +508,7 @@ export default function MePage() {
               onShowQR={() => setView("qr")}
               qrToken={qrToken}
               rewardTiers={activeEntry.shop?.rewardTiers}
+              accentColor={activeEntry.shop?.accentColor}
             />
           </motion.div>
         )}

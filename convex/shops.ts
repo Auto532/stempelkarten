@@ -58,6 +58,13 @@ export const toggleBonusProgram = mutation({
   },
 });
 
+export const setShopColor = mutation({
+  args: { shopId: v.id("shops"), accentColor: v.optional(v.string()) },
+  handler: async (ctx, { shopId, accentColor }) => {
+    await ctx.db.patch(shopId, { accentColor });
+  },
+});
+
 export const createShop = mutation({
   args: {
     name: v.string(),

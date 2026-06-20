@@ -7,13 +7,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
-  Shield, TrendingUp, ArrowLeft, Printer, type LucideIcon,
+  Shield, TrendingUp, ArrowLeft, Printer, Palette, type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
 
 const SUPERADMIN_PIN = "1337";
+
+const COLOR_PRESETS = [
+  { label: "Amber", value: "#fbbf24" },
+  { label: "Blau", value: "#60a5fa" },
+  { label: "Grün", value: "#4ade80" },
+  { label: "Lila", value: "#a78bfa" },
+  { label: "Rosa", value: "#fb7185" },
+  { label: "Orange", value: "#f97316" },
+];
 
 // ─── ShopCard ────────────────────────────────────────────────────────────────
 
@@ -37,8 +46,12 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
   const customers = useQuery(api.shops.listCustomersForShop, shop ? { shopId: shop._id } : "skip");
   const toggleShowLeads = useMutation(api.shops.toggleShowLeads);
   const toggleBonusProgram = useMutation(api.shops.toggleBonusProgram);
+  const setShopColor = useMutation(api.shops.setShopColor);
   const [showQR, setShowQR] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [showColor, setShowColor] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [savingColor, setSavingColor] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [togglingLeads, setTogglingLeads] = useState(false);
   const [togglingBonus, setTogglingBonus] = useState(false);
@@ -68,6 +81,19 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
     try { await toggleBonusProgram({ shopId: shop._id, enabled: !shop.bonusProgramEnabled }); }
     finally { setTogglingBonus(false); }
   };
+
+  const handleSetColor = async () => {
+    if (!selectedColor) return;
+    setSavingColor(true);
+    try {
+      await setShopColor({ shopId: shop._id, accentColor: selectedColor });
+      setSelectedColor(null);
+    } finally {
+      setSavingColor(false);
+    }
+  };
+
+  const displayedColor = selectedColor ?? shop.accentColor ?? "#fbbf24";
 
   return (
     <motion.div
@@ -195,6 +221,44 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
                   </button>
                 </div>
                 <p className="text-[11px] text-zinc-600 mt-2">Nur einmalig an den Betrieb senden — Link loggt automatisch ein.</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Kartenfarbe accordion */}
+      <div className="border-t border-zinc-800/50">
+        <button onClick={() => setShowColor(!showColor)}
+          className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+          <Palette size={14} className="text-amber-400 shrink-0" />
+          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Kartenfarbe</span>
+          <div className="w-3 h-3 rounded-full mr-2 shrink-0" style={{ backgroundColor: shop.accentColor ?? "#fbbf24" }} />
+          <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showColor ? "rotate-90" : ""}`} />
+        </button>
+        <AnimatePresence>
+          {showColor && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="px-4 pb-4 space-y-3">
+                <p className="text-[11px] text-zinc-500">Akzentfarbe der Kundenkarte</p>
+                <div className="flex gap-2.5 flex-wrap">
+                  {COLOR_PRESETS.map(({ label, value }) => (
+                    <button
+                      key={value}
+                      onClick={() => setSelectedColor(value)}
+                      title={label}
+                      className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${displayedColor === value ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-900" : ""}`}
+                      style={{ backgroundColor: value }}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={handleSetColor}
+                  disabled={savingColor || !selectedColor || selectedColor === shop.accentColor}
+                  className="w-full py-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-zinc-900 text-xs font-semibold rounded-xl transition-colors"
+                >
+                  {savingColor ? "Speichert..." : "Farbe speichern"}
+                </button>
               </div>
             </motion.div>
           )}

@@ -15,6 +15,7 @@ export default defineSchema({
       text: v.string(),
       enabled: v.boolean(),
     }))),
+    accentColor: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_slug", ["slug"]).index("by_adminLoginToken", ["adminLoginToken"]),
 
