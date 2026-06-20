@@ -49,6 +49,7 @@ export default function BetriebDashboard() {
   const [tiersInitialized, setTiersInitialized] = useState(false);
   const [tierSaving, setTierSaving] = useState(false);
   const [tierSaved, setTierSaved] = useState(false);
+  const [openRedemptionId, setOpenRedemptionId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
@@ -391,20 +392,55 @@ export default function BetriebDashboard() {
               {redemptions?.length === 0 && (
                 <div className="px-5 py-6 text-center text-zinc-600 text-sm">Noch keine Geschenke vergeben</div>
               )}
-              {redemptions?.map((r) => (
-                <div key={r._id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-8 h-8 rounded-full bg-amber-400/15 border border-amber-400/20 flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-amber-400">{r.customerName.charAt(0).toUpperCase()}</span>
+              {redemptions?.map((r) => {
+                const isOpen = openRedemptionId === r._id;
+                return (
+                  <div key={r._id}>
+                    <button
+                      onClick={() => setOpenRedemptionId(isOpen ? null : r._id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 transition-colors text-left"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-amber-400/15 border border-amber-400/20 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-amber-400">{r.customerName.charAt(0).toUpperCase()}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-zinc-200 truncate">{r.customerName}</p>
+                        <p className="text-xs text-amber-400/80 truncate">{r.rewardText ?? shop.rewardText}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <p className="text-[11px] text-zinc-600">
+                          {new Date(r.timestamp).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                        </p>
+                        <ChevronRight size={13} className={`text-zinc-700 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                      </div>
+                    </button>
+                    <AnimatePresence>
+                      {isOpen && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="mx-4 mb-3 bg-zinc-800/70 rounded-xl p-3 space-y-1.5">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-zinc-500">Belohnung</span>
+                              <span className="text-xs font-semibold text-amber-400">{r.rewardText ?? shop.rewardText}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-zinc-500">Datum</span>
+                              <span className="text-xs text-zinc-300">
+                                {new Date(r.timestamp).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-zinc-500">Uhrzeit</span>
+                              <span className="text-xs text-zinc-300">
+                                {new Date(r.timestamp).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-200 truncate">{r.customerName}</p>
-                    <p className="text-xs text-amber-400/80 truncate">{r.rewardText ?? shop.rewardText}</p>
-                  </div>
-                  <p className="text-[11px] text-zinc-600 shrink-0">
-                    {new Date(r.timestamp).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
         )}
