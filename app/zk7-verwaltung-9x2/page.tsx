@@ -150,7 +150,7 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
         <button onClick={() => setShowToggles(!showToggles)}
           className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
           <Settings size={14} className="text-zinc-500 shrink-0" />
-          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Einstellungen</span>
+          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Zusatzleistungen</span>
           <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showToggles ? "rotate-90" : ""}`} />
         </button>
         <AnimatePresence>
