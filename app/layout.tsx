@@ -16,7 +16,6 @@ export const metadata: Metadata = {
   description: "Deine digitale Treuekarte",
   manifest: "/manifest.json",
   icons: {
-    icon: "/Icon.png",
     apple: "/Icon.png",
   },
   appleWebApp: {
