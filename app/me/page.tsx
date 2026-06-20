@@ -508,7 +508,7 @@ export default function MePage() {
               onShowQR={() => setView("qr")}
               qrToken={qrToken}
               rewardTiers={activeEntry.shop?.rewardTiers}
-              accentColor={activeEntry.shop?.accentColor}
+              accentColor={activeEntry.shop?.customDesignEnabled ? activeEntry.shop?.accentColor : undefined}
             />
           </motion.div>
         )}

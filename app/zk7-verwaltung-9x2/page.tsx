@@ -46,15 +46,16 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
   const customers = useQuery(api.shops.listCustomersForShop, shop ? { shopId: shop._id } : "skip");
   const toggleShowLeads = useMutation(api.shops.toggleShowLeads);
   const toggleBonusProgram = useMutation(api.shops.toggleBonusProgram);
+  const toggleCustomDesign = useMutation(api.shops.toggleCustomDesign);
   const setShopColor = useMutation(api.shops.setShopColor);
   const [showQR, setShowQR] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [showColor, setShowColor] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [savingColor, setSavingColor] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [togglingLeads, setTogglingLeads] = useState(false);
   const [togglingBonus, setTogglingBonus] = useState(false);
+  const [togglingDesign, setTogglingDesign] = useState(false);
 
   if (!shop) return null;
 
@@ -80,6 +81,12 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
     setTogglingBonus(true);
     try { await toggleBonusProgram({ shopId: shop._id, enabled: !shop.bonusProgramEnabled }); }
     finally { setTogglingBonus(false); }
+  };
+
+  const handleToggleDesign = async () => {
+    setTogglingDesign(true);
+    try { await toggleCustomDesign({ shopId: shop._id, enabled: !shop.customDesignEnabled }); }
+    finally { setTogglingDesign(false); }
   };
 
   const handleSetColor = async () => {
@@ -166,7 +173,62 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
             />
           </button>
         </div>
+        <div className="flex items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-2">
+            <Palette size={14} className={shop.customDesignEnabled ? "text-amber-400" : "text-zinc-600"} />
+            <span className="text-xs text-zinc-400">Eigenes Design</span>
+            {shop.customDesignEnabled && shop.accentColor && (
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: shop.accentColor }} />
+            )}
+          </div>
+          <button
+            onClick={handleToggleDesign}
+            disabled={togglingDesign}
+            style={{ minWidth: "2.5rem", height: "1.375rem" }}
+            className={`relative rounded-full transition-colors duration-200 flex items-center px-0.5 ${shop.customDesignEnabled ? "bg-amber-400" : "bg-zinc-700"}`}
+          >
+            <motion.div
+              animate={{ x: shop.customDesignEnabled ? 18 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="w-4 h-4 rounded-full bg-white shadow-sm"
+            />
+          </button>
+        </div>
       </div>
+
+      {/* Eigenes Design – Farbauswahl */}
+      <AnimatePresence>
+        {shop.customDesignEnabled && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-zinc-800/50"
+          >
+            <div className="px-4 py-3 space-y-3">
+              <p className="text-[11px] text-zinc-500">Akzentfarbe der Kundenkarte</p>
+              <div className="flex gap-2.5 flex-wrap">
+                {COLOR_PRESETS.map(({ label, value }) => (
+                  <button
+                    key={value}
+                    onClick={() => setSelectedColor(value)}
+                    title={label}
+                    className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${displayedColor === value ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-900" : ""}`}
+                    style={{ backgroundColor: value }}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={handleSetColor}
+                disabled={savingColor || !selectedColor || selectedColor === shop.accentColor}
+                className="w-full py-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-zinc-900 text-xs font-semibold rounded-xl transition-colors"
+              >
+                {savingColor ? "Speichert..." : "Farbe speichern"}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* QR Code accordion */}
       <div className="border-t border-zinc-800/50">
@@ -227,43 +289,6 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
         </AnimatePresence>
       </div>
 
-      {/* Kartenfarbe accordion */}
-      <div className="border-t border-zinc-800/50">
-        <button onClick={() => setShowColor(!showColor)}
-          className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
-          <Palette size={14} className="text-amber-400 shrink-0" />
-          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Kartenfarbe</span>
-          <div className="w-3 h-3 rounded-full mr-2 shrink-0" style={{ backgroundColor: shop.accentColor ?? "#fbbf24" }} />
-          <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showColor ? "rotate-90" : ""}`} />
-        </button>
-        <AnimatePresence>
-          {showColor && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="px-4 pb-4 space-y-3">
-                <p className="text-[11px] text-zinc-500">Akzentfarbe der Kundenkarte</p>
-                <div className="flex gap-2.5 flex-wrap">
-                  {COLOR_PRESETS.map(({ label, value }) => (
-                    <button
-                      key={value}
-                      onClick={() => setSelectedColor(value)}
-                      title={label}
-                      className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${displayedColor === value ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-900" : ""}`}
-                      style={{ backgroundColor: value }}
-                    />
-                  ))}
-                </div>
-                <button
-                  onClick={handleSetColor}
-                  disabled={savingColor || !selectedColor || selectedColor === shop.accentColor}
-                  className="w-full py-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-zinc-900 text-xs font-semibold rounded-xl transition-colors"
-                >
-                  {savingColor ? "Speichert..." : "Farbe speichern"}
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
 
     </motion.div>
   );

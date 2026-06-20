@@ -65,6 +65,13 @@ export const setShopColor = mutation({
   },
 });
 
+export const toggleCustomDesign = mutation({
+  args: { shopId: v.id("shops"), enabled: v.boolean() },
+  handler: async (ctx, { shopId, enabled }) => {
+    await ctx.db.patch(shopId, { customDesignEnabled: enabled });
+  },
+});
+
 export const createShop = mutation({
   args: {
     name: v.string(),

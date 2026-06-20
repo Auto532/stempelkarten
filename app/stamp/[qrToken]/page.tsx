@@ -307,13 +307,13 @@ export default function StampPage() {
             <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center">
               <p className="text-amber-400 font-semibold">🎉 {topTier.text}</p>
             </div>
-            <button onClick={() => handleRedeem(topTier.text)} disabled={loading}
-              className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-base">
-              {loading ? <Spinner /> : <><Gift size={20} /> Belohnung einlösen</>}
-            </button>
             <button onClick={handleStamp} disabled={loading}
-              className="w-full py-2.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-              Stempel hinzufügen (ohne einlösen)
+              className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-base">
+              {loading ? <Spinner /> : <><Stamp size={20} /> Stempel geben</>}
+            </button>
+            <button onClick={() => handleRedeem(topTier.text)} disabled={loading}
+              className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 border border-zinc-700 text-zinc-400 font-medium rounded-2xl flex items-center justify-center gap-2 transition-colors text-sm">
+              {loading ? <Spinner /> : <><Gift size={15} /> Jetzt einlösen</>}
             </button>
           </motion.div>
 

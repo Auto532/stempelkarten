@@ -16,6 +16,7 @@ export default defineSchema({
       enabled: v.boolean(),
     }))),
     accentColor: v.optional(v.string()),
+    customDesignEnabled: v.optional(v.boolean()),
     createdAt: v.number(),
   }).index("by_slug", ["slug"]).index("by_adminLoginToken", ["adminLoginToken"]),
 
