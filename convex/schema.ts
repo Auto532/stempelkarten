@@ -17,6 +17,11 @@ export default defineSchema({
     }))),
     accentColor: v.optional(v.string()),
     customDesignEnabled: v.optional(v.boolean()),
+    milestones: v.optional(v.array(v.object({
+      stamps: v.number(),
+      text: v.string(),
+      enabled: v.boolean(),
+    }))),
     impressumText: v.optional(v.string()),
     agbText: v.optional(v.string()),
     createdAt: v.number(),

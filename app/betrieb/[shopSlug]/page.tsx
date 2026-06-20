@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScanLine, Users, Settings, ChevronRight, Award, Stamp, X, Check, QrCode, Phone, Eye, Printer, Search, Gift, Plus, TrendingUp } from "lucide-react";
+import { ScanLine, Users, Settings, ChevronRight, Award, Stamp, X, Check, QrCode, Phone, Eye, Printer, Search, Gift, Plus, TrendingUp, Trophy } from "lucide-react";
 import { QRImage } from "@/app/components/QRImage";
 import QRCode from "qrcode";
 
@@ -36,6 +36,7 @@ export default function BetriebDashboard() {
     shop?.bonusProgramEnabled && shop ? { shopId: shop._id } : "skip"
   );
   const updateSettings = useMutation(api.shops.updateSettings);
+  const updateMilestones = useMutation(api.shops.updateMilestones);
 
   const [authorized, setAuthorized] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -49,6 +50,10 @@ export default function BetriebDashboard() {
   const [tiersInitialized, setTiersInitialized] = useState(false);
   const [tierSaving, setTierSaving] = useState(false);
   const [tierSaved, setTierSaved] = useState(false);
+  const [milestones, setMilestones] = useState<Tier[]>([]);
+  const [milestonesInitialized, setMilestonesInitialized] = useState(false);
+  const [milestoneSaving, setMilestoneSaving] = useState(false);
+  const [milestoneSaved, setMilestoneSaved] = useState(false);
   const [openRedemptionId, setOpenRedemptionId] = useState<string | null>(null);
   const [showGifts, setShowGifts] = useState(false);
   const [showCustomers, setShowCustomers] = useState(true);
@@ -73,6 +78,25 @@ export default function BetriebDashboard() {
       );
     }
   }, [shop, tiersInitialized]);
+
+  useEffect(() => {
+    if (shop && !milestonesInitialized) {
+      setMilestonesInitialized(true);
+      setMilestones(shop.milestones ? [...shop.milestones] : []);
+    }
+  }, [shop, milestonesInitialized]);
+
+  const handleSaveMilestones = async () => {
+    if (!shop) return;
+    setMilestoneSaving(true);
+    try {
+      await updateMilestones({ shopId: shop._id, milestones: [...milestones].sort((a, b) => a.stamps - b.stamps) });
+      setMilestoneSaved(true);
+      setTimeout(() => setMilestoneSaved(false), 2500);
+    } finally {
+      setMilestoneSaving(false);
+    }
+  };
 
   const handleSaveTiers = async () => {
     if (!shop) return;
@@ -367,6 +391,77 @@ export default function BetriebDashboard() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Meilensteine */}
+        <div className="border-t border-zinc-800">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800/60">
+            <div className="flex items-center gap-2">
+              <Trophy size={14} className="text-amber-400" />
+              <span className="text-xs font-medium text-zinc-300">Treue-Meilensteine</span>
+            </div>
+            {milestoneSaved && (
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-green-400 flex items-center gap-1">
+                <Check size={12} /> Gespeichert
+              </motion.span>
+            )}
+          </div>
+          <div className="p-4 space-y-3">
+            <p className="text-[11px] text-zinc-500 leading-relaxed">
+              Belohnungen für Stammkunden — basieren auf Stempeln insgesamt (nie zurückgesetzt).
+            </p>
+            {milestones.map((m, i) => (
+              <div key={i} className="bg-zinc-800/60 rounded-xl p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-zinc-400">Meilenstein {i + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setMilestones(prev => prev.map((t, idx) => idx === i ? { ...t, enabled: !t.enabled } : t))}
+                      className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                        m.enabled ? "bg-amber-400/15 border-amber-400/30 text-amber-400" : "bg-zinc-700/50 border-zinc-600/50 text-zinc-500"
+                      }`}
+                    >
+                      {m.enabled ? "Aktiv" : "Inaktiv"}
+                    </button>
+                    <button onClick={() => setMilestones(prev => prev.filter((_, idx) => idx !== i))}
+                      className="text-zinc-600 hover:text-red-400 transition-colors">
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="number" min={1} value={m.stamps}
+                    onChange={(e) => setMilestones(prev => prev.map((t, idx) => idx === i ? { ...t, stamps: Number(e.target.value) } : t))}
+                    className="w-16 px-2 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-sm focus:outline-none focus:border-amber-400/40 text-center"
+                  />
+                  <input
+                    value={m.text}
+                    onChange={(e) => setMilestones(prev => prev.map((t, idx) => idx === i ? { ...t, text: e.target.value } : t))}
+                    placeholder="z.B. Bronze Stammkunde…"
+                    className="flex-1 px-3 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-sm placeholder-zinc-500 focus:outline-none focus:border-amber-400/40"
+                  />
+                </div>
+                <p className="text-[10px] text-zinc-600">Bei {m.stamps} Stempeln gesamt: {m.text || "…"}</p>
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                const last = milestones[milestones.length - 1];
+                setMilestones(prev => [...prev, { stamps: (last?.stamps ?? 50) * 2, text: "", enabled: true }]);
+              }}
+              className="w-full py-2 border border-dashed border-zinc-700 hover:border-amber-400/40 rounded-xl text-xs text-zinc-500 hover:text-amber-400/70 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Plus size={12} /> Meilenstein hinzufügen
+            </button>
+            <button
+              onClick={handleSaveMilestones}
+              disabled={milestoneSaving}
+              className="w-full py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-semibold rounded-xl text-sm transition-colors"
+            >
+              {milestoneSaving ? "Speichert…" : "Meilensteine speichern"}
+            </button>
+          </div>
+        </div>
       </motion.div>
 
       {/* Vergebene Geschenke (nur wenn Bonus aktiv) */}
