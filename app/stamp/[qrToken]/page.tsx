@@ -286,14 +286,18 @@ export default function StampPage() {
               </p>
               <p className="text-amber-400 font-semibold">{exactTier!.text}</p>
             </div>
-            <button onClick={() => handleRedeem(exactTier!.text)} disabled={loading}
-              className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-base">
-              {loading ? <Spinner /> : <><Gift size={20} /> Jetzt einlösen</>}
-            </button>
             <button onClick={handleStamp} disabled={loading}
-              className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 border border-zinc-700 text-zinc-200 font-semibold rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-colors text-sm">
-              <span>Weiter zu Stufe {activeTiers.indexOf(nextTierUp!) + 1}</span>
-              <span className="text-xs text-zinc-500 font-normal">{nextTierUp!.stamps} Stempel → {nextTierUp!.text}</span>
+              className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-colors">
+              {loading ? <Spinner /> : (
+                <>
+                  <span className="text-base">Weiter zu Stufe {activeTiers.indexOf(nextTierUp!) + 1}</span>
+                  <span className="text-xs text-zinc-900/60 font-normal">{nextTierUp!.stamps} Stempel → {nextTierUp!.text}</span>
+                </>
+              )}
+            </button>
+            <button onClick={() => handleRedeem(exactTier!.text)} disabled={loading}
+              className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 border border-zinc-700 text-zinc-500 font-medium rounded-2xl flex items-center justify-center gap-2 transition-colors text-sm">
+              {loading ? <Spinner /> : <><Gift size={15} /> Jetzt einlösen</>}
             </button>
           </motion.div>
 

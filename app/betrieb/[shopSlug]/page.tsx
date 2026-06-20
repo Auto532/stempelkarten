@@ -279,95 +279,94 @@ export default function BetriebDashboard() {
             </div>
           )}
         </div>
-      </motion.div>
 
-      {/* Bonus-Programme (nur wenn aktiviert) */}
-      <AnimatePresence>
-        {shop.bonusProgramEnabled && (
-          <motion.div
-            key="bonus"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ delay: 0.05 }}
-            className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
-          >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={16} className="text-amber-400" />
-                <span className="font-medium text-zinc-200 text-sm">Bonus-Programme</span>
-              </div>
-              {tierSaved && (
-                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-green-400 flex items-center gap-1">
-                  <Check size={12} /> Gespeichert
-                </motion.span>
-              )}
-            </div>
-            <div className="p-4 space-y-3">
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Mehrere Belohnungsstufen — je mehr Stempel, desto wertvoller die Belohnung.
-              </p>
-              {tiers.map((tier, i) => (
-                <div key={i} className="bg-zinc-800/60 rounded-xl p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-zinc-400">Stufe {i + 1}</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, enabled: !t.enabled } : t))}
-                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
-                          tier.enabled
-                            ? "bg-amber-400/15 border-amber-400/30 text-amber-400"
-                            : "bg-zinc-700/50 border-zinc-600/50 text-zinc-500"
-                        }`}
-                      >
-                        {tier.enabled ? "Aktiv" : "Inaktiv"}
-                      </button>
-                      {tiers.length > 1 && (
-                        <button
-                          onClick={() => setTiers(prev => prev.filter((_, idx) => idx !== i))}
-                          className="text-zinc-600 hover:text-red-400 transition-colors"
-                        >
-                          <X size={14} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="number" min={1} max={100} value={tier.stamps}
-                      onChange={(e) => setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, stamps: Number(e.target.value) } : t))}
-                      className="w-16 px-2 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-sm focus:outline-none focus:border-amber-400/40 text-center"
-                    />
-                    <input
-                      value={tier.text}
-                      onChange={(e) => setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, text: e.target.value } : t))}
-                      placeholder="Belohnung beschreiben…"
-                      className="flex-1 px-3 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-sm placeholder-zinc-500 focus:outline-none focus:border-amber-400/40"
-                    />
-                  </div>
-                  <p className="text-[10px] text-zinc-600">Bei {tier.stamps} Stempeln: {tier.text || "…"}</p>
+        {/* Bonus-Stufen (wenn aktiviert) */}
+        <AnimatePresence>
+          {shop.bonusProgramEnabled && (
+            <motion.div
+              key="bonus-stufen"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden border-t border-zinc-800"
+            >
+              <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800/60">
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={14} className="text-amber-400" />
+                  <span className="text-xs font-medium text-zinc-300">Bonus-Stufen</span>
                 </div>
-              ))}
-              <button
-                onClick={() => {
-                  const last = tiers[tiers.length - 1];
-                  setTiers(prev => [...prev, { stamps: (last?.stamps ?? 10) + 5, text: "", enabled: true }]);
-                }}
-                className="w-full py-2 border border-dashed border-zinc-700 hover:border-amber-400/40 rounded-xl text-xs text-zinc-500 hover:text-amber-400/70 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Plus size={12} /> Stufe hinzufügen
-              </button>
-              <button
-                onClick={handleSaveTiers}
-                disabled={tierSaving}
-                className="w-full py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
-              >
-                {tierSaving ? "Speichert…" : "Speichern"}
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                {tierSaved && (
+                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-green-400 flex items-center gap-1">
+                    <Check size={12} /> Gespeichert
+                  </motion.span>
+                )}
+              </div>
+              <div className="p-4 space-y-3">
+                <p className="text-[11px] text-zinc-500 leading-relaxed">
+                  Mehrere Belohnungsstufen — je mehr Stempel, desto wertvoller die Belohnung.
+                </p>
+                {tiers.map((tier, i) => (
+                  <div key={i} className="bg-zinc-800/60 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-zinc-400">Stufe {i + 1}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, enabled: !t.enabled } : t))}
+                          className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                            tier.enabled
+                              ? "bg-amber-400/15 border-amber-400/30 text-amber-400"
+                              : "bg-zinc-700/50 border-zinc-600/50 text-zinc-500"
+                          }`}
+                        >
+                          {tier.enabled ? "Aktiv" : "Inaktiv"}
+                        </button>
+                        {tiers.length > 1 && (
+                          <button
+                            onClick={() => setTiers(prev => prev.filter((_, idx) => idx !== i))}
+                            className="text-zinc-600 hover:text-red-400 transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="number" min={1} max={100} value={tier.stamps}
+                        onChange={(e) => setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, stamps: Number(e.target.value) } : t))}
+                        className="w-16 px-2 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-sm focus:outline-none focus:border-amber-400/40 text-center"
+                      />
+                      <input
+                        value={tier.text}
+                        onChange={(e) => setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, text: e.target.value } : t))}
+                        placeholder="Belohnung beschreiben…"
+                        className="flex-1 px-3 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-sm placeholder-zinc-500 focus:outline-none focus:border-amber-400/40"
+                      />
+                    </div>
+                    <p className="text-[10px] text-zinc-600">Bei {tier.stamps} Stempeln: {tier.text || "…"}</p>
+                  </div>
+                ))}
+                <button
+                  onClick={() => {
+                    const last = tiers[tiers.length - 1];
+                    setTiers(prev => [...prev, { stamps: (last?.stamps ?? 10) + 5, text: "", enabled: true }]);
+                  }}
+                  className="w-full py-2 border border-dashed border-zinc-700 hover:border-amber-400/40 rounded-xl text-xs text-zinc-500 hover:text-amber-400/70 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Plus size={12} /> Stufe hinzufügen
+                </button>
+                <button
+                  onClick={handleSaveTiers}
+                  disabled={tierSaving}
+                  className="w-full py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  {tierSaving ? "Speichert…" : "Stufen speichern"}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* Vergebene Geschenke (nur wenn Bonus aktiv) */}
       <AnimatePresence>

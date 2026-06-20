@@ -178,9 +178,9 @@ function LoyaltyCard({
       transition={{ delay: 0.05 }}
       className="card-3d rounded-3xl overflow-hidden"
       style={{
-        background: "linear-gradient(150deg, #141109 0%, #0c0a07 60%, #111009 100%)",
+        background: "linear-gradient(150deg, #2e2010 0%, #211508 60%, #291c0d 100%)",
         border: "1.5px solid rgba(251,146,60,0.55)",
-        boxShadow: "0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(200,160,60,0.04)",
+        boxShadow: "0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(200,160,60,0.08)",
       }}
     >
       {/* ── Karten-Kopf ── */}
@@ -219,10 +219,10 @@ function LoyaltyCard({
                 style={{
                   background: filled
                     ? "linear-gradient(135deg, #8a6820 0%, #4e3610 100%)"
-                    : "rgba(30,24,12,0.5)",
+                    : "rgba(62,46,20,0.75)",
                   border: filled
                     ? isTierEnd ? "1.5px solid rgba(251,146,60,0.6)" : "1px solid rgba(170,130,50,0.3)"
-                    : isTierEnd ? "1.5px solid rgba(251,146,60,0.22)" : "1px solid rgba(100,80,30,0.18)",
+                    : isTierEnd ? "1.5px solid rgba(251,146,60,0.4)" : "1px solid rgba(150,112,45,0.38)",
                   boxShadow: filled
                     ? isTierEnd
                       ? "0 2px 10px rgba(251,146,60,0.35), inset 0 1px 0 rgba(220,175,70,0.18)"
