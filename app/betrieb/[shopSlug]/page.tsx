@@ -383,7 +383,7 @@ export default function BetriebDashboard() {
               className="w-full flex items-center gap-2 px-5 py-4 hover:bg-zinc-800/30 transition-colors"
             >
               <Gift size={15} className="text-amber-400 shrink-0" />
-              <span className="font-medium text-zinc-200 text-sm flex-1 text-left">Vergebene Geschenke</span>
+              <span className="font-medium text-zinc-200 text-sm flex-1 text-left">Treue Bonus</span>
               {redemptions && redemptions.length > 0 && (
                 <span className="text-xs text-zinc-600 mr-1">{redemptions.length}</span>
               )}
@@ -506,7 +506,15 @@ export default function BetriebDashboard() {
           </div>
         </div>
 
-        <div className="divide-y divide-zinc-800/40 max-h-[420px] overflow-y-auto">
+        {/* Table header */}
+        <div className="flex items-center px-4 py-2 border-b border-zinc-800/60">
+          <div className="w-7 shrink-0 mr-3" />
+          <span className="flex-1 text-[10px] text-zinc-600 uppercase tracking-wider">Kunde</span>
+          <span className="text-[10px] text-zinc-600 uppercase tracking-wider w-10 text-right mr-1">Stand</span>
+          {shop.showLeads && <div className="w-4" />}
+        </div>
+
+        <div className="divide-y divide-zinc-800/40">
           {customers === undefined && (
             <div className="px-5 py-6 text-center text-zinc-600 text-sm">Laden...</div>
           )}
@@ -519,63 +527,37 @@ export default function BetriebDashboard() {
 
           {filteredCustomers.map(({ customer, membership }, i) => {
             if (!customer) return null;
-            const pct = Math.min((membership.currentStamps / lowestTierStamps) * 100, 100);
             const isSelected = selectedCustomerId === customer._id;
             const isReady = membership.currentStamps >= lowestTierStamps;
 
             return (
               <motion.div
                 key={membership._id}
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: Math.min(i * 0.04, 0.3) }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: Math.min(i * 0.02, 0.2) }}
               >
                 <button
                   onClick={() => shop.showLeads ? setSelectedCustomerId(isSelected ? null : customer._id) : undefined}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${shop.showLeads ? "hover:bg-zinc-800/50 cursor-pointer" : "cursor-default"}`}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${shop.showLeads ? "hover:bg-zinc-800/50 cursor-pointer" : "cursor-default"}`}
                 >
-                  {/* Avatar */}
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                     isReady ? "bg-amber-400 text-zinc-900" : "bg-zinc-800 text-amber-400 border border-zinc-700"
                   }`}>
                     {customer.name.charAt(0).toUpperCase()}
                   </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-zinc-200 truncate">{customer.name}</span>
-                      {isReady && (
-                        <span className="shrink-0 text-[9px] bg-amber-400/15 text-amber-400 border border-amber-400/20 px-1.5 py-0.5 rounded-full font-bold">
-                          BEREIT
-                        </span>
-                      )}
-                    </div>
-                    {/* Mini stamp dots */}
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: shop.stampsRequired }).map((_, di) => (
-                        <div
-                          key={di}
-                          className={`rounded-full transition-colors ${
-                            di < membership.currentStamps
-                              ? "bg-amber-400"
-                              : "bg-zinc-700"
-                          }`}
-                          style={{ width: `${Math.min(10, Math.floor(220 / shop.stampsRequired))}px`, height: "6px" }}
-                        />
-                      ))}
-                      <span className="text-[10px] text-zinc-600 ml-1 shrink-0">
-                        {membership.currentStamps}/{shop.stampsRequired}
-                      </span>
-                    </div>
-                  </div>
-
+                  <span className="flex-1 text-sm text-zinc-200 truncate">{customer.name}</span>
+                  {isReady && (
+                    <span className="shrink-0 text-[9px] bg-amber-400/15 text-amber-400 border border-amber-400/20 px-1.5 py-0.5 rounded-full font-bold">BEREIT</span>
+                  )}
+                  <span className="text-xs text-zinc-500 shrink-0 w-10 text-right">
+                    {membership.currentStamps}/{lowestTierStamps}
+                  </span>
                   {shop.showLeads && (
-                    <ChevronRight size={14} className={`text-zinc-700 shrink-0 transition-transform ${isSelected ? "rotate-90" : ""}`} />
+                    <ChevronRight size={13} className={`text-zinc-700 shrink-0 transition-transform ${isSelected ? "rotate-90" : ""}`} />
                   )}
                 </button>
 
-                {/* Lead detail */}
                 <AnimatePresence>
                   {shop.showLeads && isSelected && (
                     <motion.div
