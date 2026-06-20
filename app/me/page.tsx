@@ -162,20 +162,23 @@ type CardTier = { stamps: number; text: string; enabled: boolean };
 
 function LoyaltyCard({
   shopName, rewardText, stampsRequired, currentStamps, rewardsRedeemed,
-  animateIndex, onShowQR, qrToken, rewardTiers, accentColor,
+  totalStampsEver, animateIndex, onShowQR, qrToken, rewardTiers, accentColor, milestones,
 }: {
   shopName: string;
   rewardText: string;
   stampsRequired: number;
   currentStamps: number;
   rewardsRedeemed: number;
+  totalStampsEver: number;
   animateIndex: number | null;
   onShowQR: () => void;
   qrToken: string;
   rewardTiers?: CardTier[];
   accentColor?: string;
+  milestones?: CardTier[];
 }) {
   const accent = accentColor ?? "#fbbf24";
+  const activeMilestones = (milestones ?? []).filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);
   const activeTiers: CardTier[] = rewardTiers && rewardTiers.some(t => t.enabled)
     ? rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps)
     : [{ stamps: stampsRequired, text: rewardText, enabled: true }];
@@ -321,6 +324,54 @@ function LoyaltyCard({
           );
         })}
       </div>
+
+      {/* ── Treue-Meilensteine ── */}
+      {activeMilestones.length > 0 && (
+        <div className="px-4 pb-4">
+          <div className="border-t border-zinc-800/40 pt-3">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-zinc-600 mb-2.5 flex items-center gap-1.5">
+              <span>⭐</span> Treue-Meilensteine
+            </p>
+            <div className="space-y-2">
+              {activeMilestones.map((m, i) => {
+                const reached = totalStampsEver >= m.stamps;
+                const isNext = !reached && activeMilestones.slice(0, i).every(prev => totalStampsEver >= prev.stamps);
+                const progress = Math.min(totalStampsEver / m.stamps, 1);
+                return (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${
+                      reached ? "bg-amber-400/20 text-amber-400" : "bg-zinc-800/80 text-zinc-600"
+                    }`}>
+                      {reached ? "✓" : i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`text-[11px] font-medium truncate ${reached ? "text-zinc-300" : isNext ? "text-zinc-400" : "text-zinc-600"}`}>
+                          {m.text}
+                        </p>
+                        <p className="text-[9px] text-zinc-600 shrink-0">
+                          {reached ? `${m.stamps} ✓` : `${totalStampsEver}/${m.stamps}`}
+                        </p>
+                      </div>
+                      {isNext && (
+                        <div className="mt-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress * 100}%` }}
+                            transition={{ duration: 0.8, delay: 0.1 }}
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: hexToRgba(accent, 0.7) }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -333,9 +384,9 @@ export default function MePage() {
   const [view, setView] = useState<"qr" | "dashboard">("qr");
   const [showInstallHint, setShowInstallHint] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [stampAnim, setStampAnim] = useState<number | null>(null);
+  const [stampAnimMap, setStampAnimMap] = useState<Record<string, number | null>>({});
   const [showStampOverlay, setShowStampOverlay] = useState(false);
-  const prevStamps = useRef<number | null>(null);
+  const prevStampsRef = useRef<Record<string, number>>({});
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
@@ -381,28 +432,44 @@ export default function MePage() {
     qrToken ? { qrToken } : "skip"
   );
 
-  const activeEntry = data?.memberships
-    ?.slice()
-    .sort((a, b) => (b.membership.lastStampAt ?? 0) - (a.membership.lastStampAt ?? 0))[0];
+  const allMemberships = (data?.memberships ?? [])
+    .slice()
+    .sort((a, b) => (b.membership.lastStampAt ?? 0) - (a.membership.lastStampAt ?? 0));
+
+  const stampsKey = allMemberships.map(e => `${e.membership._id}:${e.membership.currentStamps}`).join(",");
 
   useEffect(() => {
-    if (!activeEntry) return;
-    const current = activeEntry.membership.currentStamps;
+    if (!allMemberships.length) return;
 
     if (isFirstLoad.current) {
       isFirstLoad.current = false;
-      prevStamps.current = current;
+      allMemberships.forEach(e => {
+        prevStampsRef.current[e.membership._id] = e.membership.currentStamps;
+      });
       return;
     }
 
-    if (prevStamps.current !== null && current > prevStamps.current) {
-      setStampAnim(current - 1);
+    const updates: Record<string, number | null> = {};
+    let anyNew = false;
+    allMemberships.forEach(e => {
+      const id = e.membership._id;
+      const current = e.membership.currentStamps;
+      const prev = prevStampsRef.current[id] ?? current;
+      if (current > prev) {
+        updates[id] = current - 1;
+        anyNew = true;
+        setTimeout(() => setStampAnimMap(m => ({ ...m, [id]: null })), 1200);
+      } else {
+        updates[id] = null;
+      }
+      prevStampsRef.current[id] = current;
+    });
+    if (anyNew) {
+      setStampAnimMap(updates);
       setShowStampOverlay(true);
       setView("dashboard");
-      setTimeout(() => setStampAnim(null), 1200);
     }
-    prevStamps.current = current;
-  }, [activeEntry?.membership.currentStamps]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stampsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!mounted) return null;
 
@@ -484,7 +551,7 @@ export default function MePage() {
             exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
             className="flex-1 flex flex-col items-center justify-center gap-6">
             <QRCard qrToken={qrToken} customerName={customer.name} />
-            {activeEntry && (
+            {allMemberships.length > 0 && (
               <button onClick={() => setView("dashboard")}
                 className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
                 Zur Übersicht <ChevronRight size={15} />
@@ -493,28 +560,33 @@ export default function MePage() {
           </motion.div>
         )}
 
-        {/* Dashboard: Stempelkarte */}
-        {view === "dashboard" && activeEntry && (
+        {/* Dashboard: alle Stempelkarten */}
+        {view === "dashboard" && allMemberships.length > 0 && (
           <motion.div key="dashboard" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
-            className="flex-1 flex flex-col">
-            <LoyaltyCard
-              shopName={activeEntry.shop?.name ?? ""}
-              rewardText={activeEntry.shop?.rewardText ?? ""}
-              stampsRequired={activeEntry.shop?.stampsRequired ?? 8}
-              currentStamps={activeEntry.membership.currentStamps}
-              rewardsRedeemed={activeEntry.membership.rewardsRedeemed}
-              animateIndex={stampAnim}
-              onShowQR={() => setView("qr")}
-              qrToken={qrToken}
-              rewardTiers={activeEntry.shop?.rewardTiers}
-              accentColor={activeEntry.shop?.customDesignEnabled ? activeEntry.shop?.accentColor : undefined}
-            />
+            className="flex-1 flex flex-col gap-5">
+            {allMemberships.map((entry) => (
+              <LoyaltyCard
+                key={entry.membership._id}
+                shopName={entry.shop?.name ?? ""}
+                rewardText={entry.shop?.rewardText ?? ""}
+                stampsRequired={entry.shop?.stampsRequired ?? 8}
+                currentStamps={entry.membership.currentStamps}
+                rewardsRedeemed={entry.membership.rewardsRedeemed}
+                totalStampsEver={entry.membership.totalStampsEver}
+                animateIndex={stampAnimMap[entry.membership._id] ?? null}
+                onShowQR={() => setView("qr")}
+                qrToken={qrToken}
+                rewardTiers={entry.shop?.rewardTiers}
+                accentColor={entry.shop?.customDesignEnabled ? entry.shop?.accentColor : undefined}
+                milestones={entry.shop?.milestones}
+              />
+            ))}
           </motion.div>
         )}
 
         {/* Noch keine Mitgliedschaft */}
-        {view === "dashboard" && !activeEntry && (
+        {view === "dashboard" && allMemberships.length === 0 && (
           <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="flex-1 flex flex-col items-center justify-center gap-6">
             <QRCard qrToken={qrToken} customerName={customer.name} />
@@ -526,15 +598,15 @@ export default function MePage() {
 
       </AnimatePresence>
 
-      {/* Legal links */}
-      {activeEntry?.shop?.slug && (
+      {/* Legal links (für den zuletzt genutzten Shop) */}
+      {allMemberships[0]?.shop?.slug && (
         <div className="flex justify-center gap-4 pt-6 pb-2">
-          <a href={`/impressum/${activeEntry.shop.slug}`}
+          <a href={`/impressum/${allMemberships[0].shop.slug}`}
             className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">
             Impressum
           </a>
           <span className="text-zinc-800">·</span>
-          <a href={`/agb/${activeEntry.shop.slug}`}
+          <a href={`/agb/${allMemberships[0].shop.slug}`}
             className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">
             AGB
           </a>
