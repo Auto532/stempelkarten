@@ -393,7 +393,7 @@ export default function BetriebDashboard() {
         </AnimatePresence>
 
         {/* Meilensteine */}
-        <div className="border-t border-zinc-800">
+        {shop.milestonesEnabled && <div className="border-t border-zinc-800">
           <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800/60">
             <div className="flex items-center gap-2">
               <Trophy size={14} className="text-amber-400" />
@@ -461,7 +461,7 @@ export default function BetriebDashboard() {
               {milestoneSaving ? "Speichert…" : "Meilensteine speichern"}
             </button>
           </div>
-        </div>
+        </div>}
       </motion.div>
 
       {/* Vergebene Geschenke (nur wenn Bonus aktiv) */}
