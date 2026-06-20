@@ -471,8 +471,10 @@ function ShopsTab() {
 
 function SettingsTab({ adminPin }: { adminPin: string }) {
   const clearAllData = useMutation(api.admin.clearAllData);
+  const [showDangerZone, setShowDangerZone] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteText, setDeleteText] = useState("");
+  const [pinInput, setPinInput] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -546,47 +548,64 @@ function SettingsTab({ adminPin }: { adminPin: string }) {
 
       {/* Danger Zone */}
       <div className="bg-zinc-900 border border-red-900/40 rounded-2xl overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-red-900/30">
-          <AlertTriangle size={15} className="text-red-400" />
-          <span className="text-sm font-medium text-red-400">Gefahrenzone</span>
-        </div>
-        <div className="p-5">
-          {deleted ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-2">
-              <Check size={20} className="text-green-400 mx-auto mb-1" />
-              <p className="text-sm text-green-400">Alle Daten gelöscht.</p>
-            </motion.div>
-          ) : !confirmDelete ? (
-            <div className="space-y-3">
-              <p className="text-xs text-zinc-500">Löscht alle Shops, Kunden, Stempel und Ereignisse — inkl. aller Nutzerdaten. Unwiderruflich.</p>
-              <button onClick={() => setConfirmDelete(true)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-red-900/30 border border-zinc-700 hover:border-red-900/50 text-zinc-500 hover:text-red-400 rounded-xl text-sm transition-colors">
-                <Trash2 size={14} /> Alle Daten löschen
-              </button>
-            </div>
-          ) : (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-              <p className="text-sm text-red-300 font-medium">Wirklich alles löschen?</p>
-              <p className="text-xs text-zinc-500">Alle Shops, Kunden und Stempel werden permanent gelöscht. Tippe zur Bestätigung:</p>
-              <input
-                value={deleteText}
-                onChange={(e) => setDeleteText(e.target.value)}
-                placeholder='LÖSCHEN'
-                className="w-full px-4 py-2.5 bg-zinc-800 border border-red-900/50 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-500/50 text-sm font-mono tracking-wider"
-              />
-              <div className="flex gap-2">
-                <button onClick={handleDelete} disabled={deleting || deleteText !== "LÖSCHEN"}
-                  className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-xl text-sm transition-colors">
-                  {deleting ? "Löscht..." : "Endgültig löschen"}
-                </button>
-                <button onClick={() => { setConfirmDelete(false); setDeleteText(""); }}
-                  className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-colors">
-                  Abbrechen
-                </button>
+        <button
+          onClick={() => { setShowDangerZone(!showDangerZone); setConfirmDelete(false); setDeleteText(""); setPinInput(""); }}
+          className="w-full flex items-center gap-2 px-5 py-4 hover:bg-red-900/10 transition-colors"
+        >
+          <AlertTriangle size={15} className="text-red-400 shrink-0" />
+          <span className="text-sm font-medium text-red-400 flex-1 text-left">Gefahrenzone</span>
+          <ChevronRight size={13} className={`text-red-900 transition-transform ${showDangerZone ? "rotate-90" : ""}`} />
+        </button>
+        <AnimatePresence>
+          {showDangerZone && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="border-t border-red-900/30 p-5">
+                {deleted ? (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-2">
+                    <Check size={20} className="text-green-400 mx-auto mb-1" />
+                    <p className="text-sm text-green-400">Alle Daten gelöscht.</p>
+                  </motion.div>
+                ) : !confirmDelete ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500">Löscht alle Shops, Kunden, Stempel und Ereignisse — inkl. aller Nutzerdaten. Unwiderruflich.</p>
+                    <button onClick={() => setConfirmDelete(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-red-900/30 border border-zinc-700 hover:border-red-900/50 text-zinc-500 hover:text-red-400 rounded-xl text-sm transition-colors">
+                      <Trash2 size={14} /> Alle Daten löschen
+                    </button>
+                  </div>
+                ) : (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+                    <p className="text-sm text-red-300 font-medium">Wirklich alles löschen?</p>
+                    <p className="text-xs text-zinc-500">Alle Shops, Kunden und Stempel werden permanent gelöscht.</p>
+                    <input
+                      value={deleteText}
+                      onChange={(e) => setDeleteText(e.target.value)}
+                      placeholder="LÖSCHEN eingeben"
+                      className="w-full px-4 py-2.5 bg-zinc-800 border border-red-900/50 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-500/50 text-sm font-mono tracking-wider"
+                    />
+                    <input
+                      type="password"
+                      value={pinInput}
+                      onChange={(e) => setPinInput(e.target.value)}
+                      placeholder="Admin-PIN zur Bestätigung"
+                      className="w-full px-4 py-2.5 bg-zinc-800 border border-red-900/50 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-500/50 text-sm text-center tracking-widest"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={handleDelete} disabled={deleting || deleteText !== "LÖSCHEN" || pinInput !== adminPin}
+                        className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-xl text-sm transition-colors">
+                        {deleting ? "Löscht..." : "Endgültig löschen"}
+                      </button>
+                      <button onClick={() => { setConfirmDelete(false); setDeleteText(""); setPinInput(""); }}
+                        className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm transition-colors">
+                        Abbrechen
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
               </div>
             </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
     </motion.div>
   );
