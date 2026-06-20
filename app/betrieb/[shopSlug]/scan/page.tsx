@@ -20,8 +20,8 @@ type ActionState =
   | { type: "stamped"; customerName: string; newStamps: number; stampsRequired: number; rewardReached: boolean; rewardText: string }
   | { type: "redeemed"; customerName: string; rewardText: string };
 
-function CustomerCard({ shopId, qrToken, stampsRequired, rewardText, onDone }: {
-  shopId: Id<"shops">; qrToken: string; stampsRequired: number; rewardText: string; onDone: () => void;
+function CustomerCard({ shopId, qrToken, stampsRequired, rewardText, bonusProgramEnabled, onDone }: {
+  shopId: Id<"shops">; qrToken: string; stampsRequired: number; rewardText: string; bonusProgramEnabled: boolean; onDone: () => void;
 }) {
   const data = useQuery(api.memberships.getForCustomerAndShop, { qrToken, shopId });
   const addStamp = useMutation(api.memberships.addStamp);
@@ -201,16 +201,27 @@ function CustomerCard({ shopId, qrToken, stampsRequired, rewardText, onDone }: {
             <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center mb-1">
               <p className="text-amber-400 text-sm font-semibold">🎉 {rewardText}</p>
             </div>
-            <button onClick={handleAddStamp} disabled={loading}
-              className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors text-base">
-              {loading
-                ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-5 h-5 border-2 border-zinc-900/30 border-t-zinc-900 rounded-full" />
-                : <><Stamp size={18} /> Stempel hinzufügen (Stufe 2)</>}
-            </button>
-            <button onClick={handleRedeem} disabled={loading}
-              className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 font-medium rounded-xl flex items-center justify-center gap-2 transition-colors text-sm">
-              <Gift size={16} /> Belohnung einlösen
-            </button>
+            {bonusProgramEnabled ? (
+              <>
+                <button onClick={handleAddStamp} disabled={loading}
+                  className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors text-base">
+                  {loading
+                    ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-5 h-5 border-2 border-zinc-900/30 border-t-zinc-900 rounded-full" />
+                    : <><Stamp size={18} /> Stempel hinzufügen (Stufe 2)</>}
+                </button>
+                <button onClick={handleRedeem} disabled={loading}
+                  className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 font-medium rounded-xl flex items-center justify-center gap-2 transition-colors text-sm">
+                  <Gift size={16} /> Belohnung einlösen
+                </button>
+              </>
+            ) : (
+              <button onClick={handleRedeem} disabled={loading}
+                className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors text-base">
+                {loading
+                  ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-5 h-5 border-2 border-zinc-900/30 border-t-zinc-900 rounded-full" />
+                  : <><Gift size={18} /> Belohnung einlösen</>}
+              </button>
+            )}
           </>
         ) : (
           <button onClick={handleAddStamp} disabled={loading}
@@ -290,6 +301,7 @@ export default function ScanPage() {
               qrToken={scannedToken}
               stampsRequired={shop.stampsRequired}
               rewardText={shop.rewardText}
+              bonusProgramEnabled={!!shop.bonusProgramEnabled}
               onDone={() => setScannedToken(null)}
             />
           </motion.div>

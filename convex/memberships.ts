@@ -83,8 +83,13 @@ export const redeemReward = mutation({
     const membership = await ctx.db.get(membershipId);
     if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
 
+    const shop = await ctx.db.get(membership.shopId);
+    if (!shop) throw new Error("Shop nicht gefunden");
+
+    const carryOver = Math.max(0, membership.currentStamps - shop.stampsRequired);
+
     await ctx.db.patch(membershipId, {
-      currentStamps: 0,
+      currentStamps: carryOver,
       rewardsRedeemed: membership.rewardsRedeemed + 1,
     });
 
