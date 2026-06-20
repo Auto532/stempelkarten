@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ConvexClientProvider } from "./providers";
 import { StarField } from "./components/StarField";
@@ -47,6 +48,9 @@ export default function RootLayout({
             {children}
           </div>
         </ConvexClientProvider>
+        <Script id="sw" strategy="afterInteractive"
+          dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js')` }}
+        />
       </body>
     </html>
   );
