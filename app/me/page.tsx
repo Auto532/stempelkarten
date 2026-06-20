@@ -525,6 +525,21 @@ export default function MePage() {
         )}
 
       </AnimatePresence>
+
+      {/* Legal links */}
+      {activeEntry?.shop?.slug && (
+        <div className="flex justify-center gap-4 pt-6 pb-2">
+          <a href={`/impressum/${activeEntry.shop.slug}`}
+            className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">
+            Impressum
+          </a>
+          <span className="text-zinc-800">·</span>
+          <a href={`/agb/${activeEntry.shop.slug}`}
+            className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">
+            AGB
+          </a>
+        </div>
+      )}
     </div>
   );
 }

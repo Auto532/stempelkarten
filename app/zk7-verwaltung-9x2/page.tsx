@@ -1,28 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
-  Shield, TrendingUp, ArrowLeft, Printer, Palette, type LucideIcon,
+  Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
 
 const SUPERADMIN_PIN = "1337";
-
-const COLOR_PRESETS = [
-  { label: "Amber", value: "#fbbf24" },
-  { label: "Blau", value: "#60a5fa" },
-  { label: "Grün", value: "#4ade80" },
-  { label: "Lila", value: "#a78bfa" },
-  { label: "Rosa", value: "#fb7185" },
-  { label: "Orange", value: "#f97316" },
-];
 
 // ─── ShopCard ────────────────────────────────────────────────────────────────
 
@@ -47,15 +38,25 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
   const toggleShowLeads = useMutation(api.shops.toggleShowLeads);
   const toggleBonusProgram = useMutation(api.shops.toggleBonusProgram);
   const toggleCustomDesign = useMutation(api.shops.toggleCustomDesign);
-  const setShopColor = useMutation(api.shops.setShopColor);
+  const updateLegalTexts = useMutation(api.shops.updateLegalTexts);
   const [showQR, setShowQR] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [savingColor, setSavingColor] = useState(false);
+  const [showLegal, setShowLegal] = useState(false);
+  const [impressumDraft, setImpressumDraft] = useState("");
+  const [agbDraft, setAgbDraft] = useState("");
+  const [savingLegal, setSavingLegal] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [togglingLeads, setTogglingLeads] = useState(false);
   const [togglingBonus, setTogglingBonus] = useState(false);
   const [togglingDesign, setTogglingDesign] = useState(false);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (showLegal && shop) {
+      setImpressumDraft(shop.impressumText ?? "");
+      setAgbDraft(shop.agbText ?? "");
+    }
+  }, [showLegal, shop?._id]);
 
   if (!shop) return null;
 
@@ -83,24 +84,24 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
     finally { setTogglingBonus(false); }
   };
 
+  const handleSaveLegal = async () => {
+    setSavingLegal(true);
+    try {
+      await updateLegalTexts({
+        shopId: shop._id,
+        impressumText: impressumDraft || undefined,
+        agbText: agbDraft || undefined,
+      });
+    } finally {
+      setSavingLegal(false);
+    }
+  };
+
   const handleToggleDesign = async () => {
     setTogglingDesign(true);
     try { await toggleCustomDesign({ shopId: shop._id, enabled: !shop.customDesignEnabled }); }
     finally { setTogglingDesign(false); }
   };
-
-  const handleSetColor = async () => {
-    if (!selectedColor) return;
-    setSavingColor(true);
-    try {
-      await setShopColor({ shopId: shop._id, accentColor: selectedColor });
-      setSelectedColor(null);
-    } finally {
-      setSavingColor(false);
-    }
-  };
-
-  const displayedColor = selectedColor ?? shop.accentColor ?? "#fbbf24";
 
   return (
     <motion.div
@@ -196,40 +197,6 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
         </div>
       </div>
 
-      {/* Eigenes Design – Farbauswahl */}
-      <AnimatePresence>
-        {shop.customDesignEnabled && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-zinc-800/50"
-          >
-            <div className="px-4 py-3 space-y-3">
-              <p className="text-[11px] text-zinc-500">Akzentfarbe der Kundenkarte</p>
-              <div className="flex gap-2.5 flex-wrap">
-                {COLOR_PRESETS.map(({ label, value }) => (
-                  <button
-                    key={value}
-                    onClick={() => setSelectedColor(value)}
-                    title={label}
-                    className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${displayedColor === value ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-900" : ""}`}
-                    style={{ backgroundColor: value }}
-                  />
-                ))}
-              </div>
-              <button
-                onClick={handleSetColor}
-                disabled={savingColor || !selectedColor || selectedColor === shop.accentColor}
-                className="w-full py-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-zinc-900 text-xs font-semibold rounded-xl transition-colors"
-              >
-                {savingColor ? "Speichert..." : "Farbe speichern"}
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* QR Code accordion */}
       <div className="border-t border-zinc-800/50">
         <button onClick={() => setShowQR(!showQR)}
@@ -289,6 +256,51 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
         </AnimatePresence>
       </div>
 
+      {/* Impressum & AGB accordion */}
+      <div className="border-t border-zinc-800/50">
+        <button onClick={() => setShowLegal(!showLegal)}
+          className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+          <FileText size={14} className={shop.impressumText ? "text-amber-400" : "text-zinc-500"} />
+          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Impressum & AGB</span>
+          {shop.impressumText && <span className="text-[10px] text-green-400 mr-1">✓</span>}
+          <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showLegal ? "rotate-90" : ""}`} />
+        </button>
+        <AnimatePresence>
+          {showLegal && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="px-4 pb-4 space-y-3">
+                <div>
+                  <label className="text-[11px] text-zinc-500 block mb-1.5">Impressum</label>
+                  <textarea
+                    value={impressumDraft}
+                    onChange={e => setImpressumDraft(e.target.value)}
+                    rows={6}
+                    placeholder={"Angaben gemäß § 5 TMG\n\nMax Mustermann\nMusterstraße 1\n12345 Musterstadt\n\nTelefon: ...\nE-Mail: ..."}
+                    className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 placeholder-zinc-600 text-xs focus:outline-none focus:border-amber-400/50 resize-none leading-relaxed"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-zinc-500 block mb-1.5">AGB</label>
+                  <textarea
+                    value={agbDraft}
+                    onChange={e => setAgbDraft(e.target.value)}
+                    rows={6}
+                    placeholder="Allgemeine Geschäftsbedingungen..."
+                    className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 placeholder-zinc-600 text-xs focus:outline-none focus:border-amber-400/50 resize-none leading-relaxed"
+                  />
+                </div>
+                <button
+                  onClick={handleSaveLegal}
+                  disabled={savingLegal}
+                  className="w-full py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-zinc-900 text-xs font-semibold rounded-xl transition-colors"
+                >
+                  {savingLegal ? "Speichert..." : "Speichern"}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
     </motion.div>
   );

@@ -72,6 +72,17 @@ export const toggleCustomDesign = mutation({
   },
 });
 
+export const updateLegalTexts = mutation({
+  args: {
+    shopId: v.id("shops"),
+    impressumText: v.optional(v.string()),
+    agbText: v.optional(v.string()),
+  },
+  handler: async (ctx, { shopId, impressumText, agbText }) => {
+    await ctx.db.patch(shopId, { impressumText, agbText });
+  },
+});
+
 export const createShop = mutation({
   args: {
     name: v.string(),
