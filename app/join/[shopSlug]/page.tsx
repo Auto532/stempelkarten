@@ -36,7 +36,7 @@ export default function JoinPage() {
       });
       localStorage.setItem("qrToken", qrToken);
       setSuccess(true);
-      setTimeout(() => router.push("/me"), 1500);
+      setTimeout(() => router.push(`/me/${qrToken}`), 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Fehler beim Registrieren");
     } finally {
