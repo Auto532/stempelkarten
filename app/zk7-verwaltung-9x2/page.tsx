@@ -102,24 +102,44 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
         ))}
       </div>
 
-      {/* Leads toggle */}
-      <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-800/50">
-        <div className="flex items-center gap-2">
-          {shop.showLeads ? <Eye size={14} className="text-amber-400" /> : <EyeOff size={14} className="text-zinc-600" />}
-          <span className="text-xs text-zinc-400">Leads für Betrieb sichtbar</span>
+      {/* Toggles */}
+      <div className="border-t border-zinc-800/50 divide-y divide-zinc-800/40">
+        <div className="flex items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-2">
+            {shop.showLeads ? <Eye size={14} className="text-amber-400" /> : <EyeOff size={14} className="text-zinc-600" />}
+            <span className="text-xs text-zinc-400">Leads sichtbar</span>
+          </div>
+          <button
+            onClick={handleToggleLeads}
+            disabled={togglingLeads}
+            style={{ minWidth: "2.5rem", height: "1.375rem" }}
+            className={`relative rounded-full transition-colors duration-200 flex items-center px-0.5 ${shop.showLeads ? "bg-amber-400" : "bg-zinc-700"}`}
+          >
+            <motion.div
+              animate={{ x: shop.showLeads ? 18 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="w-4 h-4 rounded-full bg-white shadow-sm"
+            />
+          </button>
         </div>
-        <button
-          onClick={handleToggleLeads}
-          disabled={togglingLeads}
-          style={{ minWidth: "2.5rem", height: "1.375rem" }}
-          className={`relative rounded-full transition-colors duration-200 flex items-center px-0.5 ${shop.showLeads ? "bg-amber-400" : "bg-zinc-700"}`}
-        >
-          <motion.div
-            animate={{ x: shop.showLeads ? 18 : 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="w-4 h-4 rounded-full bg-white shadow-sm"
-          />
-        </button>
+        <div className="flex items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp size={14} className={shop.bonusProgramEnabled ? "text-amber-400" : "text-zinc-600"} />
+            <span className="text-xs text-zinc-400">Bonus-Programm</span>
+          </div>
+          <button
+            onClick={handleToggleBonus}
+            disabled={togglingBonus}
+            style={{ minWidth: "2.5rem", height: "1.375rem" }}
+            className={`relative rounded-full transition-colors duration-200 flex items-center px-0.5 ${shop.bonusProgramEnabled ? "bg-amber-400" : "bg-zinc-700"}`}
+          >
+            <motion.div
+              animate={{ x: shop.bonusProgramEnabled ? 18 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="w-4 h-4 rounded-full bg-white shadow-sm"
+            />
+          </button>
+        </div>
       </div>
 
       {/* QR Code accordion */}
@@ -181,25 +201,6 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
         </AnimatePresence>
       </div>
 
-      {/* Bonus-Programme toggle */}
-      <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-800/50">
-        <div className="flex items-center gap-2">
-          <TrendingUp size={14} className={shop.bonusProgramEnabled ? "text-amber-400" : "text-zinc-600"} />
-          <span className="text-xs text-zinc-400">Bonus-Programme (Betrieb)</span>
-        </div>
-        <button
-          onClick={handleToggleBonus}
-          disabled={togglingBonus}
-          style={{ minWidth: "2.5rem", height: "1.375rem" }}
-          className={`relative rounded-full transition-colors duration-200 flex items-center px-0.5 ${shop.bonusProgramEnabled ? "bg-amber-400" : "bg-zinc-700"}`}
-        >
-          <motion.div
-            animate={{ x: shop.bonusProgramEnabled ? 18 : 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="w-4 h-4 rounded-full bg-white shadow-sm"
-          />
-        </button>
-      </div>
     </motion.div>
   );
 }

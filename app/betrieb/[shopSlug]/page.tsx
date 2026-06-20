@@ -51,6 +51,7 @@ export default function BetriebDashboard() {
   const [tierSaved, setTierSaved] = useState(false);
   const [openRedemptionId, setOpenRedemptionId] = useState<string | null>(null);
   const [showGifts, setShowGifts] = useState(false);
+  const [showCustomers, setShowCustomers] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
@@ -469,50 +470,62 @@ export default function BetriebDashboard() {
         className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
       >
         {/* Header */}
-        <div className="px-5 pt-4 pb-3 border-b border-zinc-800 space-y-3">
-          <div className="flex items-center gap-2">
-            <Users size={15} className="text-zinc-400" />
-            <span className="font-medium text-zinc-200 text-sm">Kunden</span>
-            {shop.showLeads && (
-              <span className="flex items-center gap-1 text-[10px] text-amber-400">
-                <Eye size={10} /> Leads
+        <button
+          onClick={() => setShowCustomers(v => !v)}
+          className="w-full flex items-center gap-2 px-5 py-4 hover:bg-zinc-800/30 transition-colors"
+        >
+          <Users size={15} className="text-zinc-400 shrink-0" />
+          <span className="font-medium text-zinc-200 text-sm">Kunden</span>
+          {shop.showLeads && (
+            <span className="flex items-center gap-1 text-[10px] text-amber-400">
+              <Eye size={10} /> Leads
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            {readyCount > 0 && (
+              <span className="flex items-center gap-1 text-[10px] bg-amber-400/10 border border-amber-400/20 text-amber-400 px-2 py-0.5 rounded-full">
+                <Gift size={9} /> {readyCount} bereit
               </span>
             )}
-            <div className="ml-auto flex items-center gap-2">
-              {readyCount > 0 && (
-                <span className="flex items-center gap-1 text-[10px] bg-amber-400/10 border border-amber-400/20 text-amber-400 px-2 py-0.5 rounded-full">
-                  <Gift size={9} /> {readyCount} bereit
-                </span>
-              )}
-              <span className="text-xs text-zinc-600">{customers?.length ?? "–"}</span>
-            </div>
+            <span className="text-xs text-zinc-600">{customers?.length ?? "–"}</span>
+            <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showCustomers ? "rotate-90" : ""}`} />
           </div>
+        </button>
 
-          {/* Search */}
-          <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Suchen…"
-              className="w-full pl-8 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40"
-            />
-            {search && (
-              <button onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400">
-                <X size={13} />
-              </button>
-            )}
-          </div>
-        </div>
+        <AnimatePresence>
+          {showCustomers && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              {/* Search */}
+              <div className="px-5 pt-1 pb-3 border-b border-zinc-800">
+                <div className="relative">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Suchen…"
+                    className="w-full pl-8 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40"
+                  />
+                  {search && (
+                    <button onClick={() => setSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400">
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+              </div>
 
-        {/* Table header */}
-        <div className="flex items-center px-4 py-2 border-b border-zinc-800/60">
-          <div className="w-7 shrink-0 mr-3" />
-          <span className="flex-1 text-[10px] text-zinc-600 uppercase tracking-wider">Kunde</span>
-          <span className="text-[10px] text-zinc-600 uppercase tracking-wider w-10 text-right mr-1">Stand</span>
-          {shop.showLeads && <div className="w-4" />}
-        </div>
+              {/* Table header */}
+              <div className="flex items-center px-4 py-2 border-b border-zinc-800/60">
+                <div className="w-7 shrink-0 mr-3" />
+                <span className="flex-1 text-[10px] text-zinc-600 uppercase tracking-wider">Kunde</span>
+                <span className="text-[10px] text-zinc-600 uppercase tracking-wider w-10 text-right mr-1">Stand</span>
+                {shop.showLeads && <div className="w-4" />}
+              </div>
 
         <div className="divide-y divide-zinc-800/40">
           {customers === undefined && (
@@ -599,6 +612,9 @@ export default function BetriebDashboard() {
             );
           })}
         </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );
