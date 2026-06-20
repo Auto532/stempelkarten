@@ -9,6 +9,11 @@ import { Smartphone, LayoutGrid, Stamp, Gift, ChevronRight, Scissors } from "luc
 
 const AWAY_THRESHOLD_MS = 4 * 60 * 60 * 1000;
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 const PARTICLES = Array.from({ length: 12 }, (_, i) => {
   const angle = (i / 12) * Math.PI * 2;
   const dist = 90 + (i % 4) * 18;
@@ -316,6 +321,7 @@ export default function MePage() {
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<"qr" | "dashboard">("qr");
   const [showInstallHint, setShowInstallHint] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [stampAnim, setStampAnim] = useState<number | null>(null);
   const [showStampOverlay, setShowStampOverlay] = useState(false);
   const prevStamps = useRef<number | null>(null);
@@ -338,7 +344,26 @@ export default function MePage() {
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
     const seen = localStorage.getItem("installHintSeen");
     if (!isStandalone && !seen) setShowInstallHint(true);
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setShowInstallHint(false);
+        localStorage.setItem("installHintSeen", "1");
+      }
+      setDeferredPrompt(null);
+    }
+  };
 
   const data = useQuery(
     api.customers.getMembershipsForCustomer,
@@ -404,14 +429,29 @@ export default function MePage() {
       <AnimatePresence>
         {showInstallHint && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            className="mb-5 bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 flex items-start gap-3">
-            <Smartphone size={18} className="text-amber-400 mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-zinc-200">Zum Homescreen hinzufügen</p>
-              <p className="text-xs text-zinc-500 mt-0.5">Tippe auf "Teilen" → "Zum Homescreen"</p>
-            </div>
-            <button onClick={() => { setShowInstallHint(false); localStorage.setItem("installHintSeen", "1"); }}
-              className="text-zinc-600 hover:text-zinc-400 text-lg leading-none">×</button>
+            className="mb-5 bg-zinc-900 border border-zinc-700 rounded-2xl overflow-hidden">
+            {deferredPrompt ? (
+              <button onClick={handleInstall}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 transition-colors text-left">
+                <Smartphone size={18} className="text-amber-400 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-zinc-200">Zum Homescreen hinzufügen</p>
+                  <p className="text-xs text-amber-400/70 mt-0.5">Tippe hier zum Installieren →</p>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); setShowInstallHint(false); localStorage.setItem("installHintSeen", "1"); }}
+                  className="text-zinc-600 hover:text-zinc-400 text-lg leading-none shrink-0">×</button>
+              </button>
+            ) : (
+              <div className="flex items-start gap-3 px-4 py-3">
+                <Smartphone size={18} className="text-amber-400 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-zinc-200">Zum Homescreen hinzufügen</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">Tippe auf "Teilen" → "Zum Homescreen"</p>
+                </div>
+                <button onClick={() => { setShowInstallHint(false); localStorage.setItem("installHintSeen", "1"); }}
+                  className="text-zinc-600 hover:text-zinc-400 text-lg leading-none shrink-0">×</button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
