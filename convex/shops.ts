@@ -72,6 +72,13 @@ export const toggleCustomDesign = mutation({
   },
 });
 
+export const toggleMilestones = mutation({
+  args: { shopId: v.id("shops"), enabled: v.boolean() },
+  handler: async (ctx, { shopId, enabled }) => {
+    await ctx.db.patch(shopId, { milestonesEnabled: enabled });
+  },
+});
+
 export const updateMilestones = mutation({
   args: {
     shopId: v.id("shops"),

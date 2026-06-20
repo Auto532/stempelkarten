@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
-  Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, type LucideIcon,
+  Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy, type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
@@ -38,7 +38,9 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
   const toggleShowLeads = useMutation(api.shops.toggleShowLeads);
   const toggleBonusProgram = useMutation(api.shops.toggleBonusProgram);
   const toggleCustomDesign = useMutation(api.shops.toggleCustomDesign);
+  const toggleMilestones = useMutation(api.shops.toggleMilestones);
   const updateLegalTexts = useMutation(api.shops.updateLegalTexts);
+  const [showToggles, setShowToggles] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
@@ -49,6 +51,7 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
   const [togglingLeads, setTogglingLeads] = useState(false);
   const [togglingBonus, setTogglingBonus] = useState(false);
   const [togglingDesign, setTogglingDesign] = useState(false);
+  const [togglingMilestones, setTogglingMilestones] = useState(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -103,6 +106,12 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
     finally { setTogglingDesign(false); }
   };
 
+  const handleToggleMilestones = async () => {
+    setTogglingMilestones(true);
+    try { await toggleMilestones({ shopId: shop._id, enabled: !shop.milestonesEnabled }); }
+    finally { setTogglingMilestones(false); }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -136,65 +145,47 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
         ))}
       </div>
 
-      {/* Toggles */}
-      <div className="border-t border-zinc-800/50 divide-y divide-zinc-800/40">
-        <div className="flex items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-2">
-            {shop.showLeads ? <Eye size={14} className="text-amber-400" /> : <EyeOff size={14} className="text-zinc-600" />}
-            <span className="text-xs text-zinc-400">Leads sichtbar</span>
-          </div>
-          <button
-            onClick={handleToggleLeads}
-            disabled={togglingLeads}
-            style={{ minWidth: "2.5rem", height: "1.375rem" }}
-            className={`relative rounded-full transition-colors duration-200 flex items-center px-0.5 ${shop.showLeads ? "bg-amber-400" : "bg-zinc-700"}`}
-          >
-            <motion.div
-              animate={{ x: shop.showLeads ? 18 : 0 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              className="w-4 h-4 rounded-full bg-white shadow-sm"
-            />
-          </button>
-        </div>
-        <div className="flex items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp size={14} className={shop.bonusProgramEnabled ? "text-amber-400" : "text-zinc-600"} />
-            <span className="text-xs text-zinc-400">Bonus-Programm</span>
-          </div>
-          <button
-            onClick={handleToggleBonus}
-            disabled={togglingBonus}
-            style={{ minWidth: "2.5rem", height: "1.375rem" }}
-            className={`relative rounded-full transition-colors duration-200 flex items-center px-0.5 ${shop.bonusProgramEnabled ? "bg-amber-400" : "bg-zinc-700"}`}
-          >
-            <motion.div
-              animate={{ x: shop.bonusProgramEnabled ? 18 : 0 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              className="w-4 h-4 rounded-full bg-white shadow-sm"
-            />
-          </button>
-        </div>
-        <div className="flex items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-2">
-            <Palette size={14} className={shop.customDesignEnabled ? "text-amber-400" : "text-zinc-600"} />
-            <span className="text-xs text-zinc-400">Eigenes Design</span>
-            {shop.customDesignEnabled && shop.accentColor && (
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: shop.accentColor }} />
-            )}
-          </div>
-          <button
-            onClick={handleToggleDesign}
-            disabled={togglingDesign}
-            style={{ minWidth: "2.5rem", height: "1.375rem" }}
-            className={`relative rounded-full transition-colors duration-200 flex items-center px-0.5 ${shop.customDesignEnabled ? "bg-amber-400" : "bg-zinc-700"}`}
-          >
-            <motion.div
-              animate={{ x: shop.customDesignEnabled ? 18 : 0 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              className="w-4 h-4 rounded-full bg-white shadow-sm"
-            />
-          </button>
-        </div>
+      {/* Toggles accordion */}
+      <div className="border-t border-zinc-800/50">
+        <button onClick={() => setShowToggles(!showToggles)}
+          className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+          <Settings size={14} className="text-zinc-500 shrink-0" />
+          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Einstellungen</span>
+          <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showToggles ? "rotate-90" : ""}`} />
+        </button>
+        <AnimatePresence>
+          {showToggles && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="divide-y divide-zinc-800/40 border-t border-zinc-800/50">
+                {[
+                  { icon: shop.showLeads ? Eye : EyeOff, label: "Leads sichtbar", active: !!shop.showLeads, toggle: handleToggleLeads, disabled: togglingLeads },
+                  { icon: TrendingUp, label: "Bonus-Programm", active: !!shop.bonusProgramEnabled, toggle: handleToggleBonus, disabled: togglingBonus },
+                  { icon: Palette, label: "Eigenes Design", active: !!shop.customDesignEnabled, toggle: handleToggleDesign, disabled: togglingDesign },
+                  { icon: Trophy, label: "Treue-Meilensteine", active: !!shop.milestonesEnabled, toggle: handleToggleMilestones, disabled: togglingMilestones },
+                ].map(({ icon: Icon, label, active, toggle, disabled }) => (
+                  <div key={label} className="flex items-center justify-between px-5 py-3">
+                    <div className="flex items-center gap-2">
+                      <Icon size={14} className={active ? "text-amber-400" : "text-zinc-600"} />
+                      <span className="text-xs text-zinc-400">{label}</span>
+                    </div>
+                    <button
+                      onClick={toggle}
+                      disabled={disabled}
+                      style={{ minWidth: "2.5rem", height: "1.375rem" }}
+                      className={`relative rounded-full transition-colors duration-200 flex items-center px-0.5 ${active ? "bg-amber-400" : "bg-zinc-700"}`}
+                    >
+                      <motion.div
+                        animate={{ x: active ? 18 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        className="w-4 h-4 rounded-full bg-white shadow-sm"
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* QR Code accordion */}

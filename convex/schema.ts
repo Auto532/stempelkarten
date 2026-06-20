@@ -17,6 +17,7 @@ export default defineSchema({
     }))),
     accentColor: v.optional(v.string()),
     customDesignEnabled: v.optional(v.boolean()),
+    milestonesEnabled: v.optional(v.boolean()),
     milestones: v.optional(v.array(v.object({
       stamps: v.number(),
       text: v.string(),

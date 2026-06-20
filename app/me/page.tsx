@@ -579,7 +579,7 @@ export default function MePage() {
                 qrToken={qrToken}
                 rewardTiers={entry.shop?.rewardTiers}
                 accentColor={entry.shop?.customDesignEnabled ? entry.shop?.accentColor : undefined}
-                milestones={entry.shop?.milestones}
+                milestones={entry.shop?.milestonesEnabled ? entry.shop?.milestones : undefined}
               />
             ))}
           </motion.div>
