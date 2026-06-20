@@ -544,7 +544,7 @@ function SettingsTab({ adminPin }: { adminPin: string }) {
           className="w-full flex items-center gap-2 px-5 py-4 hover:bg-red-900/10 transition-colors"
         >
           <AlertTriangle size={15} className="text-red-400 shrink-0" />
-          <span className="text-sm font-medium text-red-400 flex-1 text-left">Gefahrenzone</span>
+          <span className="text-sm font-medium text-red-400 flex-1 text-left">Löschen</span>
           <ChevronRight size={13} className={`text-red-900 transition-transform ${showDangerZone ? "rotate-90" : ""}`} />
         </button>
         <AnimatePresence>
