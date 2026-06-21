@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection } from "../../components";
+import { VintageBackground, VintageLoyaltyCard, VintageRewardBanner, VintageMilestonesSection } from "../../themes/vintage";
 
 export default function MeShopPage() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -67,8 +68,12 @@ export default function MeShopPage() {
     return null;
   }
 
+  const isVintage = shop.theme === "vintage";
+
   return (
     <div className="min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col">
+
+      {isVintage && <VintageBackground />}
 
       <AnimatePresence>
         {showStampOverlay && <StampOverlay onDone={() => setShowStampOverlay(false)} />}
@@ -121,25 +126,47 @@ export default function MeShopPage() {
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-4"
             >
-              <LoyaltyCard
-                shopName={shop.name}
-                rewardText={shop.rewardText}
-                stampsRequired={shop.stampsRequired}
-                currentStamps={membership.currentStamps}
-                rewardsRedeemed={membership.rewardsRedeemed}
-                animateIndex={stampAnim}
-                onShowQR={() => setShowQR(true)}
-                qrToken={qrToken}
-                rewardTiers={shop.rewardTiers}
-                accentColor={shop.customDesignEnabled ? shop.accentColor : undefined}
-                stampIcon={shop.stampIcon}
-              />
-              {shop.milestonesEnabled && shop.milestones && (
-                <MilestonesSection
-                  milestones={shop.milestones}
-                  totalStampsEver={membership.totalStampsEver}
-                  accent={shop.customDesignEnabled ? shop.accentColor : undefined}
-                />
+              {shop.theme === "vintage" ? (
+                <>
+                  <VintageLoyaltyCard
+                    shopName={shop.name}
+                    stampsRequired={shop.stampsRequired}
+                    currentStamps={membership.currentStamps}
+                    animateIndex={stampAnim}
+                    onShowQR={() => setShowQR(true)}
+                    qrToken={qrToken}
+                  />
+                  <VintageRewardBanner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} />
+                  {shop.milestonesEnabled && shop.milestones && (
+                    <VintageMilestonesSection
+                      milestones={shop.milestones}
+                      totalStampsEver={membership.totalStampsEver}
+                    />
+                  )}
+                </>
+              ) : (
+                <>
+                  <LoyaltyCard
+                    shopName={shop.name}
+                    rewardText={shop.rewardText}
+                    stampsRequired={shop.stampsRequired}
+                    currentStamps={membership.currentStamps}
+                    rewardsRedeemed={membership.rewardsRedeemed}
+                    animateIndex={stampAnim}
+                    onShowQR={() => setShowQR(true)}
+                    qrToken={qrToken}
+                    rewardTiers={shop.rewardTiers}
+                    accentColor={shop.customDesignEnabled ? shop.accentColor : undefined}
+                    stampIcon={shop.stampIcon}
+                  />
+                  {shop.milestonesEnabled && shop.milestones && (
+                    <MilestonesSection
+                      milestones={shop.milestones}
+                      totalStampsEver={membership.totalStampsEver}
+                      accent={shop.customDesignEnabled ? shop.accentColor : undefined}
+                    />
+                  )}
+                </>
               )}
             </motion.div>
           )}
@@ -147,15 +174,19 @@ export default function MeShopPage() {
       </div>
 
       {/* Legal links */}
-      <div className="flex flex-wrap justify-center gap-3 pt-6 pb-2">
+      <div className="flex flex-wrap justify-center gap-3 pt-6 pb-2 relative z-10">
         {shop.impressumText && (
           <a href={`/me/impressum/${shopSlug}`}
-            className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">Impressum</a>
+            style={isVintage ? { fontSize: 11, color: "#7A5C12" } : undefined}
+            className={isVintage ? "" : "text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors"}>Impressum</a>
         )}
-        {shop.impressumText && shop.datenschutzText && <span className="text-zinc-800">·</span>}
+        {shop.impressumText && shop.datenschutzText && (
+          <span style={isVintage ? { color: "#5A3C0A" } : undefined} className={isVintage ? "" : "text-zinc-800"}>·</span>
+        )}
         {shop.datenschutzText && (
           <a href={`/me/datenschutz/${shopSlug}`}
-            className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">Datenschutz</a>
+            style={isVintage ? { fontSize: 11, color: "#7A5C12" } : undefined}
+            className={isVintage ? "" : "text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors"}>Datenschutz</a>
         )}
       </div>
     </div>

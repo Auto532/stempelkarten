@@ -27,6 +27,7 @@ export default defineSchema({
     agbText: v.optional(v.string()),
     datenschutzText: v.optional(v.string()),
     stampIcon: v.optional(v.string()),
+    theme: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_slug", ["slug"]).index("by_adminLoginToken", ["adminLoginToken"]),
 

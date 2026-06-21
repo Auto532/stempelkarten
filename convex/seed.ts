@@ -1,4 +1,5 @@
 import { internalMutation } from "./_generated/server";
+import { v } from "convex/values";
 
 export const seedBarbershop = internalMutation({
   args: {},
@@ -11,6 +12,7 @@ export const seedBarbershop = internalMutation({
       rewardText: "1x Haarschnitt gratis",
       adminLoginToken,
       stampIcon: "scissors",
+      theme: "vintage",
       bonusProgramEnabled: true,
       rewardTiers: [
         { stamps: 8,  text: "1x Haarschnitt gratis", enabled: true },
@@ -55,5 +57,15 @@ export const seedBarbershop = internalMutation({
     }
 
     return { adminLoginToken, joinLink: "/join/oldschool-barbershop" };
+  },
+});
+
+export const patchShopTheme = internalMutation({
+  args: { slug: v.string(), theme: v.string() },
+  handler: async (ctx, { slug, theme }) => {
+    const shop = await ctx.db.query("shops").withIndex("by_slug", q => q.eq("slug", slug)).unique();
+    if (!shop) throw new Error("Shop nicht gefunden");
+    await ctx.db.patch(shop._id, { theme });
+    return "OK";
   },
 });
