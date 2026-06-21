@@ -13,6 +13,7 @@ export const seedBarbershop = internalMutation({
       adminLoginToken,
       stampIcon: "scissors",
       theme: "vintage",
+      customDesignEnabled: true,
       bonusProgramEnabled: true,
       rewardTiers: [
         { stamps: 8,  text: "1x Haarschnitt gratis", enabled: true },
@@ -65,7 +66,7 @@ export const patchShopTheme = internalMutation({
   handler: async (ctx, { slug, theme }) => {
     const shop = await ctx.db.query("shops").withIndex("by_slug", q => q.eq("slug", slug)).unique();
     if (!shop) throw new Error("Shop nicht gefunden");
-    await ctx.db.patch(shop._id, { theme });
+    await ctx.db.patch(shop._id, { theme, customDesignEnabled: true });
     return "OK";
   },
 });

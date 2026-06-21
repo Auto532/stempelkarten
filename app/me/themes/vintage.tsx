@@ -150,19 +150,15 @@ export function VintageLoyaltyCard({
               {currentStamps} von {stampsRequired} Stempel
             </p>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+          <button
+            onClick={onShowQR}
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          >
             <VintageQRMini qrToken={qrToken} />
-            <button
-              onClick={onShowQR}
-              style={{
-                fontSize: 8, fontWeight: 700, color: GOLD, letterSpacing: "0.12em",
-                background: "none", border: "none", cursor: "pointer", padding: 0,
-                textTransform: "uppercase",
-              }}
-            >
+            <span style={{ fontSize: 8, fontWeight: 700, color: GOLD, letterSpacing: "0.12em", textTransform: "uppercase" }}>
               QR zeigen
-            </button>
-          </div>
+            </span>
+          </button>
         </div>
 
         {/* Gold divider */}
@@ -194,7 +190,16 @@ export function VintageLoyaltyCard({
 
 // ─── Vintage Reward Banner ────────────────────────────────────────────────────
 
-export function VintageRewardBanner({ rewardText, stampsRequired }: { rewardText: string; stampsRequired: number }) {
+export function VintageRewardBanner({
+  rewardText, stampsRequired, rewardTiers,
+}: {
+  rewardText: string;
+  stampsRequired: number;
+  rewardTiers?: Array<{ stamps: number; text: string; enabled: boolean }>;
+}) {
+  const tiers = rewardTiers?.filter(t => t.enabled) ?? [];
+  const items = tiers.length > 0 ? tiers : [{ stamps: stampsRequired, text: rewardText }];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -205,26 +210,36 @@ export function VintageRewardBanner({ rewardText, stampsRequired }: { rewardText
         borderRadius: 12,
         border: `1.5px solid ${GOLD_DIM}`,
         background: `linear-gradient(135deg, #1C0E06 0%, #160B04 100%)`,
-        padding: "12px 14px",
-        display: "flex", alignItems: "center", gap: 12,
+        overflow: "hidden",
       }}
     >
-      <div style={{
-        width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-        border: `1.5px solid ${GOLD_DIM}`,
-        background: "radial-gradient(circle at 35% 35%, #3D2510, #1E1008)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        <Wheat size={18} color={GOLD} />
-      </div>
-      <div>
-        <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.22em", color: GOLD_DIM, textTransform: "uppercase", marginBottom: 3 }}>
-          Ab {stampsRequired} Stempeln
-        </p>
-        <p style={{ fontSize: 15, fontWeight: 800, color: GOLD_LIGHT, lineHeight: 1.2 }}>
-          {rewardText}
-        </p>
-      </div>
+      {items.map((item, i) => (
+        <div
+          key={item.stamps}
+          style={{
+            padding: "12px 14px",
+            display: "flex", alignItems: "center", gap: 12,
+            borderBottom: i < items.length - 1 ? `1px solid ${GOLD_DIM}33` : "none",
+          }}
+        >
+          <div style={{
+            width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
+            border: `1.5px solid ${GOLD_DIM}`,
+            background: "radial-gradient(circle at 35% 35%, #3D2510, #1E1008)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Wheat size={18} color={GOLD} />
+          </div>
+          <div>
+            <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.22em", color: GOLD_DIM, textTransform: "uppercase", marginBottom: 3 }}>
+              Ab {item.stamps} Stempeln
+            </p>
+            <p style={{ fontSize: 15, fontWeight: 800, color: GOLD_LIGHT, lineHeight: 1.2 }}>
+              {item.text}
+            </p>
+          </div>
+        </div>
+      ))}
     </motion.div>
   );
 }

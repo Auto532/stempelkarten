@@ -68,10 +68,10 @@ export default function MeShopPage() {
     return null;
   }
 
-  const isVintage = shop.theme === "vintage";
+  const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
 
   return (
-    <div className="min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col">
+    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col relative ${isVintage ? "z-[2]" : ""}`}>
 
       {isVintage && <VintageBackground />}
 
@@ -136,7 +136,7 @@ export default function MeShopPage() {
                     onShowQR={() => setShowQR(true)}
                     qrToken={qrToken}
                   />
-                  <VintageRewardBanner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} />
+                  <VintageRewardBanner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.rewardTiers} />
                   {shop.milestonesEnabled && shop.milestones && (
                     <VintageMilestonesSection
                       milestones={shop.milestones}
