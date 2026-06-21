@@ -3,14 +3,29 @@
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Phone, Gift, Stamp, ArrowRight, CheckCircle } from "lucide-react";
+import { User, Phone, Gift, ArrowRight, CheckCircle, Stamp } from "lucide-react";
 
 export default function JoinPage() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const router = useRouter();
   const shop = useQuery(api.shops.getBySlug, { slug: shopSlug });
+
+  const [qrToken, setQrToken] = useState<string | null>(undefined as unknown as null);
+  const [tokenLoaded, setTokenLoaded] = useState(false);
+
+  useEffect(() => {
+    setQrToken(localStorage.getItem("qrToken"));
+    setTokenLoaded(true);
+  }, []);
+
+  const existing = useQuery(
+    api.memberships.getForCustomerAndShop,
+    tokenLoaded && shop && qrToken
+      ? { qrToken, shopId: shop._id }
+      : "skip"
+  );
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -20,23 +35,30 @@ export default function JoinPage() {
   const [success, setSuccess] = useState(false);
 
   const registerCustomer = useMutation(api.customers.registerCustomer);
+  const createMembership = useMutation(api.memberships.createMembershipForExistingCustomer);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Bestandskunde mit bestehender Mitgliedschaft → direkt weiterleiten
+  useEffect(() => {
+    if (existing?.membership && qrToken) {
+      router.replace(`/me/${qrToken}`);
+    }
+  }, [existing, qrToken, router]);
+
+  const handleNewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !phone.trim()) return;
+    if (!name.trim() || !phone.trim() || !consent) return;
     setLoading(true);
     setError("");
     try {
-      const existingQrToken = localStorage.getItem("qrToken") ?? undefined;
-      const { qrToken } = await registerCustomer({
+      const { qrToken: newToken } = await registerCustomer({
         name: name.trim(),
         phone: phone.trim(),
         shopSlug,
-        existingQrToken,
+        existingQrToken: qrToken ?? undefined,
       });
-      localStorage.setItem("qrToken", qrToken);
+      localStorage.setItem("qrToken", newToken);
       setSuccess(true);
-      setTimeout(() => router.push(`/me/${qrToken}`), 1500);
+      setTimeout(() => router.push(`/me/${newToken}`), 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Fehler beim Registrieren");
     } finally {
@@ -44,7 +66,24 @@ export default function JoinPage() {
     }
   };
 
-  if (shop === undefined) {
+  const handleReturningSubmit = async () => {
+    if (!qrToken || !shop || !consent) return;
+    setLoading(true);
+    setError("");
+    try {
+      await createMembership({ qrToken, shopId: shop._id });
+      setSuccess(true);
+      setTimeout(() => router.push(`/me/${qrToken}`), 1500);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Fehler beim Hinzufügen");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isLoading = shop === undefined || !tokenLoaded || (qrToken !== null && existing === undefined);
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <motion.div
@@ -70,6 +109,9 @@ export default function JoinPage() {
     );
   }
 
+  const customerName = existing?.customer?.name;
+  const isReturning = !!qrToken && !!existing && !existing.membership;
+
   return (
     <div className="min-h-screen flex flex-col px-6 py-12 max-w-sm mx-auto">
 
@@ -80,7 +122,6 @@ export default function JoinPage() {
         transition={{ duration: 0.5 }}
         className="mb-10"
       >
-        {/* Stamp dots decoration */}
         <div className="flex gap-1.5 mb-6">
           {Array.from({ length: shop.stampsRequired }).map((_, i) => (
             <motion.div
@@ -96,7 +137,6 @@ export default function JoinPage() {
         <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{shop.name}</h1>
         <p className="text-zinc-500 mt-1 text-sm">Digitale Stempelkarte</p>
 
-        {/* Reward badge */}
         <motion.div
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
@@ -110,7 +150,7 @@ export default function JoinPage() {
         </motion.div>
       </motion.div>
 
-      {/* Form */}
+      {/* Content */}
       <AnimatePresence mode="wait">
         {success ? (
           <motion.div
@@ -126,19 +166,97 @@ export default function JoinPage() {
             >
               <CheckCircle size={64} className="text-amber-400 mx-auto" />
             </motion.div>
-            <h2 className="text-xl font-bold text-zinc-100">Willkommen, {name}!</h2>
+            <h2 className="text-xl font-bold text-zinc-100">
+              {isReturning ? `Karte hinzugefügt!` : `Willkommen, ${name}!`}
+            </h2>
             <p className="text-zinc-500 text-sm">Deine Stempelkarte wird geladen...</p>
           </motion.div>
+
+        ) : isReturning ? (
+          /* Bestandskunde, noch kein Mitglied hier */
+          <motion.div
+            key="returning"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="flex flex-col gap-4 flex-1"
+          >
+            <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4">
+              <div className="w-10 h-10 rounded-full bg-amber-400/10 flex items-center justify-center shrink-0">
+                <Stamp size={18} className="text-amber-400" />
+              </div>
+              <div>
+                <p className="text-zinc-100 font-semibold">Willkommen zurück{customerName ? `, ${customerName}` : ""}!</p>
+                <p className="text-zinc-500 text-xs mt-0.5">Füge {shop.name} zu deiner Wallet hinzu.</p>
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3"
+                >
+                  {error}
+                </motion.p>
+              )}
+            </AnimatePresence>
+
+            <div className="flex-1" />
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <div className="relative mt-0.5 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                  consent ? "bg-amber-400 border-amber-400" : "border-zinc-600 bg-zinc-900"
+                }`}>
+                  {consent && <CheckCircle size={12} className="text-zinc-900" strokeWidth={3} />}
+                </div>
+              </div>
+              <span className="text-xs text-zinc-500 leading-relaxed">
+                Ich stimme zu, dass meine Daten für das Treueprogramm bei{" "}
+                <span className="text-zinc-300">{shop.name}</span> gespeichert werden.
+              </span>
+            </label>
+
+            <motion.button
+              onClick={handleReturningSubmit}
+              disabled={loading || !consent}
+              whileTap={{ scale: 0.97 }}
+              className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-900 font-semibold rounded-2xl transition-colors flex items-center justify-center gap-2 text-base"
+            >
+              {loading ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-5 h-5 border-2 border-zinc-900/30 border-t-zinc-900 rounded-full"
+                />
+              ) : (
+                <>
+                  Karte hinzufügen
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </motion.button>
+          </motion.div>
+
         ) : (
+          /* Neuer Kunde */
           <motion.form
             key="form"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.4 }}
-            onSubmit={handleSubmit}
+            onSubmit={handleNewSubmit}
             className="flex flex-col gap-4 flex-1"
           >
-            {/* Name */}
             <div className="group">
               <label className="block text-xs font-medium text-zinc-400 mb-2 ml-1">Dein Name</label>
               <div className="relative">
@@ -154,7 +272,6 @@ export default function JoinPage() {
               </div>
             </div>
 
-            {/* Phone */}
             <div className="group">
               <label className="block text-xs font-medium text-zinc-400 mb-2 ml-1">Handynummer</label>
               <div className="relative">
@@ -185,7 +302,6 @@ export default function JoinPage() {
 
             <div className="flex-1" />
 
-            {/* Consent */}
             <label className="flex items-start gap-3 cursor-pointer group">
               <div className="relative mt-0.5 shrink-0">
                 <input
@@ -206,7 +322,6 @@ export default function JoinPage() {
               </span>
             </label>
 
-            {/* Submit */}
             <motion.button
               type="submit"
               disabled={loading || !name.trim() || !phone.trim() || !consent}
