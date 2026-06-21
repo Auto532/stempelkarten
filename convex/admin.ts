@@ -1,12 +1,13 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-export const checkPin = query({
+export const checkPin = mutation({
   args: { pin: v.string() },
   handler: async (ctx, { pin }) => {
     const expected = process.env.ADMIN_PIN;
-    if (!expected) return false;
-    return pin === expected;
+    if (!expected) throw new Error("ADMIN_PIN nicht gesetzt");
+    if (pin !== expected) throw new Error("Falscher PIN");
+    return true;
   },
 });
 

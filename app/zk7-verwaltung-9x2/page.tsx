@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -657,23 +656,24 @@ const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
 
 export default function SuperAdminPage() {
   const router = useRouter();
-  const convex = useConvex();
+  const checkPinMutation = useMutation(api.admin.checkPin);
   const [pin, setPin] = useState("");
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [pinError, setPinError] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
   const handleLogin = async () => {
     if (!pin) return;
     setChecking(true);
-    setPinError(false);
+    setPinError(null);
     try {
-      const ok = await convex.query(api.admin.checkPin, { pin });
-      if (ok) setAuthed(true);
-      else { setPinError(true); setPin(""); }
-    } catch {
-      setPinError(true); setPin("");
+      await checkPinMutation({ pin });
+      setAuthed(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Fehler";
+      setPinError(msg);
+      setPin("");
     } finally {
       setChecking(false);
     }
@@ -691,13 +691,13 @@ export default function SuperAdminPage() {
             <p className="text-zinc-500 text-sm mt-1">Nur für interne Nutzung</p>
           </div>
           <input
-            type="password" value={pin} onChange={(e) => { setPin(e.target.value); setPinError(false); }}
+            type="password" value={pin} onChange={(e) => { setPin(e.target.value); setPinError(null); }}
             placeholder="PIN"
             onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }}
             autoFocus
             className={`w-full px-4 py-3.5 bg-zinc-900 border rounded-2xl text-zinc-100 placeholder-zinc-600 focus:outline-none text-center tracking-widest text-xl transition-colors ${pinError ? "border-red-500/60" : "border-zinc-800 focus:border-amber-400/50"}`}
           />
-          {pinError && <p className="text-red-400 text-sm text-center -mt-2">Falscher PIN</p>}
+          {pinError && <p className="text-red-400 text-sm text-center -mt-2">{pinError}</p>}
           <button
             onClick={handleLogin}
             disabled={checking || !pin}
