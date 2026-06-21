@@ -37,25 +37,25 @@ export function getStampIcon(key?: string | null): LucideIcon {
   return Stamp;
 }
 
-// ─── Branchen für Shop-Erstellung ─────────────────────────────────────────────
+// ─── Branchen ─────────────────────────────────────────────────────────────────
 
 export const BRANCHEN = [
   { label: "Friseur / Barbershop", icon: "scissors" },
-  { label: "Café / Kaffee", icon: "coffee" },
-  { label: "Restaurant", icon: "utensils" },
-  { label: "Imbiss / Pizza", icon: "pizza" },
-  { label: "Bäckerei / Konditorei", icon: "flame" },
-  { label: "Gym / Fitness", icon: "dumbbell" },
-  { label: "Wellness / Kosmetik", icon: "flower" },
-  { label: "Einzelhandel", icon: "shopping" },
-  { label: "Auto / Werkstatt", icon: "car" },
-  { label: "Fahrrad", icon: "bike" },
-  { label: "Mode / Kleidung", icon: "shirt" },
-  { label: "Buchhandlung", icon: "book" },
-  { label: "Sonstiges", icon: "stamp" },
+  { label: "Café / Kaffee",        icon: "coffee"   },
+  { label: "Restaurant",           icon: "utensils" },
+  { label: "Imbiss / Pizza",       icon: "pizza"    },
+  { label: "Bäckerei / Konditorei",icon: "flame"    },
+  { label: "Gym / Fitness",        icon: "dumbbell" },
+  { label: "Wellness / Kosmetik",  icon: "flower"   },
+  { label: "Einzelhandel",         icon: "shopping" },
+  { label: "Auto / Werkstatt",     icon: "car"      },
+  { label: "Fahrrad",              icon: "bike"     },
+  { label: "Mode / Kleidung",      icon: "shirt"    },
+  { label: "Buchhandlung",         icon: "book"     },
+  { label: "Sonstiges",            icon: "stamp"    },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function hexToRgba(hex: string, alpha: number) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -79,7 +79,7 @@ export function getActiveTiers(shop: {
 
 const PARTICLES = Array.from({ length: 12 }, (_, i) => {
   const angle = (i / 12) * Math.PI * 2;
-  const dist = 90 + (i % 4) * 18;
+  const dist  = 90 + (i % 4) * 18;
   return { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist };
 });
 
@@ -93,16 +93,14 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.4 } }}
       onClick={onDone}
       className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/90 backdrop-blur-sm cursor-pointer"
     >
       {[0, 1, 2, 3].map(i => (
         <motion.div key={i}
-          initial={{ scale: 0.2, opacity: 0.85 }}
-          animate={{ scale: 5.5, opacity: 0 }}
+          initial={{ scale: 0.2, opacity: 0.85 }} animate={{ scale: 5.5, opacity: 0 }}
           transition={{ delay: 0.1 + i * 0.11, duration: 1.0, ease: "easeOut" }}
           className="absolute w-28 h-28 rounded-full border-2 border-amber-400/55"
         />
@@ -126,17 +124,14 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
           <Stamp size={68} className="text-zinc-900" strokeWidth={1.5} />
         </motion.div>
         <motion.p
-          initial={{ opacity: 0, scale: 0.4, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.4, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ delay: 0.3, type: "spring", stiffness: 280 }}
           className="text-4xl font-black text-amber-400 mt-6 tracking-tight"
         >
           Stempel!
         </motion.p>
         <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.75 }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.75 }}
           className="text-zinc-500 text-sm mt-2"
         >
           Tippe um fortzufahren
@@ -150,20 +145,17 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
 
 export function QRCard({ qrToken, customerName }: { qrToken: string; customerName: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
   useEffect(() => {
     if (canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
-        width: 210, margin: 1,
-        color: { dark: "#09090b", light: "#fafafa" },
+        width: 210, margin: 1, color: { dark: "#09090b", light: "#fafafa" },
       });
     }
   }, [qrToken]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
       className="relative mx-auto w-full max-w-xs"
     >
@@ -196,8 +188,7 @@ export function QRMini({ qrToken }: { qrToken: string }) {
   useEffect(() => {
     if (canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
-        width: 72, margin: 1,
-        color: { dark: "#09090b", light: "#fafafa" },
+        width: 72, margin: 1, color: { dark: "#09090b", light: "#fafafa" },
       });
     }
   }, [qrToken]);
@@ -208,30 +199,94 @@ export function QRMini({ qrToken }: { qrToken: string }) {
   );
 }
 
+// ─── MilestonesSection (außerhalb der Karte) ──────────────────────────────────
+
+export function MilestonesSection({
+  milestones, totalStampsEver, accent,
+}: {
+  milestones: CardTier[];
+  totalStampsEver: number;
+  accent?: string;
+}) {
+  const active = milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);
+  if (!active.length) return null;
+  const accentColor = accent ?? "#fbbf24";
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+      <div className="flex items-center gap-2 mb-3">
+        <Star size={14} className="text-amber-500 fill-amber-500 shrink-0" />
+        <h3 className="text-xs font-bold text-neutral-400 tracking-wider uppercase">Treue-Meilensteine</h3>
+      </div>
+      <div className="space-y-2">
+        {active.map((m, i) => {
+          const reached = totalStampsEver >= m.stamps;
+          const isNext  = !reached && active.slice(0, i).every(prev => totalStampsEver >= prev.stamps);
+          const progress = Math.min(totalStampsEver / m.stamps, 1);
+          return (
+            <div key={i} className="bg-[#111111] border border-neutral-800 rounded-2xl p-4 flex items-center gap-4">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                style={reached
+                  ? { backgroundColor: hexToRgba(accentColor, 0.2), color: accentColor }
+                  : { backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", color: "#525252" }
+                }
+              >
+                {reached ? "✓" : i + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <p className={`text-sm truncate ${reached ? "text-neutral-200" : isNext ? "text-neutral-400" : "text-neutral-600"}`}>
+                    {m.text}
+                  </p>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full shrink-0"
+                    style={reached
+                      ? { backgroundColor: hexToRgba(accentColor, 0.15), color: accentColor }
+                      : { backgroundColor: "#1a1a1a", color: "#525252" }
+                    }
+                  >
+                    {totalStampsEver} / {m.stamps}
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress * 100}%` }}
+                    transition={{ duration: 0.8, delay: 0.1 }}
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: reached ? accentColor : hexToRgba(accentColor, 0.5) }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── LoyaltyCard ─────────────────────────────────────────────────────────────
 
 export function LoyaltyCard({
   shopName, rewardText, stampsRequired, currentStamps, rewardsRedeemed,
-  totalStampsEver, animateIndex, onShowQR, qrToken, rewardTiers,
-  accentColor, milestones, stampIcon,
+  animateIndex, onShowQR, qrToken, rewardTiers, accentColor, stampIcon,
 }: {
   shopName: string;
   rewardText: string;
   stampsRequired: number;
   currentStamps: number;
   rewardsRedeemed: number;
-  totalStampsEver: number;
   animateIndex: number | null;
   onShowQR: () => void;
   qrToken: string;
   rewardTiers?: CardTier[];
   accentColor?: string;
-  milestones?: CardTier[];
   stampIcon?: string | null;
 }) {
   const accent = accentColor ?? "#fbbf24";
   const StampIconComponent = getStampIcon(stampIcon);
-  const activeMilestones = (milestones ?? []).filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);
   const activeTiers: CardTier[] = rewardTiers && rewardTiers.some(t => t.enabled)
     ? rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps)
     : [{ stamps: stampsRequired, text: rewardText, enabled: true }];
@@ -242,62 +297,50 @@ export function LoyaltyCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 }}
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
       className="card-3d rounded-3xl overflow-hidden"
       style={{
-        background: "rgba(8, 8, 12, 0.82)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        border: `1.5px solid ${hexToRgba(accent, 0.2)}`,
-        boxShadow: `0 8px 40px rgba(0,0,0,0.7), inset 0 1px 0 ${hexToRgba(accent, 0.06)}`,
+        backgroundColor: "#111111",
+        border: "1px solid #262626",
+        boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
       }}
     >
       {/* Karten-Kopf */}
-      <div className="px-5 pt-5 pb-3 flex items-start gap-3">
+      <div className="px-6 pt-6 pb-3 flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-[8px] font-semibold uppercase tracking-[0.28em] text-zinc-600 mb-1">
+          <p className="text-[9px] font-bold tracking-widest uppercase mb-1" style={{ color: accent }}>
             Digitale Stempelkarte
           </p>
-          <p className="text-zinc-100 font-bold text-xl leading-tight">{shopName}</p>
-          <p className="text-[11px] text-zinc-600 mt-1">
-            {currentStamps} von {maxStamps} Stempel
-          </p>
+          <h2 className="text-2xl font-bold text-neutral-100 leading-tight">{shopName}</h2>
+          <p className="text-neutral-500 text-sm mt-1">{currentStamps} von {maxStamps} Stempel</p>
         </div>
-        <button onClick={onShowQR} className="shrink-0 flex flex-col items-center gap-1 group mt-0.5">
+        <button onClick={onShowQR} className="shrink-0 flex flex-col items-center gap-1.5 group mt-0.5">
           <QRMini qrToken={qrToken} />
-          <span className="text-[9px] text-zinc-700 group-hover:text-zinc-500 transition-colors">
+          <span className="text-[9px] group-hover:text-neutral-400 transition-colors" style={{ color: accent }}>
             QR zeigen
           </span>
         </button>
       </div>
 
-      <div className="mx-5 border-t border-white/5 mb-4" />
-
       {/* Stempel-Raster */}
-      <div className="px-5 pb-4">
-        <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+      <div className="px-6 pt-5 pb-6">
+        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
           {Array.from({ length: maxStamps }).map((_, i) => {
-            const filled = i < currentStamps;
-            const isNew = animateIndex === i;
+            const filled   = i < currentStamps;
+            const isNew    = animateIndex === i;
             const isTierEnd = tierThresholds.has(i + 1);
             return (
               <motion.div
                 key={i}
                 className="aspect-square rounded-full flex items-center justify-center"
                 style={{
-                  background: filled
-                    ? `linear-gradient(135deg, ${hexToRgba(accent, 0.28)} 0%, ${hexToRgba(accent, 0.10)} 100%)`
-                    : "rgba(20, 20, 30, 0.8)",
+                  backgroundColor: filled ? hexToRgba(accent, 0.12) : "#161616",
                   border: filled
-                    ? isTierEnd
-                      ? `1.5px solid ${hexToRgba(accent, 0.65)}`
-                      : `1px solid ${hexToRgba(accent, 0.38)}`
-                    : isTierEnd
-                      ? `1.5px solid ${hexToRgba(accent, 0.3)}`
-                      : `1px solid rgba(255,255,255,0.06)`,
-                  boxShadow: filled ? `0 2px 10px ${hexToRgba(accent, 0.18)}` : "none",
+                    ? isTierEnd ? `1.5px solid ${hexToRgba(accent, 0.7)}` : `1px solid ${hexToRgba(accent, 0.4)}`
+                    : isTierEnd ? `1.5px solid ${hexToRgba(accent, 0.35)}` : `1px solid ${hexToRgba(accent, 0.25)}`,
+                  boxShadow: filled
+                    ? `0 2px 8px ${hexToRgba(accent, 0.15)}`
+                    : "inset 0 4px 8px rgba(0,0,0,0.6)",
                 }}
                 animate={isNew ? { scale: [1, 1.35, 0.94, 1.06, 1] } : {}}
                 transition={{ duration: 0.45, ease: "easeOut" }}
@@ -308,20 +351,10 @@ export function LoyaltyCard({
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ type: "spring", stiffness: 320, delay: isNew ? 0.06 : 0 }}
                   >
-                    <StampIconComponent
-                      size={iconSize}
-                      strokeWidth={1.6}
-                      style={{ color: hexToRgba(accent, 0.9) }}
-                    />
+                    <StampIconComponent size={iconSize} strokeWidth={1.6} style={{ color: accent }} />
                   </motion.div>
                 ) : (
-                  <span
-                    className="select-none leading-none font-medium"
-                    style={{
-                      fontSize: "9px",
-                      color: isTierEnd ? hexToRgba(accent, 0.3) : "rgba(255,255,255,0.1)",
-                    }}
-                  >
+                  <span className="select-none leading-none text-sm font-medium" style={{ color: "#404040" }}>
                     {i + 1}
                   </span>
                 )}
@@ -331,106 +364,40 @@ export function LoyaltyCard({
         </div>
       </div>
 
-      {/* Coupon-Trennlinie */}
-      <div className="relative mx-4 mb-3">
-        <div className="border-t border-dashed border-white/6" />
-        <div className="absolute -left-5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-zinc-950" />
-        <div className="absolute -right-5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-zinc-950" />
-      </div>
-
       {/* Belohnungs-Abschnitt */}
-      <div className="px-4 pb-5 space-y-2">
+      <div className="px-5 pb-6 space-y-2">
         {activeTiers.map((tier, i) => {
           const reached = currentStamps >= tier.stamps;
           return (
             <div
               key={i}
-              className="rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-500"
+              className="rounded-2xl p-4 flex items-center gap-4 transition-all duration-500"
               style={{
-                background: reached ? hexToRgba(accent, 0.08) : "rgba(255,255,255,0.03)",
-                border: reached
-                  ? `1.5px solid ${hexToRgba(accent, 0.45)}`
-                  : `1px solid rgba(255,255,255,0.06)`,
+                background: reached
+                  ? `linear-gradient(to right, ${hexToRgba(accent, 0.18)}, ${hexToRgba(accent, 0.08)})`
+                  : "linear-gradient(to right, #1a1208, #110d04)",
+                border: `1px solid ${hexToRgba(accent, reached ? 0.45 : 0.2)}`,
               }}
             >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300"
-                style={reached
-                  ? { backgroundColor: hexToRgba(accent, 0.9) }
-                  : { backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }
-                }
-              >
-                <Gift size={17} className={reached ? "text-zinc-900" : "text-zinc-600"} />
-              </div>
+              <Gift size={28} style={{ color: accent, flexShrink: 0 }} />
               <div className="flex-1 min-w-0">
-                <p
-                  className="text-[9px] font-semibold uppercase tracking-widest mb-0.5 transition-colors"
-                  style={{ color: reached ? hexToRgba(accent, 0.9) : "rgba(255,255,255,0.2)" }}
-                >
+                <p className="text-[10px] font-bold tracking-wider uppercase mb-0.5" style={{ color: accent }}>
                   {reached ? "Bereit zum Einlösen" : `Ab ${tier.stamps} Stempeln`}
                 </p>
-                <p className={`text-sm font-semibold leading-snug transition-colors ${reached ? "text-zinc-100" : "text-zinc-600"}`}>
+                <p className={`font-semibold leading-snug ${reached ? "text-amber-50" : "text-neutral-400"}`}>
                   {tier.text}
                 </p>
               </div>
               {i === activeTiers.length - 1 && rewardsRedeemed > 0 && (
-                <div className="shrink-0 rounded-xl px-2.5 py-1.5 text-center" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <p className="text-xs text-zinc-400 font-bold">{rewardsRedeemed}×</p>
-                  <p className="text-[8px] text-zinc-600 mt-0.5">genutzt</p>
+                <div className="shrink-0 text-center">
+                  <p className="text-sm font-bold" style={{ color: accent }}>{rewardsRedeemed}×</p>
+                  <p className="text-[9px] text-neutral-600">genutzt</p>
                 </div>
               )}
             </div>
           );
         })}
       </div>
-
-      {/* Treue-Meilensteine */}
-      {activeMilestones.length > 0 && (
-        <div className="px-4 pb-4">
-          <div className="border-t border-white/5 pt-3">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-zinc-600 mb-2.5 flex items-center gap-1.5">
-              <span>⭐</span> Treue-Meilensteine
-            </p>
-            <div className="space-y-2">
-              {activeMilestones.map((m, i) => {
-                const reached = totalStampsEver >= m.stamps;
-                const isNext = !reached && activeMilestones.slice(0, i).every(prev => totalStampsEver >= prev.stamps);
-                const progress = Math.min(totalStampsEver / m.stamps, 1);
-                return (
-                  <div key={i} className="flex items-start gap-2.5">
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${
-                      reached ? "bg-amber-400/20 text-amber-400" : "bg-white/5 text-zinc-600"
-                    }`}>
-                      {reached ? "✓" : i + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={`text-[11px] font-medium truncate ${reached ? "text-zinc-300" : isNext ? "text-zinc-400" : "text-zinc-600"}`}>
-                          {m.text}
-                        </p>
-                        <p className="text-[9px] text-zinc-600 shrink-0">
-                          {reached ? `${m.stamps} ✓` : `${totalStampsEver}/${m.stamps}`}
-                        </p>
-                      </div>
-                      {isNext && (
-                        <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress * 100}%` }}
-                            transition={{ duration: 0.8, delay: 0.1 }}
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: hexToRgba(accent, 0.6) }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
     </motion.div>
   );
 }

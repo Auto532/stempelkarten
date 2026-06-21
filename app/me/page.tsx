@@ -6,7 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Smartphone, LayoutGrid, ChevronRight, Gift } from "lucide-react";
-import { StampOverlay, QRCard, LoyaltyCard, getActiveTiers, hexToRgba } from "./components";
+import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection, getActiveTiers, hexToRgba } from "./components";
 
 const AWAY_THRESHOLD_MS = 4 * 60 * 60 * 1000;
 
@@ -240,8 +240,10 @@ export default function MePage() {
       </AnimatePresence>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 text-center">
-        <p className="text-zinc-500 text-sm">Hallo,</p>
-        <h1 className="text-2xl font-bold text-zinc-100 mt-0.5">{customer.name} 👋</h1>
+        <p className="text-neutral-500 text-sm">Hallo,</p>
+        <h1 className="text-2xl font-bold mt-0.5 bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600">
+          {customer.name} 👋
+        </h1>
       </motion.div>
 
       {/* ── Multi-Shop Übersicht ─────────────────────────────────── */}
@@ -293,22 +295,28 @@ export default function MePage() {
               exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
               className="flex-1 flex flex-col gap-5">
               {allMemberships.map((entry) => (
-                <LoyaltyCard
-                  key={entry.membership._id}
-                  shopName={entry.shop?.name ?? ""}
-                  rewardText={entry.shop?.rewardText ?? ""}
-                  stampsRequired={entry.shop?.stampsRequired ?? 8}
-                  currentStamps={entry.membership.currentStamps}
-                  rewardsRedeemed={entry.membership.rewardsRedeemed}
-                  totalStampsEver={entry.membership.totalStampsEver}
-                  animateIndex={stampAnimMap[entry.membership._id] ?? null}
-                  onShowQR={() => setView("qr")}
-                  qrToken={qrToken}
-                  rewardTiers={entry.shop?.rewardTiers}
-                  accentColor={entry.shop?.customDesignEnabled ? entry.shop?.accentColor : undefined}
-                  milestones={entry.shop?.milestonesEnabled ? entry.shop?.milestones : undefined}
-                  stampIcon={entry.shop?.stampIcon}
-                />
+                <div key={entry.membership._id} className="flex flex-col gap-4">
+                  <LoyaltyCard
+                    shopName={entry.shop?.name ?? ""}
+                    rewardText={entry.shop?.rewardText ?? ""}
+                    stampsRequired={entry.shop?.stampsRequired ?? 8}
+                    currentStamps={entry.membership.currentStamps}
+                    rewardsRedeemed={entry.membership.rewardsRedeemed}
+                    animateIndex={stampAnimMap[entry.membership._id] ?? null}
+                    onShowQR={() => setView("qr")}
+                    qrToken={qrToken}
+                    rewardTiers={entry.shop?.rewardTiers}
+                    accentColor={entry.shop?.customDesignEnabled ? entry.shop?.accentColor : undefined}
+                    stampIcon={entry.shop?.stampIcon}
+                  />
+                  {entry.shop?.milestonesEnabled && entry.shop.milestones && (
+                    <MilestonesSection
+                      milestones={entry.shop.milestones}
+                      totalStampsEver={entry.membership.totalStampsEver}
+                      accent={entry.shop?.customDesignEnabled ? entry.shop.accentColor : undefined}
+                    />
+                  )}
+                </div>
               ))}
             </motion.div>
           )}

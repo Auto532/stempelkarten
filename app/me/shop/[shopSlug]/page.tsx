@@ -6,7 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
-import { StampOverlay, QRCard, LoyaltyCard } from "../../components";
+import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection } from "../../components";
 
 export default function MeShopPage() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -119,6 +119,7 @@ export default function MeShopPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
+              className="flex flex-col gap-4"
             >
               <LoyaltyCard
                 shopName={shop.name}
@@ -126,15 +127,20 @@ export default function MeShopPage() {
                 stampsRequired={shop.stampsRequired}
                 currentStamps={membership.currentStamps}
                 rewardsRedeemed={membership.rewardsRedeemed}
-                totalStampsEver={membership.totalStampsEver}
                 animateIndex={stampAnim}
                 onShowQR={() => setShowQR(true)}
                 qrToken={qrToken}
                 rewardTiers={shop.rewardTiers}
                 accentColor={shop.customDesignEnabled ? shop.accentColor : undefined}
-                milestones={shop.milestonesEnabled ? shop.milestones : undefined}
                 stampIcon={shop.stampIcon}
               />
+              {shop.milestonesEnabled && shop.milestones && (
+                <MilestonesSection
+                  milestones={shop.milestones}
+                  totalStampsEver={membership.totalStampsEver}
+                  accent={shop.customDesignEnabled ? shop.accentColor : undefined}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
