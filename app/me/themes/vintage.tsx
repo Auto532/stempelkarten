@@ -16,7 +16,7 @@ const APP_BG     = "#0D0803";
 export function VintageBackground() {
   return (
     <div
-      className="fixed inset-0 z-[1] pointer-events-none"
+      className="fixed inset-0 z-[-1] pointer-events-none"
       style={{
         background: `
           radial-gradient(ellipse at 15% 20%, rgba(80,40,8,0.5) 0%, transparent 55%),
