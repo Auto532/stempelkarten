@@ -3,11 +3,57 @@
 import { useEffect, useRef } from "react";
 import QRCode from "qrcode";
 import { motion } from "framer-motion";
-import { Gift, Stamp, Scissors } from "lucide-react";
+import {
+  Gift, Stamp, Scissors, Coffee, Pizza, Dumbbell, Flower2,
+  ShoppingBag, Car, Utensils, BookOpen, Flame, Star, Bike, Shirt,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CardTier = { stamps: number; text: string; enabled: boolean };
+
+// ─── Icon-System ──────────────────────────────────────────────────────────────
+
+export const STAMP_ICONS: Record<string, LucideIcon> = {
+  scissors: Scissors,
+  coffee: Coffee,
+  pizza: Pizza,
+  dumbbell: Dumbbell,
+  flower: Flower2,
+  shopping: ShoppingBag,
+  car: Car,
+  utensils: Utensils,
+  book: BookOpen,
+  flame: Flame,
+  star: Star,
+  bike: Bike,
+  shirt: Shirt,
+  stamp: Stamp,
+};
+
+export function getStampIcon(key?: string | null): LucideIcon {
+  if (key && STAMP_ICONS[key]) return STAMP_ICONS[key];
+  return Stamp;
+}
+
+// ─── Branchen für Shop-Erstellung ─────────────────────────────────────────────
+
+export const BRANCHEN = [
+  { label: "Friseur / Barbershop", icon: "scissors" },
+  { label: "Café / Kaffee", icon: "coffee" },
+  { label: "Restaurant", icon: "utensils" },
+  { label: "Imbiss / Pizza", icon: "pizza" },
+  { label: "Bäckerei / Konditorei", icon: "flame" },
+  { label: "Gym / Fitness", icon: "dumbbell" },
+  { label: "Wellness / Kosmetik", icon: "flower" },
+  { label: "Einzelhandel", icon: "shopping" },
+  { label: "Auto / Werkstatt", icon: "car" },
+  { label: "Fahrrad", icon: "bike" },
+  { label: "Mode / Kleidung", icon: "shirt" },
+  { label: "Buchhandlung", icon: "book" },
+  { label: "Sonstiges", icon: "stamp" },
+];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -18,7 +64,11 @@ export function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-export function getActiveTiers(shop: { stampsRequired: number; rewardText: string; rewardTiers?: CardTier[] }): CardTier[] {
+export function getActiveTiers(shop: {
+  stampsRequired: number;
+  rewardText: string;
+  rewardTiers?: CardTier[];
+}): CardTier[] {
   if (shop.rewardTiers && shop.rewardTiers.some(t => t.enabled)) {
     return shop.rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps);
   }
@@ -96,7 +146,7 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
   );
 }
 
-// ─── QRCard (groß, für die Hauptansicht) ──────────────────────────────────────
+// ─── QRCard ───────────────────────────────────────────────────────────────────
 
 export function QRCard({ qrToken, customerName }: { qrToken: string; customerName: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -139,7 +189,7 @@ export function QRCard({ qrToken, customerName }: { qrToken: string; customerNam
   );
 }
 
-// ─── QRMini (eingebettet in LoyaltyCard) ─────────────────────────────────────
+// ─── QRMini ───────────────────────────────────────────────────────────────────
 
 export function QRMini({ qrToken }: { qrToken: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -162,7 +212,8 @@ export function QRMini({ qrToken }: { qrToken: string }) {
 
 export function LoyaltyCard({
   shopName, rewardText, stampsRequired, currentStamps, rewardsRedeemed,
-  totalStampsEver, animateIndex, onShowQR, qrToken, rewardTiers, accentColor, milestones,
+  totalStampsEver, animateIndex, onShowQR, qrToken, rewardTiers,
+  accentColor, milestones, stampIcon,
 }: {
   shopName: string;
   rewardText: string;
@@ -176,8 +227,10 @@ export function LoyaltyCard({
   rewardTiers?: CardTier[];
   accentColor?: string;
   milestones?: CardTier[];
+  stampIcon?: string | null;
 }) {
   const accent = accentColor ?? "#fbbf24";
+  const StampIconComponent = getStampIcon(stampIcon);
   const activeMilestones = (milestones ?? []).filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);
   const activeTiers: CardTier[] = rewardTiers && rewardTiers.some(t => t.enabled)
     ? rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps)
@@ -194,9 +247,11 @@ export function LoyaltyCard({
       transition={{ delay: 0.05 }}
       className="card-3d rounded-3xl overflow-hidden"
       style={{
-        background: "linear-gradient(150deg, #2e2010 0%, #211508 60%, #291c0d 100%)",
-        border: `1.5px solid ${hexToRgba(accent, 0.55)}`,
-        boxShadow: `0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 ${hexToRgba(accent, 0.08)}`,
+        background: "rgba(8, 8, 12, 0.82)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        border: `1.5px solid ${hexToRgba(accent, 0.2)}`,
+        boxShadow: `0 8px 40px rgba(0,0,0,0.7), inset 0 1px 0 ${hexToRgba(accent, 0.06)}`,
       }}
     >
       {/* Karten-Kopf */}
@@ -218,7 +273,7 @@ export function LoyaltyCard({
         </button>
       </div>
 
-      <div className="mx-5 border-t border-zinc-800/70 mb-4" />
+      <div className="mx-5 border-t border-white/5 mb-4" />
 
       {/* Stempel-Raster */}
       <div className="px-5 pb-4">
@@ -233,16 +288,16 @@ export function LoyaltyCard({
                 className="aspect-square rounded-full flex items-center justify-center"
                 style={{
                   background: filled
-                    ? "linear-gradient(135deg, #8a6820 0%, #4e3610 100%)"
-                    : "rgba(62,46,20,0.75)",
+                    ? `linear-gradient(135deg, ${hexToRgba(accent, 0.28)} 0%, ${hexToRgba(accent, 0.10)} 100%)`
+                    : "rgba(20, 20, 30, 0.8)",
                   border: filled
-                    ? isTierEnd ? `1.5px solid ${hexToRgba(accent, 0.6)}` : `1px solid ${hexToRgba(accent, 0.3)}`
-                    : isTierEnd ? `1.5px solid ${hexToRgba(accent, 0.4)}` : `1px solid ${hexToRgba(accent, 0.38)}`,
-                  boxShadow: filled
                     ? isTierEnd
-                      ? `0 2px 10px ${hexToRgba(accent, 0.35)}, inset 0 1px 0 ${hexToRgba(accent, 0.18)}`
-                      : `0 2px 8px rgba(70,50,10,0.45), inset 0 1px 0 ${hexToRgba(accent, 0.18)}`
-                    : "none",
+                      ? `1.5px solid ${hexToRgba(accent, 0.65)}`
+                      : `1px solid ${hexToRgba(accent, 0.38)}`
+                    : isTierEnd
+                      ? `1.5px solid ${hexToRgba(accent, 0.3)}`
+                      : `1px solid rgba(255,255,255,0.06)`,
+                  boxShadow: filled ? `0 2px 10px ${hexToRgba(accent, 0.18)}` : "none",
                 }}
                 animate={isNew ? { scale: [1, 1.35, 0.94, 1.06, 1] } : {}}
                 transition={{ duration: 0.45, ease: "easeOut" }}
@@ -253,12 +308,19 @@ export function LoyaltyCard({
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ type: "spring", stiffness: 320, delay: isNew ? 0.06 : 0 }}
                   >
-                    <Scissors size={iconSize} className="text-amber-100/80" strokeWidth={1.6} />
+                    <StampIconComponent
+                      size={iconSize}
+                      strokeWidth={1.6}
+                      style={{ color: hexToRgba(accent, 0.9) }}
+                    />
                   </motion.div>
                 ) : (
                   <span
                     className="select-none leading-none font-medium"
-                    style={{ fontSize: "9px", color: isTierEnd ? hexToRgba(accent, 0.4) : "rgba(161,161,170,0.35)" }}
+                    style={{
+                      fontSize: "9px",
+                      color: isTierEnd ? hexToRgba(accent, 0.3) : "rgba(255,255,255,0.1)",
+                    }}
                   >
                     {i + 1}
                   </span>
@@ -271,11 +333,9 @@ export function LoyaltyCard({
 
       {/* Coupon-Trennlinie */}
       <div className="relative mx-4 mb-3">
-        <div className="border-t border-dashed border-zinc-700/40" />
-        <div className="absolute -left-5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full"
-          style={{ background: "rgb(9,9,11)" }} />
-        <div className="absolute -right-5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full"
-          style={{ background: "rgb(9,9,11)" }} />
+        <div className="border-t border-dashed border-white/6" />
+        <div className="absolute -left-5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-zinc-950" />
+        <div className="absolute -right-5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-zinc-950" />
       </div>
 
       {/* Belohnungs-Abschnitt */}
@@ -287,29 +347,34 @@ export function LoyaltyCard({
               key={i}
               className="rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-500"
               style={{
-                background: reached ? hexToRgba(accent, 0.08) : "rgba(0,0,0,0.15)",
-                border: reached ? `1.5px solid ${hexToRgba(accent, 0.55)}` : `1px solid ${hexToRgba(accent, 0.18)}`,
+                background: reached ? hexToRgba(accent, 0.08) : "rgba(255,255,255,0.03)",
+                border: reached
+                  ? `1.5px solid ${hexToRgba(accent, 0.45)}`
+                  : `1px solid rgba(255,255,255,0.06)`,
               }}
             >
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${!reached ? "bg-zinc-800/80 border border-zinc-700/50" : ""}`}
-                style={reached ? { backgroundColor: hexToRgba(accent, 0.9) } : {}}
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300"
+                style={reached
+                  ? { backgroundColor: hexToRgba(accent, 0.9) }
+                  : { backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }
+                }
               >
                 <Gift size={17} className={reached ? "text-zinc-900" : "text-zinc-600"} />
               </div>
               <div className="flex-1 min-w-0">
                 <p
-                  className={`text-[9px] font-semibold uppercase tracking-widest mb-0.5 transition-colors ${!reached ? "text-zinc-600" : ""}`}
-                  style={reached ? { color: hexToRgba(accent, 0.9) } : {}}
+                  className="text-[9px] font-semibold uppercase tracking-widest mb-0.5 transition-colors"
+                  style={{ color: reached ? hexToRgba(accent, 0.9) : "rgba(255,255,255,0.2)" }}
                 >
                   {reached ? "Bereit zum Einlösen" : `Ab ${tier.stamps} Stempeln`}
                 </p>
-                <p className={`text-sm font-semibold leading-snug transition-colors ${reached ? "text-zinc-100" : "text-zinc-500"}`}>
+                <p className={`text-sm font-semibold leading-snug transition-colors ${reached ? "text-zinc-100" : "text-zinc-600"}`}>
                   {tier.text}
                 </p>
               </div>
               {i === activeTiers.length - 1 && rewardsRedeemed > 0 && (
-                <div className="shrink-0 border border-zinc-700/50 rounded-xl px-2.5 py-1.5 text-center">
+                <div className="shrink-0 rounded-xl px-2.5 py-1.5 text-center" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
                   <p className="text-xs text-zinc-400 font-bold">{rewardsRedeemed}×</p>
                   <p className="text-[8px] text-zinc-600 mt-0.5">genutzt</p>
                 </div>
@@ -322,7 +387,7 @@ export function LoyaltyCard({
       {/* Treue-Meilensteine */}
       {activeMilestones.length > 0 && (
         <div className="px-4 pb-4">
-          <div className="border-t border-zinc-800/40 pt-3">
+          <div className="border-t border-white/5 pt-3">
             <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-zinc-600 mb-2.5 flex items-center gap-1.5">
               <span>⭐</span> Treue-Meilensteine
             </p>
@@ -334,7 +399,7 @@ export function LoyaltyCard({
                 return (
                   <div key={i} className="flex items-start gap-2.5">
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${
-                      reached ? "bg-amber-400/20 text-amber-400" : "bg-zinc-800/80 text-zinc-600"
+                      reached ? "bg-amber-400/20 text-amber-400" : "bg-white/5 text-zinc-600"
                     }`}>
                       {reached ? "✓" : i + 1}
                     </div>
@@ -348,13 +413,13 @@ export function LoyaltyCard({
                         </p>
                       </div>
                       {isNext && (
-                        <div className="mt-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                        <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${progress * 100}%` }}
                             transition={{ duration: 0.8, delay: 0.1 }}
                             className="h-full rounded-full"
-                            style={{ backgroundColor: hexToRgba(accent, 0.7) }}
+                            style={{ backgroundColor: hexToRgba(accent, 0.6) }}
                           />
                         </div>
                       )}

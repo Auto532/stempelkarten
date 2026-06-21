@@ -9,6 +9,7 @@ import {
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy, type LucideIcon,
 } from "lucide-react";
+import { BRANCHEN, STAMP_ICONS } from "@/app/me/components";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
@@ -317,13 +318,16 @@ function CreateShopForm({ onDone }: { onDone: () => void }) {
   const [slug, setSlug] = useState("");
   const [stampsRequired, setStampsRequired] = useState(10);
   const [rewardText, setRewardText] = useState("");
+  const [selectedBranche, setSelectedBranche] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const stampIcon = BRANCHEN.find(b => b.label === selectedBranche)?.icon;
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setLoading(true);
     try {
-      await createShop({ name, slug, stampsRequired, rewardText });
+      await createShop({ name, slug, stampsRequired, rewardText, stampIcon });
       onDone();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Fehler");
@@ -337,6 +341,33 @@ function CreateShopForm({ onDone }: { onDone: () => void }) {
         <h2 className="font-semibold text-zinc-100">Neuer Shop</h2>
         <button type="button" onClick={onDone} className="text-zinc-500 hover:text-zinc-300"><X size={18} /></button>
       </div>
+
+      {/* Branche */}
+      <div>
+        <label className="block text-xs text-zinc-500 mb-1.5">Branche</label>
+        <div className="grid grid-cols-2 gap-1.5">
+          {BRANCHEN.map((b) => {
+            const Icon = STAMP_ICONS[b.icon] ?? Stamp;
+            const active = selectedBranche === b.label;
+            return (
+              <button
+                key={b.label}
+                type="button"
+                onClick={() => setSelectedBranche(active ? "" : b.label)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left text-xs transition-all ${
+                  active
+                    ? "bg-amber-400/15 border-amber-400/40 text-amber-300"
+                    : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                }`}
+              >
+                <Icon size={13} className={active ? "text-amber-400" : "text-zinc-500"} />
+                <span className="truncate">{b.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {[
         { label: "Shop-Name", value: name, onChange: setName, placeholder: "Friseur Müller" },
         { label: "Slug (URL-Kürzel)", value: slug, onChange: (v: string) => setSlug(v.toLowerCase().replace(/[^a-z0-9-]/g, "-")), placeholder: "friseur-mueller" },

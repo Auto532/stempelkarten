@@ -133,6 +133,7 @@ export default function MeShopPage() {
                 rewardTiers={shop.rewardTiers}
                 accentColor={shop.customDesignEnabled ? shop.accentColor : undefined}
                 milestones={shop.milestonesEnabled ? shop.milestones : undefined}
+                stampIcon={shop.stampIcon}
               />
             </motion.div>
           )}

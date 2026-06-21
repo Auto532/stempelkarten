@@ -307,6 +307,7 @@ export default function MePage() {
                   rewardTiers={entry.shop?.rewardTiers}
                   accentColor={entry.shop?.customDesignEnabled ? entry.shop?.accentColor : undefined}
                   milestones={entry.shop?.milestonesEnabled ? entry.shop?.milestones : undefined}
+                  stampIcon={entry.shop?.stampIcon}
                 />
               ))}
             </motion.div>

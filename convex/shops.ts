@@ -117,6 +117,7 @@ export const createShop = mutation({
     slug: v.string(),
     stampsRequired: v.number(),
     rewardText: v.string(),
+    stampIcon: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const adminLoginToken = crypto.randomUUID();
