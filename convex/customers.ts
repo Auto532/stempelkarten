@@ -28,11 +28,13 @@ export const getMembershipsForCustomer = query({
     const withShops = await Promise.all(
       memberships.map(async (m) => {
         const shop = await ctx.db.get(m.shopId);
-        return { membership: m, shop };
+        if (!shop) return null;
+        const { adminLoginToken: _omit, ...publicShop } = shop;
+        return { membership: m, shop: publicShop };
       })
     );
 
-    return { customer, memberships: withShops.filter((w) => w.shop !== null) };
+    return { customer, memberships: withShops.filter((w) => w !== null) };
   },
 });
 

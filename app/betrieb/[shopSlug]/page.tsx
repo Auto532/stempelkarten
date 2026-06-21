@@ -41,6 +41,7 @@ export default function BetriebDashboard() {
   const updateMilestones = useMutation(api.shops.updateMilestones);
 
   const [authorized, setAuthorized] = useState(false);
+  const [adminToken, setAdminToken] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [stampsRequired, setStampsRequired] = useState(0);
   const [rewardText, setRewardText] = useState("");
@@ -62,9 +63,11 @@ export default function BetriebDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
-    if (!token) { router.replace("/"); return; }
+    const slug = localStorage.getItem("adminShopSlug");
+    if (!token || slug !== shopSlug) { router.replace("/"); return; }
+    setAdminToken(token);
     setAuthorized(true);
-  }, [router]);
+  }, [router, shopSlug]);
 
   useEffect(() => {
     if (shop) { setStampsRequired(shop.stampsRequired); setRewardText(shop.rewardText); }
@@ -92,7 +95,7 @@ export default function BetriebDashboard() {
     if (!shop) return;
     setMilestoneSaving(true);
     try {
-      await updateMilestones({ shopId: shop._id, milestones: [...milestones].sort((a, b) => a.stamps - b.stamps) });
+      await updateMilestones({ shopId: shop._id, adminToken, milestones: [...milestones].sort((a, b) => a.stamps - b.stamps) });
       setMilestoneSaved(true);
       setTimeout(() => setMilestoneSaved(false), 2500);
     } finally {
@@ -109,6 +112,7 @@ export default function BetriebDashboard() {
       const primary = enabled[0] ?? { stamps: shop.stampsRequired, text: shop.rewardText };
       await updateSettings({
         shopId: shop._id,
+        adminToken,
         stampsRequired: primary.stamps,
         rewardText: primary.text,
         rewardTiers: sorted.length > 1 ? sorted : undefined,
@@ -124,7 +128,7 @@ export default function BetriebDashboard() {
     if (!shop) return;
     setSaving(true);
     try {
-      await updateSettings({ shopId: shop._id, stampsRequired, rewardText });
+      await updateSettings({ shopId: shop._id, adminToken, stampsRequired, rewardText });
       setSaved(true);
       setEditMode(false);
       setTimeout(() => setSaved(false), 2000);

@@ -4,10 +4,14 @@ import { mutation, query } from "./_generated/server";
 export const getBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    return await ctx.db
+    const shop = await ctx.db
       .query("shops")
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .unique();
+    if (!shop) return null;
+    // adminLoginToken wird nie an den Client weitergegeben
+    const { adminLoginToken: _omit, ...publicShop } = shop;
+    return publicShop;
   },
 });
 
@@ -31,6 +35,7 @@ export const getById = query({
 export const updateSettings = mutation({
   args: {
     shopId: v.id("shops"),
+    adminToken: v.string(),
     stampsRequired: v.number(),
     rewardText: v.string(),
     rewardTiers: v.optional(v.array(v.object({
@@ -39,7 +44,9 @@ export const updateSettings = mutation({
       enabled: v.boolean(),
     }))),
   },
-  handler: async (ctx, { shopId, stampsRequired, rewardText, rewardTiers }) => {
+  handler: async (ctx, { shopId, adminToken, stampsRequired, rewardText, rewardTiers }) => {
+    const shop = await ctx.db.get(shopId);
+    if (!shop || shop.adminLoginToken !== adminToken) throw new Error("Nicht autorisiert");
     await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers });
   },
 });
@@ -82,9 +89,12 @@ export const toggleMilestones = mutation({
 export const updateMilestones = mutation({
   args: {
     shopId: v.id("shops"),
+    adminToken: v.string(),
     milestones: v.array(v.object({ stamps: v.number(), text: v.string(), enabled: v.boolean() })),
   },
-  handler: async (ctx, { shopId, milestones }) => {
+  handler: async (ctx, { shopId, adminToken, milestones }) => {
+    const shop = await ctx.db.get(shopId);
+    if (!shop || shop.adminLoginToken !== adminToken) throw new Error("Nicht autorisiert");
     await ctx.db.patch(shopId, { milestones });
   },
 });

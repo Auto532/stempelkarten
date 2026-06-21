@@ -4,7 +4,8 @@ import { v } from "convex/values";
 export const clearAllData = mutation({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
-    const expected = process.env.ADMIN_PIN ?? "1337";
+    const expected = process.env.ADMIN_PIN;
+    if (!expected) throw new Error("ADMIN_PIN Umgebungsvariable nicht gesetzt");
     if (adminSecret !== expected) throw new Error("Nicht autorisiert");
     const tables = ["stampEvents", "memberships", "customers", "shops"] as const;
     for (const table of tables) {

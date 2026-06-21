@@ -20,8 +20,8 @@ type ActionState =
   | { type: "stamped"; customerName: string; newStamps: number; stampsRequired: number; rewardReached: boolean; rewardText: string }
   | { type: "redeemed"; customerName: string; rewardText: string };
 
-function CustomerCard({ shopId, qrToken, stampsRequired, rewardText, bonusProgramEnabled, onDone }: {
-  shopId: Id<"shops">; qrToken: string; stampsRequired: number; rewardText: string; bonusProgramEnabled: boolean; onDone: () => void;
+function CustomerCard({ shopId, qrToken, stampsRequired, rewardText, bonusProgramEnabled, adminToken, onDone }: {
+  shopId: Id<"shops">; qrToken: string; stampsRequired: number; rewardText: string; bonusProgramEnabled: boolean; adminToken: string; onDone: () => void;
 }) {
   const data = useQuery(api.memberships.getForCustomerAndShop, { qrToken, shopId });
   const addStamp = useMutation(api.memberships.addStamp);
@@ -133,7 +133,7 @@ function CustomerCard({ shopId, qrToken, stampsRequired, rewardText, bonusProgra
   const handleAddStamp = async () => {
     setLoading(true); setError("");
     try {
-      const result = await addStamp({ membershipId: membership._id });
+      const result = await addStamp({ membershipId: membership._id, adminToken });
       setActionState({ type: "stamped", customerName: customer.name, newStamps: membership.currentStamps + 1, stampsRequired: result.stampsRequired, rewardReached: result.rewardReached, rewardText });
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
     finally { setLoading(false); }
@@ -142,7 +142,7 @@ function CustomerCard({ shopId, qrToken, stampsRequired, rewardText, bonusProgra
   const handleRedeem = async () => {
     setLoading(true); setError("");
     try {
-      await redeemReward({ membershipId: membership._id });
+      await redeemReward({ membershipId: membership._id, adminToken });
       setActionState({ type: "redeemed", customerName: customer.name, rewardText });
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
     finally { setLoading(false); }
@@ -243,12 +243,15 @@ export default function ScanPage() {
   const shop = useQuery(api.shops.getBySlug, { slug: shopSlug });
   const [scannedToken, setScannedToken] = useState<string | null>(null);
   const [authorized, setAuthorized] = useState(false);
+  const [adminToken, setAdminToken] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
-    if (!token) { router.replace("/"); return; }
+    const slug = localStorage.getItem("adminShopSlug");
+    if (!token || slug !== shopSlug) { router.replace("/"); return; }
+    setAdminToken(token);
     setAuthorized(true);
-  }, [router]);
+  }, [router, shopSlug]);
 
   if (!authorized || shop === undefined) {
     return <div className="min-h-screen flex items-center justify-center"><motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-zinc-500 text-sm">Laden...</motion.div></div>;
@@ -302,6 +305,7 @@ export default function ScanPage() {
               stampsRequired={shop.stampsRequired}
               rewardText={shop.rewardText}
               bonusProgramEnabled={!!shop.bonusProgramEnabled}
+              adminToken={adminToken}
               onDone={() => setScannedToken(null)}
             />
           </motion.div>

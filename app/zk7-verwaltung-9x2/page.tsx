@@ -9,6 +9,7 @@ import {
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy, type LucideIcon,
 } from "lucide-react";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
@@ -32,9 +33,8 @@ async function printQR(shopName: string, url: string) {
   w.document.close();
 }
 
-function ShopCard({ slug, index }: { slug: string; index: number }) {
-  const shop = useQuery(api.shops.getBySlug, { slug });
-  const customers = useQuery(api.shops.listCustomersForShop, shop ? { shopId: shop._id } : "skip");
+function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
+  const customers = useQuery(api.shops.listCustomersForShop, { shopId: shop._id });
   const toggleShowLeads = useMutation(api.shops.toggleShowLeads);
   const toggleBonusProgram = useMutation(api.shops.toggleBonusProgram);
   const toggleCustomDesign = useMutation(api.shops.toggleCustomDesign);
@@ -60,8 +60,6 @@ function ShopCard({ slug, index }: { slug: string; index: number }) {
       setAgbDraft(shop.agbText ?? "");
     }
   }, [showLegal, shop?._id]);
-
-  if (!shop) return null;
 
   const totalStamps = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
   const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
@@ -452,7 +450,7 @@ function ShopsTab() {
         </div>
       )}
       {allShops?.map((shop, i) => (
-        <ShopCard key={shop._id} slug={shop.slug} index={i} />
+        <ShopCard key={shop._id} shop={shop} index={i} />
       ))}
     </motion.div>
   );

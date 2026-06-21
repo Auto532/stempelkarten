@@ -21,6 +21,7 @@ export default function StampPage() {
   const router = useRouter();
 
   const [shopSlug, setShopSlug] = useState<string | null>(null);
+  const [adminToken, setAdminToken] = useState("");
   const [ready, setReady] = useState(false);
   const [done, setDone] = useState<"stamped" | "redeemed" | null>(null);
   const [loading, setLoading] = useState(false);
@@ -28,13 +29,14 @@ export default function StampPage() {
   const [redeemedTierText, setRedeemedTierText] = useState<string | null>(null);
 
   useEffect(() => {
-    const adminToken = localStorage.getItem("adminToken");
+    const token = localStorage.getItem("adminToken");
     const slug = localStorage.getItem("adminShopSlug");
-    if (!adminToken || !slug) {
+    if (!token || !slug) {
       // Kunde hat die URL geöffnet → zu /me
       router.replace("/me");
       return;
     }
+    setAdminToken(token);
     setShopSlug(slug);
     setReady(true);
   }, [router]);
@@ -53,7 +55,7 @@ export default function StampPage() {
     if (!data?.membership) return;
     setLoading(true); setError("");
     try {
-      await addStamp({ membershipId: data.membership._id });
+      await addStamp({ membershipId: data.membership._id, adminToken });
       setDone("stamped");
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
     finally { setLoading(false); }
@@ -63,7 +65,7 @@ export default function StampPage() {
     if (!data?.membership) return;
     setLoading(true); setError("");
     try {
-      await redeemReward({ membershipId: data.membership._id, rewardText: tierText });
+      await redeemReward({ membershipId: data.membership._id, adminToken, rewardText: tierText });
       setRedeemedTierText(tierText ?? null);
       setDone("redeemed");
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }

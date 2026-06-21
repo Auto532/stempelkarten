@@ -54,13 +54,14 @@ export const createMembershipForExistingCustomer = mutation({
 });
 
 export const addStamp = mutation({
-  args: { membershipId: v.id("memberships") },
-  handler: async (ctx, { membershipId }) => {
+  args: { membershipId: v.id("memberships"), adminToken: v.string() },
+  handler: async (ctx, { membershipId, adminToken }) => {
     const membership = await ctx.db.get(membershipId);
     if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
 
     const shop = await ctx.db.get(membership.shopId);
     if (!shop) throw new Error("Shop nicht gefunden");
+    if (shop.adminLoginToken !== adminToken) throw new Error("Nicht autorisiert");
 
     const newStamps = membership.currentStamps + 1;
     const rewardReached = newStamps >= shop.stampsRequired;
@@ -83,13 +84,14 @@ export const addStamp = mutation({
 });
 
 export const redeemReward = mutation({
-  args: { membershipId: v.id("memberships"), rewardText: v.optional(v.string()) },
-  handler: async (ctx, { membershipId, rewardText }) => {
+  args: { membershipId: v.id("memberships"), adminToken: v.string(), rewardText: v.optional(v.string()) },
+  handler: async (ctx, { membershipId, adminToken, rewardText }) => {
     const membership = await ctx.db.get(membershipId);
     if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
 
     const shop = await ctx.db.get(membership.shopId);
     if (!shop) throw new Error("Shop nicht gefunden");
+    if (shop.adminLoginToken !== adminToken) throw new Error("Nicht autorisiert");
 
     const carryOver = Math.max(0, membership.currentStamps - shop.stampsRequired);
 
