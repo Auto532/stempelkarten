@@ -46,6 +46,7 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
   const [showLegal, setShowLegal] = useState(false);
   const [impressumDraft, setImpressumDraft] = useState("");
   const [agbDraft, setAgbDraft] = useState("");
+  const [datenschutzDraft, setDatenschutzDraft] = useState("");
   const [savingLegal, setSavingLegal] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [togglingLeads, setTogglingLeads] = useState(false);
@@ -58,6 +59,7 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
     if (showLegal && shop) {
       setImpressumDraft(shop.impressumText ?? "");
       setAgbDraft(shop.agbText ?? "");
+      setDatenschutzDraft(shop.datenschutzText ?? "");
     }
   }, [showLegal, shop?._id]);
 
@@ -92,6 +94,7 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
         shopId: shop._id,
         impressumText: impressumDraft || undefined,
         agbText: agbDraft || undefined,
+        datenschutzText: datenschutzDraft || undefined,
       });
     } finally {
       setSavingLegal(false);
@@ -250,8 +253,9 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
         <button onClick={() => setShowLegal(!showLegal)}
           className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
           <FileText size={14} className={shop.impressumText ? "text-amber-400" : "text-zinc-500"} />
-          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Impressum & AGB</span>
-          {shop.impressumText && <span className="text-[10px] text-green-400 mr-1">✓</span>}
+          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Rechtliche Texte</span>
+          {shop.impressumText && shop.datenschutzText && <span className="text-[10px] text-green-400 mr-1">✓</span>}
+          {shop.impressumText && !shop.datenschutzText && <span className="text-[10px] text-amber-400 mr-1">!</span>}
           <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showLegal ? "rotate-90" : ""}`} />
         </button>
         <AnimatePresence>
@@ -275,6 +279,16 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
                     onChange={e => setAgbDraft(e.target.value)}
                     rows={6}
                     placeholder="Allgemeine Geschäftsbedingungen..."
+                    className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 placeholder-zinc-600 text-xs focus:outline-none focus:border-amber-400/50 resize-none leading-relaxed"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-zinc-500 block mb-1.5">Datenschutzerklärung</label>
+                  <textarea
+                    value={datenschutzDraft}
+                    onChange={e => setDatenschutzDraft(e.target.value)}
+                    rows={8}
+                    placeholder={"Datenschutzerklärung gemäß DSGVO\n\nVerantwortlicher: ...\n\nWelche Daten wir erheben:\n- Name\n- Telefonnummer\n\nZweck der Verarbeitung: Verwaltung des Treueprogramms.\n\nRechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).\n\nSpeicherdauer: Bis zum Widerruf der Einwilligung.\n\nRechte: Auskunft, Berichtigung, Löschung per E-Mail an ..."}
                     className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 placeholder-zinc-600 text-xs focus:outline-none focus:border-amber-400/50 resize-none leading-relaxed"
                   />
                 </div>

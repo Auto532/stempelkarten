@@ -104,9 +104,10 @@ export const updateLegalTexts = mutation({
     shopId: v.id("shops"),
     impressumText: v.optional(v.string()),
     agbText: v.optional(v.string()),
+    datenschutzText: v.optional(v.string()),
   },
-  handler: async (ctx, { shopId, impressumText, agbText }) => {
-    await ctx.db.patch(shopId, { impressumText, agbText });
+  handler: async (ctx, { shopId, impressumText, agbText, datenschutzText }) => {
+    await ctx.db.patch(shopId, { impressumText, agbText, datenschutzText });
   },
 });
 
