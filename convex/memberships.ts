@@ -22,8 +22,12 @@ export const getForCustomerAndShop = query({
 });
 
 export const createMembershipForExistingCustomer = mutation({
-  args: { qrToken: v.string(), shopId: v.id("shops") },
-  handler: async (ctx, { qrToken, shopId }) => {
+  args: {
+    qrToken: v.string(),
+    shopId: v.id("shops"),
+    acquisitionType: v.optional(v.union(v.literal("new"), v.literal("returning"))),
+  },
+  handler: async (ctx, { qrToken, shopId, acquisitionType }) => {
     const customer = await ctx.db
       .query("customers")
       .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
@@ -44,6 +48,7 @@ export const createMembershipForExistingCustomer = mutation({
       currentStamps: 0,
       totalStampsEver: 0,
       rewardsRedeemed: 0,
+      acquisitionType,
     });
   },
 });

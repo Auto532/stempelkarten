@@ -42,8 +42,9 @@ export const registerCustomer = mutation({
     phone: v.string(),
     shopSlug: v.string(),
     existingQrToken: v.optional(v.string()),
+    acquisitionType: v.optional(v.union(v.literal("new"), v.literal("returning"))),
   },
-  handler: async (ctx, { name, phone, shopSlug, existingQrToken }) => {
+  handler: async (ctx, { name, phone, shopSlug, existingQrToken, acquisitionType }) => {
     const shop = await ctx.db
       .query("shops")
       .withIndex("by_slug", (q) => q.eq("slug", shopSlug))
@@ -98,6 +99,7 @@ export const registerCustomer = mutation({
         currentStamps: 0,
         totalStampsEver: 0,
         rewardsRedeemed: 0,
+        acquisitionType,
       });
     }
 

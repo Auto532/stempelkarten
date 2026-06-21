@@ -42,6 +42,7 @@ export default defineSchema({
     totalStampsEver: v.number(),
     rewardsRedeemed: v.number(),
     lastStampAt: v.optional(v.number()),
+    acquisitionType: v.optional(v.union(v.literal("new"), v.literal("returning"))),
   })
     .index("by_customer", ["customerId"])
     .index("by_shop", ["shopId"])

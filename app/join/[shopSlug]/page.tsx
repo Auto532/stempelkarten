@@ -7,6 +7,40 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Phone, Gift, ArrowRight, CheckCircle, Stamp } from "lucide-react";
 
+function AcquisitionPicker({
+  value,
+  onChange,
+}: {
+  value: "new" | "returning" | null;
+  onChange: (v: "new" | "returning" | null) => void;
+}) {
+  const options: { key: "new" | "returning"; label: string }[] = [
+    { key: "new", label: "Bin neu hier" },
+    { key: "returning", label: "Komm schon länger" },
+  ];
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs text-zinc-500 ml-0.5">Warst du schon mal hier? <span className="text-zinc-600">(optional)</span></p>
+      <div className="flex gap-2">
+        {options.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(value === key ? null : key)}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+              value === key
+                ? "bg-amber-400/15 border-amber-400/40 text-amber-400"
+                : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function JoinPage() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const router = useRouter();
@@ -30,6 +64,7 @@ export default function JoinPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [consent, setConsent] = useState(false);
+  const [acquisitionType, setAcquisitionType] = useState<"new" | "returning" | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -55,6 +90,7 @@ export default function JoinPage() {
         phone: phone.trim(),
         shopSlug,
         existingQrToken: qrToken ?? undefined,
+        acquisitionType: acquisitionType ?? undefined,
       });
       localStorage.setItem("qrToken", newToken);
       setSuccess(true);
@@ -71,7 +107,7 @@ export default function JoinPage() {
     setLoading(true);
     setError("");
     try {
-      await createMembership({ qrToken, shopId: shop._id });
+      await createMembership({ qrToken, shopId: shop._id, acquisitionType: acquisitionType ?? undefined });
       setSuccess(true);
       setTimeout(() => router.push(`/me/${qrToken}`), 1500);
     } catch (err: unknown) {
@@ -206,6 +242,8 @@ export default function JoinPage() {
 
             <div className="flex-1" />
 
+            <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} />
+
             <label className="flex items-start gap-3 cursor-pointer">
               <div className="relative mt-0.5 shrink-0">
                 <input
@@ -301,6 +339,8 @@ export default function JoinPage() {
             </AnimatePresence>
 
             <div className="flex-1" />
+
+            <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} />
 
             <label className="flex items-start gap-3 cursor-pointer group">
               <div className="relative mt-0.5 shrink-0">
