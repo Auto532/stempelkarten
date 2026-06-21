@@ -104,14 +104,14 @@ export const redeemReward = mutation({
 });
 
 export const getRedemptionsForShop = query({
-  args: { shopId: v.id("shops") },
-  handler: async (ctx, { shopId }) => {
-    const events = await ctx.db
+  args: { shopId: v.id("shops"), limit: v.optional(v.number()) },
+  handler: async (ctx, { shopId, limit }) => {
+    const q = ctx.db
       .query("stampEvents")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
       .filter((q) => q.eq(q.field("type"), "redeem"))
-      .order("desc")
-      .take(50);
+      .order("desc");
+    const events = limit !== undefined ? await q.take(limit) : await q.collect();
 
     const results = await Promise.all(
       events.map(async (event) => {

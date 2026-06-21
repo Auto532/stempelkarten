@@ -143,12 +143,13 @@ export const getGlobalStats = query({
 });
 
 export const listCustomersForShop = query({
-  args: { shopId: v.id("shops") },
-  handler: async (ctx, { shopId }) => {
-    const memberships = await ctx.db
+  args: { shopId: v.id("shops"), limit: v.optional(v.number()) },
+  handler: async (ctx, { shopId, limit }) => {
+    const q = ctx.db
       .query("memberships")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
-      .collect();
+      .order("desc");
+    const memberships = limit !== undefined ? await q.take(limit) : await q.collect();
 
     const results = await Promise.all(
       memberships.map(async (m) => {

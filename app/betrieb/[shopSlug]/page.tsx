@@ -30,10 +30,12 @@ export default function BetriebDashboard() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const router = useRouter();
   const shop = useQuery(api.shops.getBySlug, { slug: shopSlug });
-  const customers = useQuery(api.shops.listCustomersForShop, shop ? { shopId: shop._id } : "skip");
+  const [showAllCustomers, setShowAllCustomers] = useState(false);
+  const [showAllRedemptions, setShowAllRedemptions] = useState(false);
+  const customers = useQuery(api.shops.listCustomersForShop, shop ? { shopId: shop._id, limit: showAllCustomers ? undefined : 10 } : "skip");
   const redemptions = useQuery(
     api.memberships.getRedemptionsForShop,
-    shop?.bonusProgramEnabled && shop ? { shopId: shop._id } : "skip"
+    shop?.bonusProgramEnabled && shop ? { shopId: shop._id, limit: showAllRedemptions ? undefined : 10 } : "skip"
   );
   const updateSettings = useMutation(api.shops.updateSettings);
   const updateMilestones = useMutation(api.shops.updateMilestones);
@@ -550,6 +552,14 @@ export default function BetriebDashboard() {
                       );
                     })}
                   </div>
+                  {redemptions && redemptions.length >= 10 && (
+                    <button
+                      onClick={() => setShowAllRedemptions(v => !v)}
+                      className="w-full py-3 text-xs text-zinc-500 hover:text-amber-400 transition-colors border-t border-zinc-800/60"
+                    >
+                      {showAllRedemptions ? "Weniger anzeigen" : `Alle anzeigen`}
+                    </button>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -707,6 +717,14 @@ export default function BetriebDashboard() {
             );
           })}
         </div>
+              {customers && customers.length >= 10 && (
+                <button
+                  onClick={() => setShowAllCustomers(v => !v)}
+                  className="w-full py-3 text-xs text-zinc-500 hover:text-amber-400 transition-colors border-t border-zinc-800/60"
+                >
+                  {showAllCustomers ? "Weniger anzeigen" : `Alle anzeigen`}
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
