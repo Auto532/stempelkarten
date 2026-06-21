@@ -1,5 +1,14 @@
-import { internalMutation, mutation } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+
+export const checkPin = query({
+  args: { pin: v.string() },
+  handler: async (ctx, { pin }) => {
+    const expected = process.env.ADMIN_PIN;
+    if (!expected) return false;
+    return pin === expected;
+  },
+});
 
 export const clearAllData = mutation({
   args: { adminSecret: v.string() },

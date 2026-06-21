@@ -1,8 +1,10 @@
 {
+  "id": "/customer-stempelkarte",
   "name": "Stempelkarte",
   "short_name": "Stempelkarte",
   "description": "Deine digitale Treuekarte",
   "start_url": "/me",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#09090b",
   "theme_color": "#18181b",

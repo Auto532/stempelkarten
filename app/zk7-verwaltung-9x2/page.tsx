@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,7 +16,6 @@ import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
 
-const SUPERADMIN_PIN = "1337";
 
 // ─── ShopCard ────────────────────────────────────────────────────────────────
 
@@ -503,7 +503,7 @@ function ShopsTab() {
 
 // ─── Tab: Einstellungen ───────────────────────────────────────────────────────
 
-function SettingsTab({ adminPin }: { adminPin: string }) {
+function SettingsTab() {
   const clearAllData = useMutation(api.admin.clearAllData);
   const [showDangerZone, setShowDangerZone] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -525,7 +525,7 @@ function SettingsTab({ adminPin }: { adminPin: string }) {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await clearAllData({ adminSecret: adminPin });
+      await clearAllData({ adminSecret: pinInput });
       setDeleted(true);
       setConfirmDelete(false);
     } finally {
@@ -554,8 +554,8 @@ function SettingsTab({ adminPin }: { adminPin: string }) {
             <p className="text-[11px] text-zinc-600 mt-1.5">Nur du kennst diese URL — teile sie niemals.</p>
           </div>
           <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl p-3">
-            <p className="text-xs text-amber-300 font-medium mb-1">PIN: {SUPERADMIN_PIN}</p>
-            <p className="text-[11px] text-zinc-500">Ändere den PIN in der Datei <code className="text-zinc-400">app/zk7-verwaltung-9x2/page.tsx</code> vor dem Live-Gang.</p>
+            <p className="text-xs text-amber-300 font-medium mb-1">PIN: gesetzt via ADMIN_PIN Env-Variable</p>
+            <p className="text-[11px] text-zinc-500">PIN wird server-seitig geprüft — nicht im Client-Bundle sichtbar.</p>
           </div>
         </div>
       </div>
@@ -625,7 +625,7 @@ function SettingsTab({ adminPin }: { adminPin: string }) {
                       className="w-full px-4 py-2.5 bg-zinc-800 border border-red-900/50 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-500/50 text-sm text-center tracking-widest"
                     />
                     <div className="flex gap-2">
-                      <button onClick={handleDelete} disabled={deleting || deleteText !== "LÖSCHEN" || pinInput !== adminPin}
+                      <button onClick={handleDelete} disabled={deleting || deleteText !== "LÖSCHEN" || !pinInput}
                         className="flex-1 py-2.5 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-xl text-sm transition-colors">
                         {deleting ? "Löscht..." : "Endgültig löschen"}
                       </button>
@@ -657,9 +657,27 @@ const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
 
 export default function SuperAdminPage() {
   const router = useRouter();
+  const convex = useConvex();
   const [pin, setPin] = useState("");
   const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [pinError, setPinError] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+
+  const handleLogin = async () => {
+    if (!pin) return;
+    setChecking(true);
+    setPinError(false);
+    try {
+      const ok = await convex.query(api.admin.checkPin, { pin });
+      if (ok) setAuthed(true);
+      else { setPinError(true); setPin(""); }
+    } catch {
+      setPinError(true); setPin("");
+    } finally {
+      setChecking(false);
+    }
+  };
 
   if (!authed) {
     return (
@@ -673,16 +691,18 @@ export default function SuperAdminPage() {
             <p className="text-zinc-500 text-sm mt-1">Nur für interne Nutzung</p>
           </div>
           <input
-            type="password" value={pin} onChange={(e) => setPin(e.target.value)}
+            type="password" value={pin} onChange={(e) => { setPin(e.target.value); setPinError(false); }}
             placeholder="PIN"
-            onKeyDown={(e) => { if (e.key === "Enter" && pin === SUPERADMIN_PIN) setAuthed(true); }}
+            onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }}
             autoFocus
-            className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/50 text-center tracking-widest text-xl"
+            className={`w-full px-4 py-3.5 bg-zinc-900 border rounded-2xl text-zinc-100 placeholder-zinc-600 focus:outline-none text-center tracking-widest text-xl transition-colors ${pinError ? "border-red-500/60" : "border-zinc-800 focus:border-amber-400/50"}`}
           />
+          {pinError && <p className="text-red-400 text-sm text-center -mt-2">Falscher PIN</p>}
           <button
-            onClick={() => { if (pin === SUPERADMIN_PIN) setAuthed(true); else setPin(""); }}
-            className="w-full py-3.5 bg-amber-400 hover:bg-amber-300 text-zinc-900 font-semibold rounded-2xl transition-colors">
-            Einloggen
+            onClick={handleLogin}
+            disabled={checking || !pin}
+            className="w-full py-3.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-semibold rounded-2xl transition-colors">
+            {checking ? "Prüfe..." : "Einloggen"}
           </button>
         </motion.div>
       </div>
@@ -721,7 +741,7 @@ export default function SuperAdminPage() {
         <AnimatePresence mode="wait">
           {activeTab === "overview" && <OverviewTab key="overview" />}
           {activeTab === "shops" && <ShopsTab key="shops" />}
-          {activeTab === "settings" && <SettingsTab key="settings" adminPin={pin} />}
+          {activeTab === "settings" && <SettingsTab key="settings" />}
         </AnimatePresence>
       </div>
 
