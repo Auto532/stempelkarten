@@ -338,13 +338,13 @@ export default function MePage() {
       {/* Legal links */}
       {!isMultiShop && allMemberships[0]?.shop?.slug && (
         <div className="flex flex-wrap justify-center gap-3 pt-6 pb-2">
-          <a href={`/impressum/${allMemberships[0].shop.slug}`}
+          <a href={`/me/impressum/${allMemberships[0].shop.slug}`}
             className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">Impressum</a>
           <span className="text-zinc-800">·</span>
           <a href={`/agb/${allMemberships[0].shop.slug}`}
             className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">AGB</a>
           <span className="text-zinc-800">·</span>
-          <a href={`/datenschutz/${allMemberships[0].shop.slug}`}
+          <a href={`/me/datenschutz/${allMemberships[0].shop.slug}`}
             className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">Datenschutz</a>
         </div>
       )}

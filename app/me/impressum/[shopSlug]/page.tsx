@@ -35,13 +35,11 @@ export default function ImpressumPage() {
     <div className="min-h-screen px-5 pt-10 pb-16 max-w-sm mx-auto">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
 
-        {/* Back */}
         <button onClick={() => router.back()}
           className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors mb-8">
           <ArrowLeft size={15} /> Zurück
         </button>
 
-        {/* Header */}
         <div className="mb-8">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-600 mb-1">
             {shop.name}
@@ -50,7 +48,6 @@ export default function ImpressumPage() {
           <div className="mt-2 h-px bg-gradient-to-r from-amber-400/40 to-transparent" />
         </div>
 
-        {/* Content */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
           <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
             {shop.impressumText}

@@ -388,13 +388,13 @@ export default function JoinPage() {
       {/* Legal links */}
       <div className="flex justify-center gap-3 pt-4 pb-2">
         {shop.impressumText && (
-          <a href={`/impressum/${shopSlug}`} className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">
+          <a href={`/me/impressum/${shopSlug}`} className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">
             Impressum
           </a>
         )}
         {shop.impressumText && shop.datenschutzText && <span className="text-zinc-800">·</span>}
         {shop.datenschutzText && (
-          <a href={`/datenschutz/${shopSlug}`} className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">
+          <a href={`/me/datenschutz/${shopSlug}`} className="text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors">
             Datenschutz
           </a>
         )}
