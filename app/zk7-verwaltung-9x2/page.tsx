@@ -9,12 +9,41 @@ import {
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy, type LucideIcon,
 } from "lucide-react";
-import { BRANCHEN, STAMP_ICONS } from "@/app/me/components";
+import { STAMP_ICONS } from "@/app/me/components";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
 
+
+// ─── Branch icon auto-detection ──────────────────────────────────────────────
+
+const ICON_KEYWORDS: Record<string, string[]> = {
+  scissors: ["friseur","friseuse","frisör","barber","barbershop","haar","haarschnitt","schnitt","salon","herrenfriseur","damenfriseur","stylist","stylistin","barbier","bartpflege","rasur"],
+  coffee:   ["café","cafe","kaffee","coffee","espresso","cappuccino","latte","coffeeshop","bäckerei café","kaffeebar","bistro café"],
+  utensils: ["restaurant","gaststätte","gaststatte","küche","küche","essen","mittagstisch","abendessen","speiselokal","wirtshaus","gasthaus","food","speisekarte"],
+  pizza:    ["pizza","imbiss","döner","doner","kebab","fastfood","fast food","burger","mcdo","pommes","snack","lieferdienst","takeaway","take away","wrap","falafel","currywurst"],
+  flame:    ["bäckerei","backerei","konditorei","brot","brötchen","kuchen","backstube","patisserie","torte","gebäck","backwaren"],
+  dumbbell: ["gym","fitness","fitnessstudio","sport","training","crossfit","workout","kraftsport","yoga","pilates","boxen","kampfsport","mma","bootcamp","personal trainer"],
+  flower:   ["wellness","kosmetik","beauty","spa","massage","nagelstudio","nägel","nagel","wimpern","waxing","maniküre","pediküre","gesichtspflege","aesthetik","ästhetik"],
+  shopping: ["laden","shop","markt","supermarkt","lebensmittel","einkaufen","einzelhandel","kiosk","tabak","lotto","blumen","blumenladen","drogerie","apotheke"],
+  car:      ["auto","kfz","werkstatt","reifen","garage","autowäsche","tuning","karosserie","pkw","motorrad","bike shop","fahrzeug"],
+  book:     ["buch","buchhandlung","literatur","bücher","antiquariat","lesen","bibliothek","schreibwaren","papeterie"],
+  bike:     ["fahrrad","rad","fahrradladen","fahrradwerkstatt","cycling","velo","ebike","e-bike","radsport"],
+  shirt:    ["mode","fashion","kleidung","bekleidung","textil","boutique","secondhand","second hand","vintage mode","outlet"],
+};
+
+function detectIcon(text: string): string {
+  if (!text.trim()) return "stamp";
+  const q = text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  for (const [icon, keywords] of Object.entries(ICON_KEYWORDS)) {
+    if (keywords.some(kw => {
+      const k = kw.normalize("NFD").replace(/[̀-ͯ]/g, "");
+      return q.includes(k) || k.includes(q);
+    })) return icon;
+  }
+  return "stamp";
+}
 
 // ─── ShopCard ────────────────────────────────────────────────────────────────
 
@@ -334,11 +363,11 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
   const [slug, setSlug] = useState("");
   const [stampsRequired, setStampsRequired] = useState(10);
   const [rewardText, setRewardText] = useState("");
-  const [selectedBranche, setSelectedBranche] = useState<string>("");
+  const [brancheText, setBrancheText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const stampIcon = BRANCHEN.find(b => b.label === selectedBranche)?.icon;
+  const stampIcon = detectIcon(brancheText);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setLoading(true);
@@ -358,30 +387,31 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         <button type="button" onClick={onDone} className="text-zinc-500 hover:text-zinc-300"><X size={18} /></button>
       </div>
 
-      {/* Branche */}
+      {/* Branche — Freitext, Icon wird automatisch erkannt */}
       <div>
         <label className="block text-xs text-zinc-500 mb-1.5">Branche</label>
-        <div className="grid grid-cols-2 gap-1.5">
-          {BRANCHEN.map((b) => {
-            const Icon = STAMP_ICONS[b.icon] ?? Stamp;
-            const active = selectedBranche === b.label;
-            return (
-              <button
-                key={b.label}
-                type="button"
-                onClick={() => setSelectedBranche(active ? "" : b.label)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left text-xs transition-all ${
-                  active
-                    ? "bg-amber-400/15 border-amber-400/40 text-amber-300"
-                    : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600"
-                }`}
-              >
-                <Icon size={13} className={active ? "text-amber-400" : "text-zinc-500"} />
-                <span className="truncate">{b.label}</span>
-              </button>
-            );
-          })}
+        <div className="flex gap-2 items-center">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={brancheText}
+              onChange={e => setBrancheText(e.target.value)}
+              placeholder="z.B. Barbershop, Café, Pizzeria…"
+              className="w-full px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm placeholder-zinc-600 focus:outline-none focus:border-zinc-500"
+            />
+          </div>
+          {/* Live icon preview */}
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+            brancheText.trim() ? "bg-amber-400/15 border border-amber-400/30" : "bg-zinc-800 border border-zinc-700"
+          }`}>
+            {(() => { const Icon = STAMP_ICONS[stampIcon] ?? STAMP_ICONS.stamp; return <Icon size={16} className={brancheText.trim() ? "text-amber-400" : "text-zinc-600"} />; })()}
+          </div>
         </div>
+        {brancheText.trim() && (
+          <p className="text-[10px] text-zinc-600 mt-1 ml-0.5">
+            Erkannt: <span className="text-zinc-400">{stampIcon}</span>
+          </p>
+        )}
       </div>
 
       {[
