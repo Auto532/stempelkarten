@@ -139,10 +139,10 @@ export default function MeShopPage() {
                     animateIndex={stampAnim}
                     onShowQR={() => setShowQR(true)}
                     qrToken={qrToken}
-                    rewardTiers={shop.rewardTiers}
+                    rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
                     accentColor={shop.accentColor}
                   />
-                  <theme.Banner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.rewardTiers} />
+                  <theme.Banner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined} />
                   {shop.milestonesEnabled && shop.milestones && (
                     <theme.Milestones milestones={shop.milestones} totalStampsEver={membership.totalStampsEver} />
                   )}
@@ -158,7 +158,7 @@ export default function MeShopPage() {
                     animateIndex={stampAnim}
                     onShowQR={() => setShowQR(true)}
                     qrToken={qrToken}
-                    rewardTiers={shop.rewardTiers}
+                    rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
                     accentColor={shop.customDesignEnabled ? shop.accentColor : undefined}
                     stampIcon={shop.stampIcon}
                   />

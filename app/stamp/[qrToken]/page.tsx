@@ -121,7 +121,9 @@ export default function StampPage() {
 
   const { customer, membership } = data;
   const currentStamps = membership?.currentStamps ?? 0;
-  const activeTiers = getActiveTiers(shop);
+  const activeTiers = shop.bonusProgramEnabled
+    ? getActiveTiers(shop)
+    : [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true }];
   const maxStamps = activeTiers[activeTiers.length - 1].stamps;
 
   const exactTier = activeTiers.find(t => currentStamps === t.stamps);
