@@ -6,8 +6,6 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Stamp, Gift, UserPlus, ArrowLeft, LogIn } from "lucide-react";
-import { LoyaltyCard } from "@/app/me/components";
-import type { CardTier } from "@/app/me/components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
@@ -235,75 +233,30 @@ export default function StampPage() {
         </div>
       </motion.div>
 
-      {/* Card */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        {theme ? (
-          <div className="space-y-3 relative z-10">
-            <theme.Card
-              shopName={shop.name}
-              stampsRequired={shop.stampsRequired}
-              currentStamps={currentStamps}
-              animateIndex={null}
-              onShowQR={() => {}}
-              qrToken={qrToken}
-              hideQR
-              rewardTiers={shop.rewardTiers as Array<{stamps:number;text:string;enabled:boolean}> | undefined}
-              accentColor={shop.accentColor}
-            />
-            <theme.Banner
-              rewardText={shop.rewardText}
-              stampsRequired={shop.stampsRequired}
-              rewardTiers={shop.rewardTiers as CardTier[] | undefined}
-            />
-          </div>
-        ) : shop.customDesignEnabled ? (
-          <LoyaltyCard
-            shopName={shop.name}
-            rewardText={shop.rewardText}
-            stampsRequired={shop.stampsRequired}
-            currentStamps={currentStamps}
-            rewardsRedeemed={membership?.rewardsRedeemed ?? 0}
-            animateIndex={null}
-            onShowQR={() => {}}
-            qrToken={qrToken}
-            rewardTiers={shop.rewardTiers as CardTier[] | undefined}
-            accentColor={shop.accentColor}
-            stampIcon={shop.stampIcon}
-            hideQR
+      {/* Mini Stempel-Übersicht */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+        className="rounded-2xl px-5 py-4 relative z-10" style={c.card}>
+        <div className="flex items-center justify-between mb-2.5">
+          <p className="text-sm font-semibold" style={{ color: c.text }}>{shop.name}</p>
+          <p className="text-sm font-bold" style={{ color: c.accent }}>
+            {currentStamps} / {maxStamps} Stempel
+          </p>
+        </div>
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: c.dark }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(currentStamps / maxStamps * 100, 100)}%` }}
+            transition={{ duration: 0.5 }}
+            className="h-full rounded-full"
+            style={{ background: c.gradient }}
           />
-        ) : (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: maxStamps }).map((_, i) => {
-                const isFilled = i < currentStamps;
-                const isTierBoundary = activeTiers.some(t => t.stamps === i + 1);
-                return (
-                  <div key={i}
-                    className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
-                      isFilled
-                        ? isTierBoundary ? "bg-amber-300 border-amber-300 text-zinc-900 ring-2 ring-amber-400/50 ring-offset-1 ring-offset-zinc-900"
-                          : "bg-amber-400 border-amber-400 text-zinc-900"
-                        : isTierBoundary ? "border-amber-700/40 bg-amber-900/10"
-                          : "border-zinc-700 bg-zinc-800/50"
-                    }`}>
-                    {isFilled ? "✓" : isTierBoundary ? <Gift size={14} className="text-amber-700/60" /> : null}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((currentStamps / maxStamps) * 100, 100)}%` }}
-                transition={{ duration: 0.6 }} className="h-full bg-amber-400 rounded-full" />
-            </div>
-            <p className="text-xs text-zinc-500">
-              {currentStamps} / {maxStamps} Stempel
-              {!rewardReady && (() => {
-                const next = activeTiers.find(t => t.stamps > currentStamps);
-                return next ? <span className="text-zinc-600"> · noch {next.stamps - currentStamps} bis {next.text}</span> : null;
-              })()}
-            </p>
-          </div>
-        )}
+        </div>
+        {!rewardReady && (() => {
+          const next = activeTiers.find(t => t.stamps > currentStamps);
+          return next
+            ? <p className="text-[11px] mt-2" style={{ color: c.accentDim }}>noch {next.stamps - currentStamps} bis: {next.text}</p>
+            : null;
+        })()}
       </motion.div>
 
       {error && <p className="text-red-400 text-sm text-center">{error}</p>}
