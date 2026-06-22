@@ -326,21 +326,25 @@ export function LoyaltyCard({
       <div className="px-6 pt-5 pb-6">
         <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
           {Array.from({ length: maxStamps }).map((_, i) => {
-            const filled   = i < currentStamps;
-            const isNew    = animateIndex === i;
+            const filled    = i < currentStamps;
+            const isNew     = animateIndex === i;
             const isTierEnd = tierThresholds.has(i + 1);
             return (
               <motion.div
                 key={i}
-                className="aspect-square rounded-full flex items-center justify-center"
+                className="aspect-square rounded-full flex items-center justify-center relative"
                 style={{
-                  backgroundColor: filled ? hexToRgba(accent, 0.12) : "#161616",
+                  backgroundColor: filled
+                    ? isTierEnd ? hexToRgba(accent, 0.22) : hexToRgba(accent, 0.12)
+                    : isTierEnd ? hexToRgba(accent, 0.06) : "#161616",
                   border: filled
-                    ? isTierEnd ? `1.5px solid ${hexToRgba(accent, 0.7)}` : `1px solid ${hexToRgba(accent, 0.4)}`
-                    : isTierEnd ? `1.5px solid ${hexToRgba(accent, 0.35)}` : `1px solid ${hexToRgba(accent, 0.25)}`,
-                  boxShadow: filled
-                    ? `0 2px 8px ${hexToRgba(accent, 0.15)}`
-                    : "inset 0 4px 8px rgba(0,0,0,0.6)",
+                    ? isTierEnd ? `2px solid ${hexToRgba(accent, 0.8)}` : `1px solid ${hexToRgba(accent, 0.4)}`
+                    : isTierEnd ? `2px dashed ${hexToRgba(accent, 0.45)}` : `1px solid ${hexToRgba(accent, 0.25)}`,
+                  boxShadow: filled && isTierEnd
+                    ? `0 0 10px ${hexToRgba(accent, 0.3)}`
+                    : filled
+                      ? `0 2px 8px ${hexToRgba(accent, 0.15)}`
+                      : "inset 0 4px 8px rgba(0,0,0,0.6)",
                 }}
                 animate={isNew ? { scale: [1, 1.35, 0.94, 1.06, 1] } : {}}
                 transition={{ duration: 0.45, ease: "easeOut" }}
@@ -350,9 +354,20 @@ export function LoyaltyCard({
                     initial={isNew ? { scale: 0, rotate: -20 } : { scale: 1 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ type: "spring", stiffness: 320, delay: isNew ? 0.06 : 0 }}
+                    className="flex flex-col items-center justify-center gap-0"
                   >
-                    <StampIconComponent size={iconSize} strokeWidth={1.6} style={{ color: accent }} />
+                    <StampIconComponent size={isTierEnd ? iconSize - 1 : iconSize} strokeWidth={1.6} style={{ color: accent }} />
+                    {isTierEnd && (
+                      <Gift size={7} style={{ color: accent, marginTop: 1, opacity: 0.9 }} />
+                    )}
                   </motion.div>
+                ) : isTierEnd ? (
+                  <div className="flex flex-col items-center justify-center gap-0.5">
+                    <Gift size={iconSize - 2} strokeWidth={1.5} style={{ color: hexToRgba(accent, 0.55) }} />
+                    <span className="select-none leading-none text-[8px] font-bold" style={{ color: hexToRgba(accent, 0.4) }}>
+                      {i + 1}
+                    </span>
+                  </div>
                 ) : (
                   <span className="select-none leading-none text-sm font-medium" style={{ color: "#404040" }}>
                     {i + 1}
