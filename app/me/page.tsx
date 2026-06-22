@@ -1,14 +1,48 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, ChevronRight, Gift } from "lucide-react";
-import { StampOverlay, getActiveTiers, hexToRgba } from "./components";
+import {
+  LayoutGrid, Gift, Settings, X, Check, ChevronRight,
+  Trophy, Pencil, AlertCircle,
+} from "lucide-react";
+import { StampOverlay, getActiveTiers, hexToRgba, getStampIcon } from "./components";
 
-// ─── ShopCard (für die multi-shop Übersicht) ──────────────────────────────────
+// ─── Profanity filter ─────────────────────────────────────────────────────────
+
+const BAD_WORDS = [
+  // Deutsch
+  "scheiße","scheisse","scheiß","arsch","arschloch","fotze","fick","ficken","wichser",
+  "hurensohn","hure","nutte","schlampe","bastard","vollidiot","idiot","depp","trottel",
+  "wichse","verdammt","pisser","pissnelke","kacke","kacker","spast","spasti","mongo",
+  "nazi","hitler","kz","penner","loser","versager","neger","kanake","türke","jude",
+  // English
+  "fuck","shit","bitch","asshole","cunt","nigger","faggot","retard","whore","slut",
+  "bastard","dick","cock","pussy","ass","damn","hell","crap","motherfucker","fucker",
+];
+
+function containsProfanity(text: string): boolean {
+  const normalized = text.toLowerCase().replace(/[^a-zäöüß0-9]/g, "");
+  return BAD_WORDS.some(w => normalized.includes(w.replace(/[^a-zäöüß]/g, "")));
+}
+
+// ─── Color presets ────────────────────────────────────────────────────────────
+
+const COLOR_PRESETS = [
+  { name: "Gold",     value: "#fbbf24" },
+  { name: "Sky",      value: "#38bdf8" },
+  { name: "Violet",   value: "#a855f7" },
+  { name: "Emerald",  value: "#10b981" },
+  { name: "Rose",     value: "#f43f5e" },
+  { name: "Orange",   value: "#f97316" },
+  { name: "Cyan",     value: "#06b6d4" },
+  { name: "Lime",     value: "#84cc16" },
+];
+
+// ─── ShopCard ─────────────────────────────────────────────────────────────────
 
 type MembershipEntry = {
   membership: {
@@ -28,129 +62,280 @@ type MembershipEntry = {
     accentColor?: string;
     customDesignEnabled?: boolean;
     stampIcon?: string | null;
+    theme?: string;
   } | null;
 };
 
-function ShopCard({ entry, index, onClick }: { entry: MembershipEntry; index: number; onClick: () => void }) {
+function ShopCard({ entry, index, personalAccent, onClick }: {
+  entry: MembershipEntry;
+  index: number;
+  personalAccent: string;
+  onClick: () => void;
+}) {
   const shop = entry.shop;
   const membership = entry.membership;
   if (!shop) return null;
 
-  const accent = shop.customDesignEnabled ? (shop.accentColor ?? "#fbbf24") : "#fbbf24";
+  // Custom design shops use their own accent; default shops use personal accent
+  const accent = shop.customDesignEnabled
+    ? (shop.accentColor ?? "#fbbf24")
+    : personalAccent;
+
   const activeTiers = getActiveTiers(shop);
-  const lowestThreshold = activeTiers[0].stamps;
-  const highestThreshold = activeTiers[activeTiers.length - 1].stamps;
-  const isReady = membership.currentStamps >= lowestThreshold;
-  const progress = Math.min(membership.currentStamps / lowestThreshold, 1);
+  const lowestTier = activeTiers[0];
+  const highestTier = activeTiers[activeTiers.length - 1];
+  const totalSlots = highestTier.stamps;
+  const tierCheckpoints = new Set(activeTiers.map(t => t.stamps));
+  const nextTier = activeTiers.find(t => membership.currentStamps < t.stamps);
+  const targetStamps = nextTier?.stamps ?? totalSlots;
+  const isReady = membership.currentStamps >= lowestTier.stamps;
+  const progress = Math.min(membership.currentStamps / targetStamps, 1);
+
+  const StampIcon = getStampIcon(shop.stampIcon);
+  const dotSize = totalSlots <= 10 ? 30 : totalSlots <= 15 ? 26 : totalSlots <= 20 ? 22 : 18;
+  const iconSize = Math.round(dotSize * 0.45);
 
   return (
     <motion.button
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.07, duration: 0.35 }}
+      whileTap={{ scale: 0.975 }}
       onClick={onClick}
-      className="w-full text-left rounded-3xl overflow-hidden active:scale-[0.98] transition-transform"
+      className="w-full text-left rounded-2xl overflow-hidden"
       style={{
-        background: "#111111",
-        border: `1px solid #262626`,
-        boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+        background: `linear-gradient(160deg, ${hexToRgba(accent, 0.06)} 0%, #111111 40%)`,
+        border: `1px solid ${hexToRgba(accent, 0.2)}`,
+        boxShadow: `0 2px 20px rgba(0,0,0,0.4), inset 0 1px 0 ${hexToRgba(accent, 0.08)}`,
       }}
     >
-      {/* Farbstreifen oben */}
-      <div
-        className="h-1 w-full"
-        style={{ background: `linear-gradient(90deg, ${accent}, ${hexToRgba(accent, 0.3)})` }}
-      />
+      {/* Top gradient line */}
+      <div className="h-[2px] w-full" style={{
+        background: `linear-gradient(90deg, ${accent}, ${hexToRgba(accent, 0.15)})`,
+      }} />
 
-      <div className="px-5 py-4">
-        {/* Shop-Name + Pfeil */}
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div>
-            <p className="text-[9px] font-bold tracking-widest uppercase mb-1" style={{ color: accent }}>
-              Stempelkarte
-            </p>
-            <h2 className="text-xl font-bold text-neutral-100 leading-tight">{shop.name}</h2>
+      <div className="px-4 pt-3.5 pb-4">
+        {/* Header: shop name + icon + badge */}
+        <div className="flex items-start justify-between gap-3 mb-3.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: hexToRgba(accent, 0.12), border: `1px solid ${hexToRgba(accent, 0.25)}` }}>
+              <StampIcon size={18} style={{ color: accent }} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold tracking-[0.2em] uppercase mb-0.5"
+                style={{ color: hexToRgba(accent, 0.65) }}>
+                Stempelkarte
+              </p>
+              <h2 className="text-base font-bold text-neutral-100 leading-tight truncate">
+                {shop.name}
+              </h2>
+            </div>
           </div>
-          <div className="flex items-center gap-1 mt-1">
+          <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
             {isReady && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="text-[9px] font-bold px-2 py-1 rounded-full"
-                style={{
-                  color: accent,
-                  backgroundColor: hexToRgba(accent, 0.12),
-                  border: `1px solid ${hexToRgba(accent, 0.3)}`,
-                }}
-              >
+              <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                style={{ color: accent, background: hexToRgba(accent, 0.12), border: `1px solid ${hexToRgba(accent, 0.3)}` }}>
                 BEREIT
               </motion.span>
             )}
-            <ChevronRight size={16} className="text-neutral-700 shrink-0 mt-0.5" />
+            <ChevronRight size={15} style={{ color: hexToRgba(accent, 0.4) }} />
           </div>
         </div>
 
-        {/* Mini Stempel-Dots */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {Array.from({ length: Math.min(highestThreshold, 20) }).map((_, i) => {
+        {/* Stamp dots */}
+        <div className="flex flex-wrap gap-1.5 mb-3.5">
+          {Array.from({ length: Math.min(totalSlots, 25) }).map((_, i) => {
             const filled = i < membership.currentStamps;
-            const isTier = activeTiers.some(t => t.stamps === i + 1);
+            const isCheckpoint = tierCheckpoints.has(i + 1);
             return (
-              <div
-                key={i}
-                className="rounded-full flex items-center justify-center"
+              <div key={i}
+                className="rounded-full flex items-center justify-center transition-all"
                 style={{
-                  width: highestThreshold <= 10 ? 26 : highestThreshold <= 15 ? 22 : 18,
-                  height: highestThreshold <= 10 ? 26 : highestThreshold <= 15 ? 22 : 18,
-                  backgroundColor: filled
-                    ? hexToRgba(accent, 0.2)
+                  width: dotSize, height: dotSize,
+                  background: filled
+                    ? isCheckpoint
+                      ? `radial-gradient(circle at 35% 35%, ${hexToRgba(accent, 0.9)}, ${hexToRgba(accent, 0.5)})`
+                      : hexToRgba(accent, 0.18)
                     : "#161616",
                   border: filled
-                    ? `1px solid ${hexToRgba(accent, 0.5)}`
-                    : isTier
-                      ? `1.5px dashed ${hexToRgba(accent, 0.35)}`
-                      : `1px solid #2a2a2a`,
-                }}
-              >
-                {filled && (
-                  <div
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: accent }}
-                  />
-                )}
-                {!filled && isTier && (
-                  <Gift size={8} style={{ color: hexToRgba(accent, 0.5) }} />
-                )}
+                    ? `1px solid ${hexToRgba(accent, isCheckpoint ? 0.8 : 0.4)}`
+                    : isCheckpoint
+                      ? `1.5px dashed ${hexToRgba(accent, 0.4)}`
+                      : `1px solid #252525`,
+                  boxShadow: filled && isCheckpoint
+                    ? `0 0 8px ${hexToRgba(accent, 0.4)}`
+                    : undefined,
+                }}>
+                {filled
+                  ? isCheckpoint
+                    ? <Trophy size={iconSize} style={{ color: "#fff" }} />
+                    : <StampIcon size={iconSize} style={{ color: accent }} />
+                  : isCheckpoint
+                    ? <Gift size={iconSize - 1} style={{ color: hexToRgba(accent, 0.5) }} />
+                    : null
+                }
               </div>
             );
           })}
-          {highestThreshold > 20 && (
-            <span className="text-[10px] text-neutral-600 self-center ml-1">+{highestThreshold - 20}</span>
+          {totalSlots > 25 && (
+            <span className="text-[10px] self-center ml-0.5" style={{ color: hexToRgba(accent, 0.5) }}>
+              +{totalSlots - 25}
+            </span>
           )}
         </div>
 
-        {/* Fortschritt */}
+        {/* Progress */}
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
-            <span className="text-xs text-neutral-500">
-              {membership.currentStamps} / {lowestThreshold} Stempel
+            <span className="text-[11px]" style={{ color: hexToRgba(accent, 0.6) }}>
+              {membership.currentStamps} / {targetStamps} · {nextTier?.text ?? lowestTier.text}
             </span>
-            <span className="text-xs font-semibold" style={{ color: hexToRgba(accent, 0.8) }}>
+            <span className="text-[11px] font-bold tabular-nums" style={{ color: hexToRgba(accent, 0.8) }}>
               {Math.round(progress * 100)}%
             </span>
           </div>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#1e1e1e" }}>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#1e1e1e" }}>
             <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progress * 100}%` }}
+              initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }}
               transition={{ duration: 0.7, delay: index * 0.07 + 0.2 }}
               className="h-full rounded-full"
-              style={{ background: `linear-gradient(90deg, ${accent}, ${hexToRgba(accent, 0.6)})` }}
+              style={{ background: `linear-gradient(90deg, ${accent}, ${hexToRgba(accent, 0.5)})` }}
             />
           </div>
         </div>
       </div>
     </motion.button>
+  );
+}
+
+// ─── Settings Panel ───────────────────────────────────────────────────────────
+
+function SettingsPanel({
+  customerName, qrToken, accent, onAccentChange, onClose,
+}: {
+  customerName: string;
+  qrToken: string;
+  accent: string;
+  onAccentChange: (c: string) => void;
+  onClose: () => void;
+}) {
+  const updateName = useMutation(api.customers.updateName);
+  const [name, setName] = useState(customerName);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  const nameDirty = name.trim() !== customerName;
+
+  const handleSaveName = async () => {
+    setError("");
+    const trimmed = name.trim();
+    if (trimmed.length < 2) { setError("Name muss mindestens 2 Zeichen haben."); return; }
+    if (trimmed.length > 40) { setError("Name darf max. 40 Zeichen lang sein."); return; }
+    if (containsProfanity(trimmed)) { setError("Bitte wähle einen anderen Namen."); return; }
+    setSaving(true);
+    try {
+      await updateName({ qrToken, name: trimmed });
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Fehler beim Speichern");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex flex-col justify-end"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Sheet */}
+      <motion.div
+        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 28, stiffness: 300 }}
+        className="relative bg-zinc-900 rounded-t-3xl px-5 pt-5 pb-10 max-w-sm w-full mx-auto"
+        style={{ border: "1px solid #27272a", borderBottom: "none" }}
+      >
+        {/* Handle */}
+        <div className="w-10 h-1 bg-zinc-700 rounded-full mx-auto mb-5" />
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-bold text-zinc-100">Einstellungen</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-zinc-800 flex items-center justify-center">
+            <X size={14} className="text-zinc-400" />
+          </button>
+        </div>
+
+        {/* Name */}
+        <div className="mb-6">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+            Dein Name
+          </label>
+          <div className="relative">
+            <Pencil size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600" />
+            <input
+              value={name}
+              onChange={e => { setName(e.target.value); setError(""); }}
+              maxLength={40}
+              placeholder="Dein Name"
+              className="w-full pl-9 pr-4 py-3 rounded-xl bg-zinc-800 text-zinc-100 text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            />
+          </div>
+          {error && (
+            <div className="flex items-center gap-1.5 mt-2">
+              <AlertCircle size={12} className="text-red-400 shrink-0" />
+              <p className="text-xs text-red-400">{error}</p>
+            </div>
+          )}
+          <AnimatePresence>
+            {nameDirty && !saved && (
+              <motion.button
+                initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                onClick={handleSaveName} disabled={saving}
+                className="mt-2.5 w-full py-2.5 rounded-xl text-sm font-semibold bg-amber-400 text-zinc-900 disabled:opacity-60">
+                {saving ? "Speichert…" : "Name speichern"}
+              </motion.button>
+            )}
+            {saved && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="mt-2.5 flex items-center gap-1.5 text-green-400 text-sm">
+                <Check size={13} /> Gespeichert
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Accent color */}
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+            Deine Farbe <span className="normal-case font-normal text-zinc-600">(nur für deine Übersicht)</span>
+          </label>
+          <div className="grid grid-cols-4 gap-2.5">
+            {COLOR_PRESETS.map(({ name: colorName, value }) => (
+              <button key={value} onClick={() => onAccentChange(value)}
+                className="flex flex-col items-center gap-1.5"
+                title={colorName}
+              >
+                <div className="w-full aspect-square rounded-xl transition-all flex items-center justify-center"
+                  style={{
+                    background: value,
+                    border: accent === value ? `2.5px solid white` : `2px solid transparent`,
+                    boxShadow: accent === value ? `0 0 12px ${hexToRgba(value, 0.6)}` : undefined,
+                    opacity: accent === value ? 1 : 0.7,
+                  }}>
+                  {accent === value && <Check size={14} className="text-zinc-900" strokeWidth={3} />}
+                </div>
+                <span className="text-[9px] text-zinc-500">{colorName}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -161,6 +346,8 @@ export default function MePage() {
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showStampOverlay, setShowStampOverlay] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [personalAccent, setPersonalAccent] = useState("#fbbf24");
   const prevStampsRef = useRef<Record<string, number>>({});
   const isFirstLoad = useRef(true);
   const didRedirect = useRef(false);
@@ -168,6 +355,13 @@ export default function MePage() {
   useEffect(() => {
     setMounted(true);
     setQrToken(localStorage.getItem("qrToken"));
+    const stored = localStorage.getItem("meAccentColor");
+    if (stored) setPersonalAccent(stored);
+  }, []);
+
+  const handleAccentChange = useCallback((color: string) => {
+    setPersonalAccent(color);
+    localStorage.setItem("meAccentColor", color);
   }, []);
 
   const data = useQuery(
@@ -235,7 +429,6 @@ export default function MePage() {
 
   if (!data) return null;
 
-  // 1 Shop → redirect läuft, Ladescreen anzeigen
   if (allMemberships.length === 1) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -247,7 +440,6 @@ export default function MePage() {
 
   const { customer } = data;
 
-  // 0 Shops → noch nicht registriert
   if (allMemberships.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center gap-5">
@@ -269,20 +461,44 @@ export default function MePage() {
   // 2+ Shops → Übersicht
   return (
     <div className="min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto">
-
       <AnimatePresence>
         {showStampOverlay && <StampOverlay onDone={() => setShowStampOverlay(false)} />}
       </AnimatePresence>
 
-      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mb-7">
-        <p className="text-neutral-500 text-sm">Hallo,</p>
-        <h1 className="text-2xl font-bold mt-0.5 bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600">
-          {customer.name}
-        </h1>
+      <AnimatePresence>
+        {showSettings && (
+          <SettingsPanel
+            customerName={customer.name}
+            qrToken={qrToken}
+            accent={personalAccent}
+            onAccentChange={handleAccentChange}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+        className="flex items-start justify-between mb-7">
+        <div>
+          <p className="text-neutral-500 text-sm">Hallo,</p>
+          <h1 className="text-2xl font-bold mt-0.5 bg-clip-text text-transparent"
+            style={{ backgroundImage: `linear-gradient(90deg, ${personalAccent}, ${hexToRgba(personalAccent, 0.6)})` }}>
+            {customer.name}
+          </h1>
+        </div>
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setShowSettings(true)}
+          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mt-1"
+        >
+          <Settings size={16} className="text-zinc-500" />
+        </motion.button>
       </motion.div>
 
+      {/* Shop list */}
       <div className="space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-600 ml-1">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-600 ml-1 mb-2">
           Deine Karten
         </p>
         {allMemberships.map((entry, i) => (
@@ -290,6 +506,7 @@ export default function MePage() {
             key={entry.membership._id}
             entry={entry}
             index={i}
+            personalAccent={personalAccent}
             onClick={() => router.push(`/me/shop/${entry.shop?.slug ?? ""}`)}
           />
         ))}

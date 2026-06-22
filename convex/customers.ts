@@ -38,6 +38,20 @@ export const getMembershipsForCustomer = query({
   },
 });
 
+export const updateName = mutation({
+  args: { qrToken: v.string(), name: v.string() },
+  handler: async (ctx, { qrToken, name }) => {
+    const customer = await ctx.db
+      .query("customers")
+      .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
+      .unique();
+    if (!customer) throw new Error("Kunde nicht gefunden");
+    const trimmed = name.trim();
+    if (trimmed.length < 2 || trimmed.length > 40) throw new Error("Name muss 2–40 Zeichen lang sein");
+    await ctx.db.patch(customer._id, { name: trimmed });
+  },
+});
+
 export const registerCustomer = mutation({
   args: {
     name: v.string(),
