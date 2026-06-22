@@ -124,6 +124,7 @@ export const adminSetFeatures = mutation({
     bonusProgramEnabled: v.optional(v.boolean()),
     milestonesEnabled: v.optional(v.boolean()),
     customDesignEnabled: v.optional(v.boolean()),
+    clearTheme: v.optional(v.boolean()),
   },
   handler: async (ctx, { shopId, adminSecret, ...flags }) => {
     requireAdmin({ secret: adminSecret });
@@ -131,9 +132,8 @@ export const adminSetFeatures = mutation({
     if (flags.showLeads !== undefined) patch.showLeads = flags.showLeads;
     if (flags.bonusProgramEnabled !== undefined) patch.bonusProgramEnabled = flags.bonusProgramEnabled;
     if (flags.milestonesEnabled !== undefined) patch.milestonesEnabled = flags.milestonesEnabled;
-    if (flags.customDesignEnabled !== undefined) {
-      patch.customDesignEnabled = flags.customDesignEnabled;
-    }
+    if (flags.customDesignEnabled !== undefined) patch.customDesignEnabled = flags.customDesignEnabled;
+    if (flags.clearTheme) patch.theme = undefined;
     await ctx.db.patch(shopId, patch);
   },
 });
