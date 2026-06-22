@@ -758,12 +758,24 @@ export default function SuperAdminPage() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
+  useEffect(() => {
+    const saved = localStorage.getItem("adminPin");
+    if (!saved) return;
+    setChecking(true);
+    checkPinMutation({ pin: saved })
+      .then(() => { setAdminSecret(saved); setAuthed(true); })
+      .catch(() => { localStorage.removeItem("adminPin"); })
+      .finally(() => setChecking(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleLogin = async () => {
     if (!pin) return;
     setChecking(true);
     setPinError(null);
     try {
       await checkPinMutation({ pin });
+      localStorage.setItem("adminPin", pin);
       setAdminSecret(pin);
       setAuthed(true);
     } catch (err: unknown) {
@@ -774,6 +786,14 @@ export default function SuperAdminPage() {
       setChecking(false);
     }
   };
+
+  if (!authed && checking) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-zinc-500 text-sm">Laden...</motion.div>
+      </div>
+    );
+  }
 
   if (!authed) {
     return (
