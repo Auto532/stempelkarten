@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection } from "../../components";
 import { VintageBackground, VintageLoyaltyCard, VintageRewardBanner, VintageMilestonesSection } from "../../themes/vintage";
+import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
 export default function MeShopPage() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -34,6 +35,7 @@ export default function MeShopPage() {
   const entry = data?.memberships.find(m => m.shop?.slug === shopSlug);
   const membership = entry?.membership;
   const shop = entry?.shop;
+  useShopThemeSync(shop);
 
   useEffect(() => {
     if (!membership) return;

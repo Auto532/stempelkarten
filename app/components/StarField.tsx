@@ -32,6 +32,7 @@ export function StarField() {
 
   return (
     <div
+      id="star-field"
       aria-hidden
       className="fixed inset-0 overflow-hidden pointer-events-none"
     >

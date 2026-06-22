@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Phone, Gift, ArrowRight, CheckCircle, Stamp } from "lucide-react";
 import { VintageBackground } from "@/app/me/themes/vintage";
+import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
 const V = {
   GOLD:      "#C49A2A",
@@ -117,6 +118,7 @@ export default function JoinPage() {
     } finally { setLoading(false); }
   };
 
+  useShopThemeSync(shop);
   const isLoading = shop === undefined || !tokenLoaded || (qrToken !== null && existing === undefined);
 
   if (isLoading) {

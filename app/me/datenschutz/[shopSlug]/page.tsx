@@ -6,11 +6,13 @@ import { api } from "@/convex/_generated/api";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { VintageBackground } from "@/app/me/themes/vintage";
+import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
 export default function DatenschutzPage() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const router = useRouter();
   const shop = useQuery(api.shops.getBySlug, { slug: shopSlug });
+  useShopThemeSync(shop);
 
   if (shop === undefined) {
     return (

@@ -41,6 +41,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
+      <head>
+        {/* Runs before first paint — reads localStorage to hide starfield instantly */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=window.location.pathname;var m=p.match(/\\/(?:me\\/shop|me\\/impressum|me\\/datenschutz|betrieb|join)\\/([^\\/]+)/);if(m){var t=localStorage.getItem('sTheme_'+m[1]);if(t)document.documentElement.setAttribute('data-shop-theme',t);}}catch(e){}})();` }} />
+      </head>
       <body className={`${jakarta.variable} antialiased bg-zinc-950 text-zinc-100 min-h-screen`}>
         <ConvexClientProvider>
           <StarField />

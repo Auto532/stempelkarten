@@ -16,6 +16,7 @@ import type { IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { LoyaltyCard } from "@/app/me/components";
 import type { CardTier } from "@/app/me/components";
 import { VintageBackground, VintageLoyaltyCard, VintageRewardBanner } from "@/app/me/themes/vintage";
+import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import { QRImage } from "@/app/components/QRImage";
 import QRCode from "qrcode";
 
@@ -359,6 +360,8 @@ export default function ScanPage() {
     setAdminToken(token);
     setAuthorized(true);
   }, [router, shopSlug]);
+
+  useShopThemeSync(shop);
 
   if (!authorized || shop === undefined) {
     return <div className="min-h-screen flex items-center justify-center"><motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-zinc-500 text-sm">Laden...</motion.div></div>;

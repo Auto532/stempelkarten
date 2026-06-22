@@ -9,6 +9,7 @@ import { Stamp, Gift, UserPlus, ArrowLeft, LogIn } from "lucide-react";
 import { LoyaltyCard } from "@/app/me/components";
 import type { CardTier } from "@/app/me/components";
 import { VintageBackground, VintageLoyaltyCard, VintageRewardBanner } from "@/app/me/themes/vintage";
+import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
 type Tier = { stamps: number; text: string; enabled: boolean };
 
@@ -54,6 +55,7 @@ export default function StampPage() {
   const addStamp = useMutation(api.memberships.addStamp);
   const redeemReward = useMutation(api.memberships.redeemReward);
   const createMembership = useMutation(api.memberships.createMembershipForExistingCustomer);
+  useShopThemeSync(shop);
 
   const handleStamp = async () => {
     if (!data?.membership) return;
