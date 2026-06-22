@@ -488,7 +488,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
 
 // ─── Tab: Übersicht ───────────────────────────────────────────────────────────
 
-function OverviewTab({ adminSecret }: { adminSecret: string }) {
+function OverviewTab({ adminSecret, onGoToShops }: { adminSecret: string; onGoToShops: () => void }) {
   const globalStats = useQuery(api.shops.getGlobalStats, adminSecret ? { adminSecret } : "skip");
 
   if (!globalStats) {
@@ -530,8 +530,9 @@ function OverviewTab({ adminSecret }: { adminSecret: string }) {
             {[...globalStats.shops]
               .sort((a, b) => b.customerCount - a.customerCount)
               .map((shop, i) => (
-                <motion.div key={shop._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 + i * 0.05 }}
-                  className="flex items-center gap-3 px-5 py-3">
+                <motion.button key={shop._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 + i * 0.05 }}
+                  onClick={onGoToShops}
+                  className="w-full flex items-center gap-3 px-5 py-3 hover:bg-zinc-800/40 transition-colors text-left">
                   <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
                     <Store size={13} className="text-amber-400" />
                   </div>
@@ -539,11 +540,14 @@ function OverviewTab({ adminSecret }: { adminSecret: string }) {
                     <p className="text-sm text-zinc-200 font-medium truncate">{shop.name}</p>
                     <p className="text-[11px] text-zinc-600">{shop.stampsRequired} Stempel · {shop.rewardText}</p>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-zinc-200">{shop.customerCount}</p>
-                    <p className="text-[10px] text-zinc-600">Kunden</p>
+                  <div className="text-right shrink-0 flex items-center gap-2">
+                    <div>
+                      <p className="text-sm font-bold text-zinc-200">{shop.customerCount}</p>
+                      <p className="text-[10px] text-zinc-600">Kunden</p>
+                    </div>
+                    <ChevronRight size={14} className="text-zinc-600" />
                   </div>
-                </motion.div>
+                </motion.button>
               ))}
           </div>
         </div>
@@ -855,7 +859,7 @@ export default function SuperAdminPage() {
       {/* Content */}
       <div className="flex-1 px-5 pt-5 pb-28 overflow-y-auto">
         <AnimatePresence mode="wait">
-          {activeTab === "overview" && <OverviewTab key="overview" adminSecret={adminSecret} />}
+          {activeTab === "overview" && <OverviewTab key="overview" adminSecret={adminSecret} onGoToShops={() => setActiveTab("shops")} />}
           {activeTab === "shops" && <ShopsTab key="shops" adminSecret={adminSecret} />}
           {activeTab === "settings" && <SettingsTab key="settings" />}
         </AnimatePresence>
