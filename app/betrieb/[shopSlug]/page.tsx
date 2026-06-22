@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { QRImage } from "@/app/components/QRImage";
 import { VintageBackground } from "@/app/me/themes/vintage";
+import { GrillBackground } from "@/app/me/themes/grill";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import QRCode from "qrcode";
 
@@ -114,14 +115,16 @@ export default function BetriebDashboard() {
   if (!shop) return null;
 
   const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
-  const ic = isVintage ? "#C49A2A" : "#fbbf24";          // icon / accent color
-  const tx = isVintage ? "#E8D070" : "#f4f4f5";           // primary text
-  const tm = isVintage ? "#7A5C12" : "#71717a";           // muted text
-  const tb = isVintage ? "#C8A86A" : "#d4d4d8";           // body text
-  const card = isVintage ? { background: "#130A04", border: "1px solid #7A5C1244" } : { background: "#18181b", border: "1px solid #27272a" };
-  const sub  = isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1222" } : { background: "#27272a" };
-  const inp  = isVintage ? { background: "#1C0E0688", border: "1px solid #7A5C1233", color: "#C8A86A" } : { background: "#27272a", border: "1px solid #3f3f46", color: "#d4d4d8" };
-  const div  = isVintage ? "#7A5C1222" : "#27272a";
+  const isGrill   = !!shop.customDesignEnabled && shop.theme === "grill";
+  const ic = isGrill ? "#E07A20" : isVintage ? "#C49A2A" : "#fbbf24";
+  const tx = isGrill ? "#F5D5A8" : isVintage ? "#E8D070" : "#f4f4f5";
+  const tm = isGrill ? "#8A5030" : isVintage ? "#7A5C12" : "#71717a";
+  const tb = isGrill ? "#C89060" : isVintage ? "#C8A86A" : "#d4d4d8";
+  const card = isGrill ? { background: "#1E0E04", border: "1px solid #8A401044" } : isVintage ? { background: "#130A04", border: "1px solid #7A5C1244" } : { background: "#18181b", border: "1px solid #27272a" };
+  const sub  = isGrill ? { background: "#1a0804", border: "1px solid #8A401022" } : isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1222" } : { background: "#27272a" };
+  const inp  = isGrill ? { background: "#1E0E0488", border: "1px solid #8A401033", color: "#C89060" } : isVintage ? { background: "#1C0E0688", border: "1px solid #7A5C1233", color: "#C8A86A" } : { background: "#27272a", border: "1px solid #3f3f46", color: "#d4d4d8" };
+  const div  = isGrill ? "#8A401022" : isVintage ? "#7A5C1222" : "#27272a";
+  const btn  = isGrill ? "linear-gradient(135deg,#E07A20,#8A4010)" : isVintage ? "linear-gradient(135deg,#C49A2A,#7A5C12)" : "#fbbf24";
 
   const totalStamps  = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
   const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
@@ -168,7 +171,7 @@ export default function BetriebDashboard() {
     } finally { setMilestoneSaving(false); }
   };
 
-  const wrapperClass = `min-h-screen max-w-sm mx-auto px-5 pb-16 ${isVintage ? "relative z-[2]" : ""}`;
+  const wrapperClass = `min-h-screen max-w-sm mx-auto px-5 pb-16 ${isVintage || isGrill ? "relative z-[2]" : ""}`;
 
   // ── Sub-page header ────────────────────────────────────────────────────────
   function SubHeader({ title }: { title: string }) {
@@ -202,7 +205,7 @@ export default function BetriebDashboard() {
           <>
             <button onClick={onSave} disabled={saving}
               className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-              style={{ background: isVintage ? "linear-gradient(135deg,#C49A2A,#7A5C12)" : "#fbbf24", color: "#18181b" }}>
+              style={{ background: btn, color: "#18181b" }}>
               {saving ? "Speichert…" : "Speichern"}
             </button>
             <button onClick={onReset} className="py-2.5 px-3 rounded-xl"
@@ -221,7 +224,7 @@ export default function BetriebDashboard() {
   if (view === "home") {
     return (
       <div className={wrapperClass}>
-        {isVintage && <VintageBackground />}
+        {isVintage && <VintageBackground />}{isGrill && <GrillBackground />}
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="pt-12 pb-6">
@@ -235,7 +238,7 @@ export default function BetriebDashboard() {
           whileTap={{ scale: 0.97 }}
           onClick={() => router.push(`/betrieb/${shopSlug}/scan`)}
           className="w-full rounded-2xl p-5 flex items-center gap-4 mb-5"
-          style={{ background: isVintage ? "linear-gradient(135deg,#C49A2A,#7A5C12)" : "#fbbf24" }}
+          style={{ background: btn }}
         >
           <div className="w-12 h-12 bg-black/15 rounded-xl flex items-center justify-center shrink-0">
             <ScanLine size={26} className="text-zinc-900" />
@@ -338,7 +341,7 @@ export default function BetriebDashboard() {
   if (view === "einstellungen") {
     return (
       <div className={wrapperClass}>
-        {isVintage && <VintageBackground />}
+        {isVintage && <VintageBackground />}{isGrill && <GrillBackground />}
         <SubHeader title="Einstellungen" />
 
         <div className="space-y-5">
@@ -497,7 +500,7 @@ export default function BetriebDashboard() {
   if (view === "kunden") {
     return (
       <div className={wrapperClass}>
-        {isVintage && <VintageBackground />}
+        {isVintage && <VintageBackground />}{isGrill && <GrillBackground />}
         <SubHeader title="Kunden" />
 
         <div className="rounded-2xl overflow-hidden" style={card}>
@@ -550,6 +553,7 @@ export default function BetriebDashboard() {
                     className={`w-full flex items-center gap-3 px-4 py-3 text-left ${shop.showLeads ? "cursor-pointer" : "cursor-default"}`}>
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                       style={isReady ? { background: ic, color: "#18181b" }
+                        : isGrill ? { background: "#1E0E04", border: "1px solid #8A401044", color: "#E07A20" }
                         : isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C49A2A" }
                         : { background: "#27272a", border: "1px solid #3f3f46", color: "#fbbf24" }}>
                       {customer.name.charAt(0).toUpperCase()}
@@ -574,7 +578,7 @@ export default function BetriebDashboard() {
                           </div>
                           <div className="grid grid-cols-3 gap-2 text-center">
                             {[{ label: "Aktuell", value: membership.currentStamps }, { label: "Gesamt", value: membership.totalStampsEver }, { label: "Belohnt", value: membership.rewardsRedeemed }].map(({ label, value }) => (
-                              <div key={label} className="rounded-xl py-2.5" style={isVintage ? { background: "#13070266" } : { background: "#3f3f46" }}>
+                              <div key={label} className="rounded-xl py-2.5" style={isGrill ? { background: "#1E0E0466" } : isVintage ? { background: "#13070266" } : { background: "#3f3f46" }}>
                                 <p className="text-base font-bold" style={{ color: tx }}>{value}</p>
                                 <p className="text-[9px] mt-0.5 uppercase tracking-wide" style={{ color: tm }}>{label}</p>
                               </div>
@@ -610,7 +614,7 @@ export default function BetriebDashboard() {
   if (view === "einloesungen") {
     return (
       <div className={wrapperClass}>
-        {isVintage && <VintageBackground />}
+        {isVintage && <VintageBackground />}{isGrill && <GrillBackground />}
         <SubHeader title="Treue Bonus" />
 
         <div className="rounded-2xl overflow-hidden" style={card}>
@@ -674,7 +678,7 @@ export default function BetriebDashboard() {
   // ══════════════════════════════════════════════════════════════════════════
   return (
     <div className={wrapperClass}>
-      {isVintage && <VintageBackground />}
+      {isVintage && <VintageBackground />}{isGrill && <GrillBackground />}
       <SubHeader title="QR-Code" />
 
       <div className="rounded-2xl p-6 space-y-5" style={card}>
@@ -689,7 +693,7 @@ export default function BetriebDashboard() {
         <button
           onClick={() => printQR(shop.name, `${window.location.origin}/join/${shopSlug}`)}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-colors"
-          style={{ background: isVintage ? "linear-gradient(135deg,#C49A2A,#7A5C12)" : "#fbbf24", color: "#18181b" }}>
+          style={{ background: btn, color: "#18181b" }}>
           <Printer size={16} />
           Drucken / Druckvorschau
         </button>

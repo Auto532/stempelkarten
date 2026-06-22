@@ -16,6 +16,7 @@ import type { IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { LoyaltyCard } from "@/app/me/components";
 import type { CardTier } from "@/app/me/components";
 import { VintageBackground, VintageLoyaltyCard, VintageRewardBanner } from "@/app/me/themes/vintage";
+import { GrillBackground, GrillLoyaltyCard, GrillRewardBanner } from "@/app/me/themes/grill";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import { QRImage } from "@/app/components/QRImage";
 import QRCode from "qrcode";
@@ -68,6 +69,7 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
 }) {
   const { stampsRequired, rewardText, bonusProgramEnabled } = shop;
   const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
+  const isGrill   = !!shop.customDesignEnabled && shop.theme === "grill";
   const data = useQuery(api.memberships.getForCustomerAndShop, { qrToken, shopId });
   const addStamp = useMutation(api.memberships.addStamp);
   const redeemReward = useMutation(api.memberships.redeemReward);
@@ -98,7 +100,9 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
 
   const { customer, membership } = data;
 
-  const vintageCard = isVintage
+  const vintageCard = isGrill
+    ? { background: "#1E0E04", border: "1px solid #8A401044" }
+    : isVintage
     ? { background: "#130A04", border: "1px solid #7A5C1244" }
     : { background: "#18181b", border: "1px solid #27272a" };
 
@@ -112,10 +116,10 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
           </div>
         </motion.div>
         <div>
-          <h2 className="text-xl font-bold" style={{ color: isVintage ? "#E8D070" : undefined }}>
+          <h2 className="text-xl font-bold" style={{ color: isGrill ? "#F5D5A8" : isVintage ? "#E8D070" : undefined }}>
             {actionState.rewardReached ? "Belohnung erreicht! 🎉" : "Stempel gesetzt!"}
           </h2>
-          <p className="text-sm mt-1" style={{ color: isVintage ? "#7A5C12" : "#a1a1aa" }}>
+          <p className="text-sm mt-1" style={{ color: isGrill ? "#8A5030" : isVintage ? "#7A5C12" : "#a1a1aa" }}>
             {actionState.customerName} · {actionState.newStamps}/{actionState.stampsRequired} Stempel
           </p>
           {actionState.rewardReached && (
@@ -126,8 +130,8 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
           )}
         </div>
         <button onClick={onDone}
-          className={isVintage ? "w-full py-3.5 rounded-xl font-medium transition-colors" : "w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors"}
-          style={isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" } : undefined}>
+          className={isGrill || isVintage ? "w-full py-3.5 rounded-xl font-medium transition-colors" : "w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors"}
+          style={isGrill ? { background: "#1E0E04", border: "1px solid #8A401044", color: "#C89060" } : isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" } : undefined}>
           Nächsten Kunden scannen
         </button>
       </motion.div>
@@ -144,13 +148,13 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
           </div>
         </motion.div>
         <div>
-          <h2 className="text-xl font-bold" style={{ color: isVintage ? "#E8D070" : undefined }}>Belohnung eingelöst! 🏆</h2>
-          <p className="text-sm mt-1" style={{ color: isVintage ? "#7A5C12" : "#a1a1aa" }}>{actionState.customerName} erhält:</p>
+          <h2 className="text-xl font-bold" style={{ color: isGrill ? "#F5D5A8" : isVintage ? "#E8D070" : undefined }}>Belohnung eingelöst! 🏆</h2>
+          <p className="text-sm mt-1" style={{ color: isGrill ? "#8A5030" : isVintage ? "#7A5C12" : "#a1a1aa" }}>{actionState.customerName} erhält:</p>
           <p className="text-amber-400 font-semibold mt-1">{actionState.rewardText}</p>
         </div>
         <button onClick={onDone}
-          className={isVintage ? "w-full py-3.5 rounded-xl font-medium transition-colors" : "w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors"}
-          style={isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" } : undefined}>
+          className={isGrill || isVintage ? "w-full py-3.5 rounded-xl font-medium transition-colors" : "w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors"}
+          style={isGrill ? { background: "#1E0E04", border: "1px solid #8A401044", color: "#C89060" } : isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" } : undefined}>
           Nächsten Kunden scannen
         </button>
       </motion.div>
@@ -225,7 +229,26 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
 
       {/* Card preview */}
       {shop.customDesignEnabled ? (
-        isVintage ? (
+        isGrill ? (
+          <div className="space-y-3 relative z-10">
+            <GrillLoyaltyCard
+              shopName={shop.name}
+              stampsRequired={stampsRequired}
+              currentStamps={membership.currentStamps}
+              animateIndex={null}
+              onShowQR={() => {}}
+              qrToken={qrToken}
+              hideQR
+              rewardTiers={shop.rewardTiers}
+              accentColor={shop.accentColor}
+            />
+            <GrillRewardBanner
+              rewardText={rewardText}
+              stampsRequired={stampsRequired}
+              rewardTiers={shop.rewardTiers}
+            />
+          </div>
+        ) : isVintage ? (
           <div className="space-y-3 relative z-10">
             <VintageLoyaltyCard
               shopName={shop.name}
@@ -371,6 +394,7 @@ export default function ScanPage() {
 
   const showLeads = false; // Mitarbeiter sehen nie Leads/Telefonnummern
   const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
+  const isGrill   = !!shop.customDesignEnabled && shop.theme === "grill";
   const totalStamps = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
   const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
   const activeTiers = shop.bonusProgramEnabled && shop.rewardTiers && shop.rewardTiers.some(t => t.enabled)
@@ -387,8 +411,9 @@ export default function ScanPage() {
   // ── Scanner view ────────────────────────────────────────────────────────────
   if (view === "scanning") {
     return (
-      <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto ${isVintage ? "relative z-[2]" : ""}`}>
+      <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto ${isVintage || isGrill ? "relative z-[2]" : ""}`}>
         {isVintage && <VintageBackground />}
+        {isGrill && <GrillBackground />}
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 mb-6">
           <button
@@ -445,7 +470,18 @@ export default function ScanPage() {
   }
 
   // ── Dashboard view ──────────────────────────────────────────────────────────
-  const V = isVintage ? {
+  const V = isGrill ? {
+    card: { background: "#1E0E04", border: "1px solid #8A401044" },
+    cardHover: "#1E0E0488",
+    divider: "#8A401022",
+    text: "#F5D5A8",
+    textDim: "#8A5030",
+    textBody: "#C89060",
+    icon: "#E07A20",
+    badge: { background: "#E07A2022", border: "1px solid #8A4010", color: "#F5D5A8" },
+    input: { background: "#1E0E04", border: "1px solid #8A401044", color: "#C89060" },
+    subCard: { background: "#1E0E0488", borderRadius: "0.75rem", padding: "0.75rem" },
+  } : isVintage ? {
     card: { background: "#130A04", border: "1px solid #7A5C1244" },
     cardHover: "#1C0E0688",
     divider: "#7A5C1222",
@@ -459,8 +495,9 @@ export default function ScanPage() {
   } : null;
 
   return (
-    <div className={`min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto space-y-6 ${isVintage ? "relative z-[2]" : ""}`}>
+    <div className={`min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto space-y-6 ${isVintage || isGrill ? "relative z-[2]" : ""}`}>
       {isVintage && <VintageBackground />}
+      {isGrill && <GrillBackground />}
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
@@ -473,7 +510,7 @@ export default function ScanPage() {
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} whileTap={{ scale: 0.97 }}
         onClick={() => setView("scanning")}
         className="w-full text-zinc-900 rounded-2xl p-5 flex items-center gap-4 transition-colors"
-        style={{ background: isVintage ? "linear-gradient(135deg, #C49A2A, #7A5C12)" : "#fbbf24" }}
+        style={{ background: isGrill ? "linear-gradient(135deg, #E07A20, #8A4010)" : isVintage ? "linear-gradient(135deg, #C49A2A, #7A5C12)" : "#fbbf24" }}
       >
         <div className="w-12 h-12 bg-zinc-900/20 rounded-xl flex items-center justify-center shrink-0">
           <ScanLine size={24} />

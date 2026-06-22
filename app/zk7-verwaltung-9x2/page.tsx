@@ -83,6 +83,7 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
   const [togglingDesign, setTogglingDesign] = useState(false);
   const [togglingMilestones, setTogglingMilestones] = useState(false);
   const [clearingTheme, setClearingTheme] = useState(false);
+  const [settingTheme, setSettingTheme] = useState<string | false>(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -149,6 +150,12 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
     setClearingTheme(true);
     try { await adminSetFeatures({ shopId: shop._id, adminSecret, clearTheme: true }); }
     finally { setClearingTheme(false); }
+  };
+
+  const handleSetTheme = async (themeName: string, accentColor: string) => {
+    setSettingTheme(themeName);
+    try { await adminSetFeatures({ shopId: shop._id, adminSecret, theme: themeName, accentColor }); }
+    finally { setSettingTheme(false); }
   };
 
   return (
@@ -221,19 +228,38 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
                     </button>
                   </div>
                 ))}
-                {shop.customDesignEnabled && shop.theme && (
-                  <div className="flex items-center justify-between px-5 py-3">
-                    <div className="flex items-center gap-2">
-                      <X size={14} className="text-zinc-600" />
-                      <span className="text-xs text-zinc-500">Theme: <span className="text-zinc-400">{shop.theme}</span></span>
+                {shop.customDesignEnabled && (
+                  <div className="px-5 py-3 space-y-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[
+                        { id: "vintage", label: "Vintage", color: "#C49A2A" },
+                        { id: "grill",   label: "Grill",   color: "#E07A20" },
+                      ].map(({ id, label, color }) => (
+                        <button
+                          key={id}
+                          onClick={() => handleSetTheme(id, color)}
+                          disabled={settingTheme}
+                          className="text-[11px] px-2.5 py-1 rounded-lg transition-colors disabled:opacity-40"
+                          style={shop.theme === id
+                            ? { background: color + "33", border: `1px solid ${color}88`, color }
+                            : { background: "#27272a", border: "1px solid #3f3f46", color: "#71717a" }}
+                        >
+                          {settingTheme === id ? "..." : label}
+                        </button>
+                      ))}
+                      {shop.theme && (
+                        <button
+                          onClick={handleClearTheme}
+                          disabled={!!clearingTheme}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-40"
+                        >
+                          {clearingTheme ? "..." : "✕"}
+                        </button>
+                      )}
                     </div>
-                    <button
-                      onClick={handleClearTheme}
-                      disabled={clearingTheme}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-40"
-                    >
-                      {clearingTheme ? "..." : "Zurücksetzen"}
-                    </button>
+                    {shop.theme && (
+                      <p className="text-[10px] text-zinc-600">Aktiv: {shop.theme}</p>
+                    )}
                   </div>
                 )}
               </div>

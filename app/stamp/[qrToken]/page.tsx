@@ -9,6 +9,7 @@ import { Stamp, Gift, UserPlus, ArrowLeft, LogIn } from "lucide-react";
 import { LoyaltyCard } from "@/app/me/components";
 import type { CardTier } from "@/app/me/components";
 import { VintageBackground, VintageLoyaltyCard, VintageRewardBanner } from "@/app/me/themes/vintage";
+import { GrillBackground, GrillLoyaltyCard, GrillRewardBanner } from "@/app/me/themes/grill";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
 type Tier = { stamps: number; text: string; enabled: boolean };
@@ -205,25 +206,28 @@ export default function StampPage() {
   }
 
   const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
+  const isGrill   = !!shop.customDesignEnabled && shop.theme === "grill";
 
   return (
-    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col gap-5 ${isVintage ? "relative z-[2]" : "bg-zinc-950"}`}>
+    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col gap-5 ${isVintage || isGrill ? "relative z-[2]" : "bg-zinc-950"}`}>
       {isVintage && <VintageBackground />}
+      {isGrill && <GrillBackground />}
 
       {/* Header */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 relative z-10">
         <button onClick={() => router.push(adminRole === "mitarbeiter" ? `/betrieb/${shopSlug}/scan` : `/betrieb/${shopSlug}`)}
           className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
-          style={isVintage
+          style={isGrill
+            ? { background: "#1E0E04", border: "1px solid #8A401044", color: "#E07A20" }
+            : isVintage
             ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C49A2A" }
             : undefined}
         >
-          {!isVintage && <span className="sr-only" />}
-          <ArrowLeft size={18} className={isVintage ? "" : "text-zinc-400"} />
+          <ArrowLeft size={18} className={isVintage || isGrill ? "" : "text-zinc-400"} />
         </button>
         <div>
-          <p className="text-xs" style={{ color: isVintage ? "#7A5C12" : "#71717a" }}>{shop.name}</p>
-          <h1 className="font-bold leading-tight" style={{ color: isVintage ? "#E8D070" : "#f4f4f5" }}>Stempel vergeben</h1>
+          <p className="text-xs" style={{ color: isGrill ? "#8A5030" : isVintage ? "#7A5C12" : "#71717a" }}>{shop.name}</p>
+          <h1 className="font-bold leading-tight" style={{ color: isGrill ? "#F5D5A8" : isVintage ? "#E8D070" : "#f4f4f5" }}>Stempel vergeben</h1>
         </div>
         {rewardReady && (
           <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
@@ -236,25 +240,48 @@ export default function StampPage() {
       {/* Customer name */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
         className="rounded-2xl px-5 py-4 flex items-center gap-3 relative z-10"
-        style={isVintage
+        style={isGrill
+          ? { background: "#1E0E04", border: "1px solid #8A401044" }
+          : isVintage
           ? { background: "#1C0E06", border: "1px solid #7A5C1244" }
           : { background: "#18181b", border: "1px solid #27272a" }}>
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0"
-          style={isVintage
+          style={isGrill
+            ? { background: "radial-gradient(circle at 35% 35%, #3D1808, #1E0E04)", border: "1px solid #E07A2044", color: "#E07A20" }
+            : isVintage
             ? { background: "radial-gradient(circle at 35% 35%, #3D2510, #1E1008)", border: "1px solid #C49A2A44", color: "#C49A2A" }
             : { background: "#27272a", color: "#fbbf24" }}>
           {customer.name.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="font-bold" style={{ color: isVintage ? "#E8D070" : "#f4f4f5" }}>{customer.name}</p>
-          <p className="text-xs truncate" style={{ color: isVintage ? "#7A5C12" : "#71717a" }}>{customer.phone}</p>
+          <p className="font-bold" style={{ color: isGrill ? "#F5D5A8" : isVintage ? "#E8D070" : "#f4f4f5" }}>{customer.name}</p>
+          <p className="text-xs truncate" style={{ color: isGrill ? "#8A5030" : isVintage ? "#7A5C12" : "#71717a" }}>{customer.phone}</p>
         </div>
       </motion.div>
 
       {/* Card */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         {shop.customDesignEnabled ? (
-          isVintage ? (
+          isGrill ? (
+            <div className="space-y-3 relative z-10">
+              <GrillLoyaltyCard
+                shopName={shop.name}
+                stampsRequired={shop.stampsRequired}
+                currentStamps={currentStamps}
+                animateIndex={null}
+                onShowQR={() => {}}
+                qrToken={qrToken}
+                hideQR
+                rewardTiers={shop.rewardTiers as Array<{stamps:number;text:string;enabled:boolean}> | undefined}
+                accentColor={shop.accentColor}
+              />
+              <GrillRewardBanner
+                rewardText={shop.rewardText}
+                stampsRequired={shop.stampsRequired}
+                rewardTiers={shop.rewardTiers as CardTier[] | undefined}
+              />
+            </div>
+          ) : isVintage ? (
             <div className="space-y-3 relative z-10">
               <VintageLoyaltyCard
                 shopName={shop.name}
