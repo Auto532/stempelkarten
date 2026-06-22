@@ -4,6 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import type { IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ScanLine, Users, Award, Stamp, X, Check, QrCode,
@@ -14,6 +16,11 @@ import { QRImage } from "@/app/components/QRImage";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import QRCode from "qrcode";
+
+const Scanner = dynamic(
+  () => import("@yudiel/react-qr-scanner").then(m => m.Scanner),
+  { ssr: false, loading: () => <div className="aspect-square bg-zinc-900 rounded-2xl animate-pulse" /> }
+);
 
 async function printQR(shopName: string, url: string) {
   const dataUrl = await QRCode.toDataURL(url, { width: 400, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
@@ -30,7 +37,7 @@ async function printQR(shopName: string, url: string) {
 }
 
 type Tier = { stamps: number; text: string; enabled: boolean };
-type View = "home" | "einstellungen" | "kunden" | "einloesungen" | "qr";
+type View = "home" | "einstellungen" | "kunden" | "einloesungen" | "qr" | "scan";
 
 export default function BetriebDashboard() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -235,7 +242,7 @@ export default function BetriebDashboard() {
         <motion.button
           initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.06 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => router.push(`/betrieb/${shopSlug}/scan`)}
+          onClick={() => setView("scan")}
           className="w-full rounded-2xl p-5 flex items-center gap-4 mb-5"
           style={{ background: btn }}
         >
@@ -666,6 +673,45 @@ export default function BetriebDashboard() {
             </button>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
+  // SCAN VIEW (Inhaber-Kamera — navigiert zu /stamp/[token])
+  // ══════════════════════════════════════════════════════════════════════════
+  if (view === "scan") {
+    return (
+      <div className={wrapperClass}>
+        {theme && <theme.Background />}
+        <SubHeader title="Kunden scannen" />
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="relative overflow-hidden rounded-2xl border" style={{ borderColor: div }}>
+            <Scanner
+              onScan={(codes: IDetectedBarcode[]) => {
+                if (codes.length > 0) {
+                  const raw = codes[0].rawValue;
+                  const token = raw.includes("/stamp/") ? raw.split("/stamp/").pop()! : raw;
+                  router.push(`/stamp/${token}`);
+                }
+              }}
+              sound={false}
+            />
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute inset-8 border-2 rounded-2xl" style={{ borderColor: `${ic}44` }} />
+              <motion.div
+                animate={{ y: ["0%", "100%", "0%"] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute left-8 right-8 top-8 h-0.5"
+                style={{ background: `linear-gradient(to right, transparent, ${ic}, transparent)` }}
+              />
+            </div>
+          </div>
+          <p className="text-center text-sm flex items-center justify-center gap-2" style={{ color: tm }}>
+            <ScanLine size={15} /> Kundencode in den Rahmen halten
+          </p>
+        </motion.div>
       </div>
     );
   }
