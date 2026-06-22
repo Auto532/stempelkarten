@@ -76,10 +76,8 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
   const membership = entry.membership;
   if (!shop) return null;
 
-  // Custom design shops use their own accent; default shops use personal accent
-  const accent = shop.customDesignEnabled
-    ? (shop.accentColor ?? "#fbbf24")
-    : personalAccent;
+  // Overview always uses personal accent — custom design only shows when you open the shop
+  const accent = personalAccent;
 
   const activeTiers = getActiveTiers(shop);
   const lowestTier = activeTiers[0];
@@ -92,8 +90,8 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
   const progress = Math.min(membership.currentStamps / targetStamps, 1);
 
   const StampIcon = getStampIcon(shop.stampIcon);
-  const dotSize = totalSlots <= 10 ? 30 : totalSlots <= 15 ? 26 : totalSlots <= 20 ? 22 : 18;
-  const iconSize = Math.round(dotSize * 0.45);
+  const dotSize = totalSlots <= 10 ? 32 : totalSlots <= 15 ? 27 : totalSlots <= 20 ? 23 : 19;
+  const iconSize = Math.round(dotSize * 0.46);
 
   return (
     <motion.button
@@ -104,76 +102,64 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
       onClick={onClick}
       className="w-full text-left rounded-2xl overflow-hidden"
       style={{
-        background: `linear-gradient(160deg, ${hexToRgba(accent, 0.06)} 0%, #111111 40%)`,
-        border: `1px solid ${hexToRgba(accent, 0.2)}`,
-        boxShadow: `0 2px 20px rgba(0,0,0,0.4), inset 0 1px 0 ${hexToRgba(accent, 0.08)}`,
+        background: "#141414",
+        border: `1px solid #242424`,
+        boxShadow: "0 2px 16px rgba(0,0,0,0.5)",
       }}
     >
-      {/* Top gradient line */}
-      <div className="h-[2px] w-full" style={{
-        background: `linear-gradient(90deg, ${accent}, ${hexToRgba(accent, 0.15)})`,
-      }} />
-
-      <div className="px-4 pt-3.5 pb-4">
-        {/* Header: shop name + icon + badge */}
-        <div className="flex items-start justify-between gap-3 mb-3.5">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: hexToRgba(accent, 0.12), border: `1px solid ${hexToRgba(accent, 0.25)}` }}>
-              <StampIcon size={18} style={{ color: accent }} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[9px] font-bold tracking-[0.2em] uppercase mb-0.5"
-                style={{ color: hexToRgba(accent, 0.65) }}>
-                Stempelkarte
-              </p>
-              <h2 className="text-base font-bold text-neutral-100 leading-tight truncate">
-                {shop.name}
-              </h2>
-            </div>
+      {/* Solid colored header — like a real loyalty card */}
+      <div className="px-4 py-3 flex items-center justify-between gap-3"
+        style={{ background: accent }}>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center shrink-0">
+            <StampIcon size={17} color="#fff" />
           </div>
-          <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-            {isReady && (
-              <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
-                className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-                style={{ color: accent, background: hexToRgba(accent, 0.12), border: `1px solid ${hexToRgba(accent, 0.3)}` }}>
-                BEREIT
-              </motion.span>
-            )}
-            <ChevronRight size={15} style={{ color: hexToRgba(accent, 0.4) }} />
+          <div className="min-w-0">
+            <p className="text-[8px] font-bold tracking-[0.22em] uppercase text-black/50 leading-none mb-0.5">
+              Stempelkarte
+            </p>
+            <h2 className="text-sm font-bold text-zinc-900 leading-tight truncate">
+              {shop.name}
+            </h2>
           </div>
         </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isReady && (
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-black/20 text-zinc-900">
+              BEREIT
+            </span>
+          )}
+          <ChevronRight size={14} className="text-black/40" />
+        </div>
+      </div>
 
-        {/* Stamp dots */}
-        <div className="flex flex-wrap gap-1.5 mb-3.5">
+      {/* Stamp grid */}
+      <div className="px-4 pt-3.5 pb-3">
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {Array.from({ length: Math.min(totalSlots, 25) }).map((_, i) => {
             const filled = i < membership.currentStamps;
             const isCheckpoint = tierCheckpoints.has(i + 1);
             return (
               <div key={i}
-                className="rounded-full flex items-center justify-center transition-all"
+                className="rounded-full flex items-center justify-center"
                 style={{
                   width: dotSize, height: dotSize,
                   background: filled
-                    ? isCheckpoint
-                      ? `radial-gradient(circle at 35% 35%, ${hexToRgba(accent, 0.9)}, ${hexToRgba(accent, 0.5)})`
-                      : hexToRgba(accent, 0.18)
-                    : "#161616",
+                    ? isCheckpoint ? accent : hexToRgba(accent, 0.22)
+                    : "#1e1e1e",
                   border: filled
-                    ? `1px solid ${hexToRgba(accent, isCheckpoint ? 0.8 : 0.4)}`
+                    ? `1.5px solid ${isCheckpoint ? accent : hexToRgba(accent, 0.5)}`
                     : isCheckpoint
                       ? `1.5px dashed ${hexToRgba(accent, 0.4)}`
-                      : `1px solid #252525`,
-                  boxShadow: filled && isCheckpoint
-                    ? `0 0 8px ${hexToRgba(accent, 0.4)}`
-                    : undefined,
+                      : `1px solid #2a2a2a`,
+                  boxShadow: filled && isCheckpoint ? `0 0 7px ${hexToRgba(accent, 0.45)}` : undefined,
                 }}>
                 {filled
                   ? isCheckpoint
-                    ? <Trophy size={iconSize} style={{ color: "#fff" }} />
+                    ? <Trophy size={iconSize} color="#141414" />
                     : <StampIcon size={iconSize} style={{ color: accent }} />
                   : isCheckpoint
-                    ? <Gift size={iconSize - 1} style={{ color: hexToRgba(accent, 0.5) }} />
+                    ? <Gift size={iconSize - 1} style={{ color: hexToRgba(accent, 0.45) }} />
                     : null
                 }
               </div>
@@ -189,19 +175,19 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
         {/* Progress */}
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
-            <span className="text-[11px]" style={{ color: hexToRgba(accent, 0.6) }}>
+            <span className="text-[11px] text-neutral-500">
               {membership.currentStamps} / {targetStamps} · {nextTier?.text ?? lowestTier.text}
             </span>
-            <span className="text-[11px] font-bold tabular-nums" style={{ color: hexToRgba(accent, 0.8) }}>
+            <span className="text-[11px] font-bold tabular-nums" style={{ color: accent }}>
               {Math.round(progress * 100)}%
             </span>
           </div>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#1e1e1e" }}>
+          <div className="h-1.5 rounded-full overflow-hidden bg-zinc-800">
             <motion.div
               initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }}
               transition={{ duration: 0.7, delay: index * 0.07 + 0.2 }}
               className="h-full rounded-full"
-              style={{ background: `linear-gradient(90deg, ${accent}, ${hexToRgba(accent, 0.5)})` }}
+              style={{ background: accent }}
             />
           </div>
         </div>
