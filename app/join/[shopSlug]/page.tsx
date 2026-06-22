@@ -76,9 +76,9 @@ export default function JoinPage() {
 
   useEffect(() => {
     if (existing?.membership && qrToken) {
-      router.replace(`/me/${qrToken}`);
+      router.replace(`/me/shop/${shopSlug}?qr=1`);
     }
-  }, [existing, qrToken, router]);
+  }, [existing, qrToken, router, shopSlug]);
 
   const handleNewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +92,7 @@ export default function JoinPage() {
       });
       localStorage.setItem("qrToken", newToken);
       setSuccess(true);
-      setTimeout(() => router.push(`/me/${newToken}`), 1500);
+      setTimeout(() => router.push(`/me/shop/${shopSlug}?qr=1`), 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Fehler beim Registrieren");
     } finally { setLoading(false); }
@@ -104,7 +104,7 @@ export default function JoinPage() {
     try {
       await createMembership({ qrToken, shopId: shop._id, acquisitionType: acquisitionType ?? undefined });
       setSuccess(true);
-      setTimeout(() => router.push(`/me/${qrToken}`), 1500);
+      setTimeout(() => router.push(`/me/shop/${shopSlug}?qr=1`), 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Fehler beim Hinzufügen");
     } finally { setLoading(false); }

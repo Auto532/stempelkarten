@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,10 +13,15 @@ import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 export default function MeShopPage() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showQR, setShowQR] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("qr") === "1") setShowQR(true);
+  }, [searchParams]);
   const [stampAnim, setStampAnim] = useState<number | null>(null);
   const [showStampOverlay, setShowStampOverlay] = useState(false);
   const prevStampsRef = useRef<number | null>(null);
