@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { IDetectedBarcode } from "@yudiel/react-qr-scanner";
-import { LoyaltyCard } from "@/app/me/components";
 import type { CardTier } from "@/app/me/components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
@@ -220,60 +219,29 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
         )}
       </div>
 
-      {/* Card preview */}
-      {shopTheme ? (
-        <div className="space-y-3 relative z-10">
-          <shopTheme.Card
-            shopName={shop.name}
-            stampsRequired={stampsRequired}
-            currentStamps={membership.currentStamps}
-            animateIndex={null}
-            onShowQR={() => {}}
-            qrToken={qrToken}
-            hideQR
-            rewardTiers={shop.rewardTiers}
-            accentColor={shop.accentColor}
+      {/* Mini Stempel-Übersicht */}
+      <div className="rounded-2xl px-5 py-4" style={c.card}>
+        <div className="flex items-center justify-between mb-2.5">
+          <p className="text-sm font-semibold" style={{ color: c.text }}>{shop.name}</p>
+          <p className="text-sm font-bold" style={{ color: c.accent }}>
+            {membership.currentStamps} / {stampsRequired} Stempel
+          </p>
+        </div>
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: c.dark }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(membership.currentStamps / stampsRequired * 100, 100)}%` }}
+            transition={{ duration: 0.5 }}
+            className="h-full rounded-full"
+            style={{ background: c.gradient }}
           />
-          <shopTheme.Banner rewardText={rewardText} stampsRequired={stampsRequired} rewardTiers={shop.rewardTiers} />
         </div>
-      ) : shop.customDesignEnabled ? (
-        <LoyaltyCard
-          shopName={shop.name}
-          rewardText={rewardText}
-          stampsRequired={stampsRequired}
-          currentStamps={membership.currentStamps}
-          rewardsRedeemed={membership.rewardsRedeemed}
-          animateIndex={null}
-          onShowQR={() => {}}
-          qrToken={qrToken}
-          rewardTiers={shop.rewardTiers}
-          accentColor={shop.accentColor}
-          stampIcon={shop.stampIcon}
-          hideQR
-        />
-      ) : (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-5">
-          <div className="flex flex-wrap gap-2 mb-4">
-            {Array.from({ length: stampsRequired }).map((_, i) => (
-              <div key={i}
-                className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
-                  i < membership.currentStamps ? "bg-amber-400 border-amber-400 text-zinc-900" : "border-zinc-700"
-                }`}>
-                {i < membership.currentStamps && "✓"}
-              </div>
-            ))}
-          </div>
-          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min((membership.currentStamps / stampsRequired) * 100, 100)}%` }}
-              transition={{ duration: 0.6 }}
-              className="h-full bg-amber-400 rounded-full"
-            />
-          </div>
-          <p className="text-xs text-zinc-500 mt-2">{membership.currentStamps} / {stampsRequired} Stempel</p>
-        </div>
-      )}
+        {rewardText && (
+          <p className="text-[11px] mt-2" style={{ color: c.accentDim }}>
+            Belohnung: {rewardText}
+          </p>
+        )}
+      </div>
 
       {error && <p className="text-red-400 text-sm px-1">{error}</p>}
 
