@@ -138,6 +138,7 @@ export default function MeShopPage() {
                     animateIndex={stampAnim}
                     onShowQR={() => setShowQR(true)}
                     qrToken={qrToken}
+                    rewardTiers={shop.rewardTiers}
                   />
                   <VintageRewardBanner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.rewardTiers} />
                   {shop.milestonesEnabled && shop.milestones && (

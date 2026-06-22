@@ -235,6 +235,7 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
               onShowQR={() => {}}
               qrToken={qrToken}
               hideQR
+              rewardTiers={shop.rewardTiers}
             />
             <VintageRewardBanner
               rewardText={rewardText}

@@ -63,9 +63,9 @@ function VintageQRMini({ qrToken }: { qrToken: string }) {
 
 // ─── Coin Stamp ───────────────────────────────────────────────────────────────
 
-function CoinStamp({ filled, index, animating }: { filled: boolean; index: number; animating: boolean }) {
-  const stampIcon = <Scissors size={15} color="#FFD060" strokeWidth={2} />;
-
+function CoinStamp({ filled, index, animating, isTierCheckpoint }: {
+  filled: boolean; index: number; animating: boolean; isTierCheckpoint?: boolean;
+}) {
   return (
     <motion.div
       animate={animating ? { scale: [1, 1.18, 1], rotate: [0, 8, -8, 0] } : {}}
@@ -73,20 +73,31 @@ function CoinStamp({ filled, index, animating }: { filled: boolean; index: numbe
       style={{
         width: 46, height: 46, borderRadius: "50%", flexShrink: 0,
         background: filled
-          ? "radial-gradient(circle at 38% 32%, #EAC030 0%, #B87E08 50%, #7A5208 100%)"
+          ? isTierCheckpoint
+            ? "radial-gradient(circle at 38% 32%, #FFE060 0%, #EAC030 30%, #B87E08 60%, #7A5208 100%)"
+            : "radial-gradient(circle at 38% 32%, #EAC030 0%, #B87E08 50%, #7A5208 100%)"
           : "radial-gradient(circle at 38% 32%, #3D2510 0%, #1E1008 80%)",
-        border: `1.5px solid ${filled ? GOLD : GOLD_DIM + "88"}`,
+        border: isTierCheckpoint
+          ? `1.5px solid ${filled ? "#FFE060" : GOLD + "99"}`
+          : `1.5px solid ${filled ? GOLD : GOLD_DIM + "88"}`,
         boxShadow: filled
-          ? `0 0 10px rgba(196,154,10,0.4), inset 0 1px 3px rgba(255,220,80,0.35), inset 0 -2px 5px rgba(0,0,0,0.65)`
-          : `inset 0 3px 6px rgba(0,0,0,0.85), inset 0 -1px 2px rgba(255,140,0,0.07)`,
+          ? isTierCheckpoint
+            ? `0 0 16px rgba(196,154,10,0.65), 0 0 6px rgba(255,224,96,0.4), inset 0 1px 3px rgba(255,240,100,0.5), inset 0 -2px 5px rgba(0,0,0,0.6)`
+            : `0 0 10px rgba(196,154,10,0.4), inset 0 1px 3px rgba(255,220,80,0.35), inset 0 -2px 5px rgba(0,0,0,0.65)`
+          : isTierCheckpoint
+            ? `inset 0 3px 6px rgba(0,0,0,0.75), 0 0 6px rgba(196,154,10,0.15)`
+            : `inset 0 3px 6px rgba(0,0,0,0.85), inset 0 -1px 2px rgba(255,140,0,0.07)`,
         display: "flex", alignItems: "center", justifyContent: "center",
       }}
     >
-      {filled ? stampIcon : (
-        <span style={{ color: GOLD_DIM, fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
-          {index + 1}
-        </span>
-      )}
+      {filled
+        ? isTierCheckpoint
+          ? <Trophy size={15} color="#FFE060" strokeWidth={2} />
+          : <Scissors size={15} color="#FFD060" strokeWidth={2} />
+        : isTierCheckpoint
+          ? <Trophy size={13} color={GOLD} strokeWidth={2} style={{ opacity: 0.7 }} />
+          : <span style={{ color: GOLD_DIM, fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{index + 1}</span>
+      }
     </motion.div>
   );
 }
@@ -94,7 +105,7 @@ function CoinStamp({ filled, index, animating }: { filled: boolean; index: numbe
 // ─── Vintage Loyalty Card ─────────────────────────────────────────────────────
 
 export function VintageLoyaltyCard({
-  shopName, stampsRequired, currentStamps, animateIndex, onShowQR, qrToken, hideQR,
+  shopName, stampsRequired, currentStamps, animateIndex, onShowQR, qrToken, hideQR, rewardTiers,
 }: {
   shopName: string;
   stampsRequired: number;
@@ -103,8 +114,16 @@ export function VintageLoyaltyCard({
   onShowQR?: () => void;
   qrToken: string;
   hideQR?: boolean;
+  rewardTiers?: Array<{ stamps: number; text: string; enabled: boolean }>;
 }) {
-  const rows = Math.ceil(stampsRequired / 5);
+  const activeTiers = rewardTiers?.filter(t => t.enabled) ?? [];
+  const totalSlots = activeTiers.length > 0
+    ? Math.max(...activeTiers.map(t => t.stamps))
+    : stampsRequired;
+  const tierCheckpoints = new Set(activeTiers.map(t => t.stamps));
+  const nextTier = activeTiers.find(t => currentStamps < t.stamps);
+  const displayTarget = nextTier?.stamps ?? totalSlots;
+  const rows = Math.ceil(totalSlots / 5);
 
   return (
     <motion.div
@@ -148,7 +167,7 @@ export function VintageLoyaltyCard({
               {shopName}
             </h2>
             <p style={{ fontSize: 10, color: "#C8A86A", opacity: 0.75 }}>
-              {currentStamps} von {stampsRequired} Stempel
+              {currentStamps} von {displayTarget} Stempel
             </p>
           </div>
           {!hideQR && (
@@ -173,13 +192,15 @@ export function VintageLoyaltyCard({
             <div key={row} style={{ display: "flex", gap: 7, justifyContent: "center" }}>
               {Array.from({ length: 5 }).map((_, col) => {
                 const idx = row * 5 + col;
-                if (idx >= stampsRequired) return <div key={col} style={{ width: 46 }} />;
+                if (idx >= totalSlots) return <div key={col} style={{ width: 46 }} />;
+                const isCheckpoint = tierCheckpoints.has(idx + 1);
                 return (
                   <CoinStamp
                     key={idx}
                     index={idx}
                     filled={idx < currentStamps}
                     animating={animateIndex === idx}
+                    isTierCheckpoint={isCheckpoint}
                   />
                 );
               })}

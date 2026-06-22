@@ -264,6 +264,7 @@ export default function StampPage() {
                 onShowQR={() => {}}
                 qrToken={qrToken}
                 hideQR
+                rewardTiers={shop.rewardTiers as Array<{stamps:number;text:string;enabled:boolean}> | undefined}
               />
               <VintageRewardBanner
                 rewardText={shop.rewardText}
