@@ -83,7 +83,7 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
   const [togglingDesign, setTogglingDesign] = useState(false);
   const [togglingMilestones, setTogglingMilestones] = useState(false);
   const [clearingTheme, setClearingTheme] = useState(false);
-  const [settingTheme, setSettingTheme] = useState<string | false>(false);
+  const [settingTheme, setSettingTheme] = useState<string | null>(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -155,7 +155,7 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
   const handleSetTheme = async (themeName: string, accentColor: string) => {
     setSettingTheme(themeName);
     try { await adminSetFeatures({ shopId: shop._id, adminSecret, theme: themeName, accentColor }); }
-    finally { setSettingTheme(false); }
+    finally { setSettingTheme(null); }
   };
 
   return (
@@ -238,7 +238,7 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
                         <button
                           key={id}
                           onClick={() => handleSetTheme(id, color)}
-                          disabled={settingTheme}
+                          disabled={!!settingTheme}
                           className="text-[11px] px-2.5 py-1 rounded-lg transition-colors disabled:opacity-40"
                           style={shop.theme === id
                             ? { background: color + "33", border: `1px solid ${color}88`, color }

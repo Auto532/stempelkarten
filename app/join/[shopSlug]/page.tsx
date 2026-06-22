@@ -26,11 +26,12 @@ const G = {
 };
 
 function AcquisitionPicker({
-  value, onChange, isVintage,
+  value, onChange, isVintage, isGrill,
 }: {
   value: "new" | "returning" | null;
   onChange: (v: "new" | "returning" | null) => void;
   isVintage: boolean;
+  isGrill: boolean;
 }) {
   const options: { key: "new" | "returning"; label: string }[] = [
     { key: "new", label: "Bin neu hier" },
@@ -241,7 +242,7 @@ export default function JoinPage() {
 
             {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
             <div className="flex-1" />
-            <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} isVintage={isVintage} />
+            <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} isVintage={isVintage} isGrill={isGrill} />
 
             <label className="flex items-start gap-3 cursor-pointer">
               <div className="relative mt-0.5 shrink-0">
@@ -305,7 +306,7 @@ export default function JoinPage() {
 
             {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
             <div className="flex-1" />
-            <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} isVintage={isVintage} />
+            <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} isVintage={isVintage} isGrill={isGrill} />
 
             <label className="flex items-start gap-3 cursor-pointer group">
               <div className="relative mt-0.5 shrink-0">
