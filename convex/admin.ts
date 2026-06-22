@@ -1,4 +1,5 @@
 import { internalMutation, mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 export const checkPin = mutation({
@@ -39,5 +40,15 @@ export const clearAll = internalMutation({
       }
     }
     return "Alles gelöscht";
+  },
+});
+
+export const runMigrateMitarbeiterToken = mutation({
+  args: { adminSecret: v.string() },
+  handler: async (ctx, { adminSecret }): Promise<string> => {
+    const expected = process.env.ADMIN_PIN;
+    if (!expected) throw new Error("ADMIN_PIN nicht gesetzt");
+    if (adminSecret !== expected) throw new Error("Nicht autorisiert");
+    return await ctx.runMutation(internal.shops.migrateMitarbeiterToken, {});
   },
 });

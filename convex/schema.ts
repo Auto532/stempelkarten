@@ -2,12 +2,21 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  owners: defineTable({
+    name: v.string(),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    createdAt: v.number(),
+  }),
+
   shops: defineTable({
     name: v.string(),
     slug: v.string(),
     stampsRequired: v.number(),
     rewardText: v.string(),
     adminLoginToken: v.string(),
+    mitarbeiterToken: v.optional(v.string()),
+    ownerId: v.optional(v.id("owners")),
     showLeads: v.optional(v.boolean()),
     bonusProgramEnabled: v.optional(v.boolean()),
     rewardTiers: v.optional(v.array(v.object({
@@ -29,7 +38,10 @@ export default defineSchema({
     stampIcon: v.optional(v.string()),
     theme: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_slug", ["slug"]).index("by_adminLoginToken", ["adminLoginToken"]),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_adminLoginToken", ["adminLoginToken"])
+    .index("by_mitarbeiterToken", ["mitarbeiterToken"]),
 
   customers: defineTable({
     name: v.string(),

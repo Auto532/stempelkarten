@@ -30,18 +30,20 @@ export default function BetriebDashboard() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const router = useRouter();
   const shop = useQuery(api.shops.getBySlug, { slug: shopSlug });
+  const [authorized, setAuthorized] = useState(false);
+  const [adminToken, setAdminToken] = useState("");
   const [showAllCustomers, setShowAllCustomers] = useState(false);
   const [showAllRedemptions, setShowAllRedemptions] = useState(false);
-  const customers = useQuery(api.shops.listCustomersForShop, shop ? { shopId: shop._id, limit: showAllCustomers ? undefined : 10 } : "skip");
+  const customers = useQuery(
+    api.shops.listCustomersForShop,
+    shop && adminToken ? { shopId: shop._id, adminToken, limit: showAllCustomers ? undefined : 10 } : "skip"
+  );
   const redemptions = useQuery(
     api.memberships.getRedemptionsForShop,
-    shop?.bonusProgramEnabled && shop ? { shopId: shop._id, limit: showAllRedemptions ? undefined : 10 } : "skip"
+    shop?.bonusProgramEnabled && shop && adminToken ? { shopId: shop._id, adminToken, limit: showAllRedemptions ? undefined : 10 } : "skip"
   );
   const updateSettings = useMutation(api.shops.updateSettings);
   const updateMilestones = useMutation(api.shops.updateMilestones);
-
-  const [authorized, setAuthorized] = useState(false);
-  const [adminToken, setAdminToken] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [stampsRequired, setStampsRequired] = useState(0);
   const [rewardText, setRewardText] = useState("");

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireShopRole } from "./auth";
 
 export const getForCustomerAndShop = query({
   args: { qrToken: v.string(), shopId: v.id("shops") },
@@ -59,9 +60,9 @@ export const addStamp = mutation({
     const membership = await ctx.db.get(membershipId);
     if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
 
+    await requireShopRole(ctx, { shopId: membership.shopId, token: adminToken, role: "mitarbeiter" });
     const shop = await ctx.db.get(membership.shopId);
     if (!shop) throw new Error("Shop nicht gefunden");
-    if (shop.adminLoginToken !== adminToken) throw new Error("Nicht autorisiert");
 
     const newStamps = membership.currentStamps + 1;
     const rewardReached = newStamps >= shop.stampsRequired;
@@ -89,9 +90,9 @@ export const redeemReward = mutation({
     const membership = await ctx.db.get(membershipId);
     if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
 
+    await requireShopRole(ctx, { shopId: membership.shopId, token: adminToken, role: "mitarbeiter" });
     const shop = await ctx.db.get(membership.shopId);
     if (!shop) throw new Error("Shop nicht gefunden");
-    if (shop.adminLoginToken !== adminToken) throw new Error("Nicht autorisiert");
 
     const carryOver = Math.max(0, membership.currentStamps - shop.stampsRequired);
 
@@ -111,8 +112,9 @@ export const redeemReward = mutation({
 });
 
 export const getRedemptionsForShop = query({
-  args: { shopId: v.id("shops"), limit: v.optional(v.number()) },
-  handler: async (ctx, { shopId, limit }) => {
+  args: { shopId: v.id("shops"), adminToken: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, { shopId, adminToken, limit }) => {
+    await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
     const q = ctx.db
       .query("stampEvents")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))

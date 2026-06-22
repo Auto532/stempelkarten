@@ -6,11 +6,11 @@ export async function GET(
 ) {
   const slug = params.shopSlug;
   const manifest = buildManifest({
-    name: `Stempelkarte – Inhaber`,
-    shortName: "Inhaber",
-    startUrl: `/betrieb/${slug}`,
-    scope: `/betrieb/${slug}`,
-    id: `/betrieb/${slug}`,
+    name: `Stempelkarte – Mitarbeiter`,
+    shortName: "Mitarbeiter",
+    startUrl: `/betrieb/${slug}/scan`,
+    scope: `/betrieb/${slug}/scan`,
+    id: `/betrieb/${slug}/scan`,
   });
   return new Response(JSON.stringify(manifest), {
     headers: { "Content-Type": "application/manifest+json" },

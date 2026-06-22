@@ -5,12 +5,14 @@ export const seedBarbershop = internalMutation({
   args: {},
   handler: async (ctx) => {
     const adminLoginToken = crypto.randomUUID();
+    const mitarbeiterToken = crypto.randomUUID();
     const shopId = await ctx.db.insert("shops", {
       name: "Oldschool Barbershop",
       slug: "oldschool-barbershop",
       stampsRequired: 8,
       rewardText: "1x Haarschnitt gratis",
       adminLoginToken,
+      mitarbeiterToken,
       stampIcon: "scissors",
       theme: "vintage",
       customDesignEnabled: true,
@@ -57,7 +59,7 @@ export const seedBarbershop = internalMutation({
       }
     }
 
-    return { adminLoginToken, joinLink: "/join/oldschool-barbershop" };
+    return { adminLoginToken, mitarbeiterToken, joinLink: "/join/oldschool-barbershop" };
   },
 });
 

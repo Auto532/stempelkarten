@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
+import { requireAdmin, requireShopRole, sanitizeShop } from "./auth";
 
 export const getBySlug = query({
   args: { slug: v.string() },
@@ -9,9 +10,7 @@ export const getBySlug = query({
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .unique();
     if (!shop) return null;
-    // adminLoginToken wird nie an den Client weitergegeben
-    const { adminLoginToken: _omit, ...publicShop } = shop;
-    return publicShop;
+    return sanitizeShop(shop);
   },
 });
 
@@ -25,12 +24,37 @@ export const getByAdminToken = query({
   },
 });
 
+export const resolveLoginToken = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const inhaberShop = await ctx.db
+      .query("shops")
+      .withIndex("by_adminLoginToken", (q) => q.eq("adminLoginToken", token))
+      .unique();
+    if (inhaberShop) {
+      return { role: "inhaber" as const, shopSlug: inhaberShop.slug };
+    }
+    const mitarbeiterShop = await ctx.db
+      .query("shops")
+      .withIndex("by_mitarbeiterToken", (q) => q.eq("mitarbeiterToken", token))
+      .unique();
+    if (mitarbeiterShop) {
+      return { role: "mitarbeiter" as const, shopSlug: mitarbeiterShop.slug };
+    }
+    return null;
+  },
+});
+
 export const getById = query({
   args: { shopId: v.id("shops") },
   handler: async (ctx, { shopId }) => {
-    return await ctx.db.get(shopId);
+    const shop = await ctx.db.get(shopId);
+    if (!shop) return null;
+    return sanitizeShop(shop);
   },
 });
+
+// ─── Inhaber-Mutations ────────────────────────────────────────────────────────
 
 export const updateSettings = mutation({
   args: {
@@ -45,44 +69,8 @@ export const updateSettings = mutation({
     }))),
   },
   handler: async (ctx, { shopId, adminToken, stampsRequired, rewardText, rewardTiers }) => {
-    const shop = await ctx.db.get(shopId);
-    if (!shop || shop.adminLoginToken !== adminToken) throw new Error("Nicht autorisiert");
+    await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
     await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers });
-  },
-});
-
-export const toggleShowLeads = mutation({
-  args: { shopId: v.id("shops"), showLeads: v.boolean() },
-  handler: async (ctx, { shopId, showLeads }) => {
-    await ctx.db.patch(shopId, { showLeads });
-  },
-});
-
-export const toggleBonusProgram = mutation({
-  args: { shopId: v.id("shops"), enabled: v.boolean() },
-  handler: async (ctx, { shopId, enabled }) => {
-    await ctx.db.patch(shopId, { bonusProgramEnabled: enabled });
-  },
-});
-
-export const setShopColor = mutation({
-  args: { shopId: v.id("shops"), accentColor: v.optional(v.string()) },
-  handler: async (ctx, { shopId, accentColor }) => {
-    await ctx.db.patch(shopId, { accentColor });
-  },
-});
-
-export const toggleCustomDesign = mutation({
-  args: { shopId: v.id("shops"), enabled: v.boolean() },
-  handler: async (ctx, { shopId, enabled }) => {
-    await ctx.db.patch(shopId, { customDesignEnabled: enabled });
-  },
-});
-
-export const toggleMilestones = mutation({
-  args: { shopId: v.id("shops"), enabled: v.boolean() },
-  handler: async (ctx, { shopId, enabled }) => {
-    await ctx.db.patch(shopId, { milestonesEnabled: enabled });
   },
 });
 
@@ -93,8 +81,7 @@ export const updateMilestones = mutation({
     milestones: v.array(v.object({ stamps: v.number(), text: v.string(), enabled: v.boolean() })),
   },
   handler: async (ctx, { shopId, adminToken, milestones }) => {
-    const shop = await ctx.db.get(shopId);
-    if (!shop || shop.adminLoginToken !== adminToken) throw new Error("Nicht autorisiert");
+    await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
     await ctx.db.patch(shopId, { milestones });
   },
 });
@@ -102,43 +89,89 @@ export const updateMilestones = mutation({
 export const updateLegalTexts = mutation({
   args: {
     shopId: v.id("shops"),
+    inhaberToken: v.string(),
     impressumText: v.optional(v.string()),
     agbText: v.optional(v.string()),
     datenschutzText: v.optional(v.string()),
   },
-  handler: async (ctx, { shopId, impressumText, agbText, datenschutzText }) => {
+  handler: async (ctx, { shopId, inhaberToken, impressumText, agbText, datenschutzText }) => {
+    await requireShopRole(ctx, { shopId, token: inhaberToken, role: "inhaber" });
     await ctx.db.patch(shopId, { impressumText, agbText, datenschutzText });
+  },
+});
+
+export const updateShopConfig = mutation({
+  args: {
+    shopId: v.id("shops"),
+    inhaberToken: v.string(),
+    accentColor: v.optional(v.string()),
+    stampIcon: v.optional(v.string()),
+    theme: v.optional(v.string()),
+  },
+  handler: async (ctx, { shopId, inhaberToken, accentColor, stampIcon, theme }) => {
+    await requireShopRole(ctx, { shopId, token: inhaberToken, role: "inhaber" });
+    await ctx.db.patch(shopId, { accentColor, stampIcon, theme });
+  },
+});
+
+// ─── Admin-Mutations (Freischalt-Flags) ──────────────────────────────────────
+
+export const adminSetFeatures = mutation({
+  args: {
+    shopId: v.id("shops"),
+    adminSecret: v.string(),
+    showLeads: v.optional(v.boolean()),
+    bonusProgramEnabled: v.optional(v.boolean()),
+    milestonesEnabled: v.optional(v.boolean()),
+    customDesignEnabled: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { shopId, adminSecret, ...flags }) => {
+    requireAdmin({ secret: adminSecret });
+    const patch: Partial<typeof flags> = {};
+    if (flags.showLeads !== undefined) patch.showLeads = flags.showLeads;
+    if (flags.bonusProgramEnabled !== undefined) patch.bonusProgramEnabled = flags.bonusProgramEnabled;
+    if (flags.milestonesEnabled !== undefined) patch.milestonesEnabled = flags.milestonesEnabled;
+    if (flags.customDesignEnabled !== undefined) patch.customDesignEnabled = flags.customDesignEnabled;
+    await ctx.db.patch(shopId, patch);
   },
 });
 
 export const createShop = mutation({
   args: {
+    adminSecret: v.string(),
     name: v.string(),
     slug: v.string(),
     stampsRequired: v.number(),
     rewardText: v.string(),
     stampIcon: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { adminSecret, ...args }) => {
+    requireAdmin({ secret: adminSecret });
     const adminLoginToken = crypto.randomUUID();
+    const mitarbeiterToken = crypto.randomUUID();
     return await ctx.db.insert("shops", {
       ...args,
       adminLoginToken,
+      mitarbeiterToken,
       createdAt: Date.now(),
     });
   },
 });
 
+// ─── Admin-Queries ────────────────────────────────────────────────────────────
+
 export const listAllShops = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { adminSecret: v.string() },
+  handler: async (ctx, { adminSecret }) => {
+    requireAdmin({ secret: adminSecret });
     return await ctx.db.query("shops").order("desc").collect();
   },
 });
 
 export const getGlobalStats = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { adminSecret: v.string() },
+  handler: async (ctx, { adminSecret }) => {
+    requireAdmin({ secret: adminSecret });
     const shops = await ctx.db.query("shops").collect();
     const customers = await ctx.db.query("customers").collect();
     const memberships = await ctx.db.query("memberships").collect();
@@ -147,16 +180,19 @@ export const getGlobalStats = query({
     const shopsWithCounts = await Promise.all(
       shops.map(async (shop) => {
         const mems = await ctx.db.query("memberships").withIndex("by_shop", (q) => q.eq("shopId", shop._id)).collect();
-        return { ...shop, customerCount: mems.length };
+        return { ...sanitizeShop(shop), customerCount: mems.length };
       })
     );
     return { totalShops: shops.length, totalCustomers: customers.length, totalStamps, totalRewards, shops: shopsWithCounts };
   },
 });
 
+// ─── Inhaber-Queries ──────────────────────────────────────────────────────────
+
 export const listCustomersForShop = query({
-  args: { shopId: v.id("shops"), limit: v.optional(v.number()) },
-  handler: async (ctx, { shopId, limit }) => {
+  args: { shopId: v.id("shops"), adminToken: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, { shopId, adminToken, limit }) => {
+    await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
     const q = ctx.db
       .query("memberships")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
@@ -170,5 +206,22 @@ export const listCustomersForShop = query({
       })
     );
     return results.filter((r) => r.customer !== null);
+  },
+});
+
+// ─── Migration ────────────────────────────────────────────────────────────────
+
+export const migrateMitarbeiterToken = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const shops = await ctx.db.query("shops").collect();
+    let patched = 0;
+    for (const shop of shops) {
+      if (!shop.mitarbeiterToken) {
+        await ctx.db.patch(shop._id, { mitarbeiterToken: crypto.randomUUID() });
+        patched++;
+      }
+    }
+    return `${patched} Shops migriert`;
   },
 });

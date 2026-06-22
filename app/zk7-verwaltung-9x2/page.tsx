@@ -33,12 +33,12 @@ async function printQR(shopName: string, url: string) {
   w.document.close();
 }
 
-function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
-  const customers = useQuery(api.shops.listCustomersForShop, { shopId: shop._id });
-  const toggleShowLeads = useMutation(api.shops.toggleShowLeads);
-  const toggleBonusProgram = useMutation(api.shops.toggleBonusProgram);
-  const toggleCustomDesign = useMutation(api.shops.toggleCustomDesign);
-  const toggleMilestones = useMutation(api.shops.toggleMilestones);
+function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecret: string; index: number }) {
+  const customers = useQuery(
+    api.shops.listCustomersForShop,
+    shop.adminLoginToken ? { shopId: shop._id, adminToken: shop.adminLoginToken } : "skip"
+  );
+  const adminSetFeatures = useMutation(api.shops.adminSetFeatures);
   const updateLegalTexts = useMutation(api.shops.updateLegalTexts);
   const [showToggles, setShowToggles] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -68,6 +68,7 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
   const base = typeof window !== "undefined" ? window.location.origin : "";
   const joinUrl = `${base}/join/${shop.slug}`;
   const loginUrl = `${base}/betrieb/login/${shop.adminLoginToken}`;
+  const mitarbeiterUrl = shop.mitarbeiterToken ? `${base}/betrieb/login/${shop.mitarbeiterToken}` : null;
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -77,13 +78,13 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
 
   const handleToggleLeads = async () => {
     setTogglingLeads(true);
-    try { await toggleShowLeads({ shopId: shop._id, showLeads: !shop.showLeads }); }
+    try { await adminSetFeatures({ shopId: shop._id, adminSecret, showLeads: !shop.showLeads }); }
     finally { setTogglingLeads(false); }
   };
 
   const handleToggleBonus = async () => {
     setTogglingBonus(true);
-    try { await toggleBonusProgram({ shopId: shop._id, enabled: !shop.bonusProgramEnabled }); }
+    try { await adminSetFeatures({ shopId: shop._id, adminSecret, bonusProgramEnabled: !shop.bonusProgramEnabled }); }
     finally { setTogglingBonus(false); }
   };
 
@@ -92,6 +93,7 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
     try {
       await updateLegalTexts({
         shopId: shop._id,
+        inhaberToken: shop.adminLoginToken,
         impressumText: impressumDraft || undefined,
         agbText: agbDraft || undefined,
         datenschutzText: datenschutzDraft || undefined,
@@ -103,13 +105,13 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
 
   const handleToggleDesign = async () => {
     setTogglingDesign(true);
-    try { await toggleCustomDesign({ shopId: shop._id, enabled: !shop.customDesignEnabled }); }
+    try { await adminSetFeatures({ shopId: shop._id, adminSecret, customDesignEnabled: !shop.customDesignEnabled }); }
     finally { setTogglingDesign(false); }
   };
 
   const handleToggleMilestones = async () => {
     setTogglingMilestones(true);
-    try { await toggleMilestones({ shopId: shop._id, enabled: !shop.milestonesEnabled }); }
+    try { await adminSetFeatures({ shopId: shop._id, adminSecret, milestonesEnabled: !shop.milestonesEnabled }); }
     finally { setTogglingMilestones(false); }
   };
 
@@ -223,25 +225,40 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
         </AnimatePresence>
       </div>
 
-      {/* Betrieb-Login accordion */}
+      {/* Inhaber-Login accordion */}
       <div className="border-t border-zinc-800/50">
         <button onClick={() => setShowLogin(!showLogin)}
           className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
           <Link size={14} className="text-zinc-500 shrink-0" />
-          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Betrieb-Login-Link</span>
+          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Inhaber-Login-Link</span>
           <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showLogin ? "rotate-90" : ""}`} />
         </button>
         <AnimatePresence>
           {showLogin && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="px-4 pb-4">
-                <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2.5">
-                  <code className="text-[11px] text-amber-300 flex-1 truncate">{loginUrl}</code>
-                  <button onClick={() => copy(loginUrl, "login")} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
-                    {copied === "login" ? <Check size={13} className="text-green-400" /> : <Link size={13} />}
-                  </button>
+              <div className="px-4 pb-4 space-y-3">
+                <div>
+                  <p className="text-[10px] text-zinc-500 mb-1.5">Inhaber (Dashboard + Einstellungen)</p>
+                  <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2.5">
+                    <code className="text-[11px] text-amber-300 flex-1 truncate">{loginUrl}</code>
+                    <button onClick={() => copy(loginUrl, "login")} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
+                      {copied === "login" ? <Check size={13} className="text-green-400" /> : <Link size={13} />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-zinc-600 mt-1.5">Nur einmalig an den Inhaber senden.</p>
                 </div>
-                <p className="text-[11px] text-zinc-600 mt-2">Nur einmalig an den Betrieb senden — Link loggt automatisch ein.</p>
+                {mitarbeiterUrl && (
+                  <div>
+                    <p className="text-[10px] text-zinc-500 mb-1.5">Mitarbeiter (nur Scanner)</p>
+                    <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2.5">
+                      <code className="text-[11px] text-blue-300 flex-1 truncate">{mitarbeiterUrl}</code>
+                      <button onClick={() => copy(mitarbeiterUrl, "mitarbeiter")} className="shrink-0 text-zinc-500 hover:text-blue-400 transition-colors">
+                        {copied === "mitarbeiter" ? <Check size={13} className="text-green-400" /> : <Link size={13} />}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-zinc-600 mt-1.5">Teilbar mit allen Mitarbeitern — nur stempeln, keine Einstellungen.</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -311,7 +328,7 @@ function ShopCard({ shop, index }: { shop: Doc<"shops">; index: number }) {
 
 // ─── CreateShopForm ───────────────────────────────────────────────────────────
 
-function CreateShopForm({ onDone }: { onDone: () => void }) {
+function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecret: string }) {
   const createShop = useMutation(api.shops.createShop);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -326,7 +343,7 @@ function CreateShopForm({ onDone }: { onDone: () => void }) {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setLoading(true);
     try {
-      await createShop({ name, slug, stampsRequired, rewardText, stampIcon });
+      await createShop({ adminSecret, name, slug, stampsRequired, rewardText, stampIcon });
       onDone();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Fehler");
@@ -394,8 +411,8 @@ function CreateShopForm({ onDone }: { onDone: () => void }) {
 
 // ─── Tab: Übersicht ───────────────────────────────────────────────────────────
 
-function OverviewTab() {
-  const globalStats = useQuery(api.shops.getGlobalStats);
+function OverviewTab({ adminSecret }: { adminSecret: string }) {
+  const globalStats = useQuery(api.shops.getGlobalStats, adminSecret ? { adminSecret } : "skip");
 
   if (!globalStats) {
     return (
@@ -466,8 +483,8 @@ function OverviewTab() {
 
 // ─── Tab: Shops ───────────────────────────────────────────────────────────────
 
-function ShopsTab() {
-  const allShops = useQuery(api.shops.listAllShops);
+function ShopsTab({ adminSecret }: { adminSecret: string }) {
+  const allShops = useQuery(api.shops.listAllShops, adminSecret ? { adminSecret } : "skip");
   const [showCreate, setShowCreate] = useState(false);
 
   return (
@@ -481,7 +498,7 @@ function ShopsTab() {
       </div>
 
       <AnimatePresence>
-        {showCreate && <CreateShopForm onDone={() => setShowCreate(false)} />}
+        {showCreate && <CreateShopForm onDone={() => setShowCreate(false)} adminSecret={adminSecret} />}
       </AnimatePresence>
 
       {allShops === undefined && (
@@ -494,7 +511,7 @@ function ShopsTab() {
         </div>
       )}
       {allShops?.map((shop, i) => (
-        <ShopCard key={shop._id} shop={shop} index={i} />
+        <ShopCard key={shop._id} shop={shop} adminSecret={adminSecret} index={i} />
       ))}
     </motion.div>
   );
@@ -658,6 +675,7 @@ export default function SuperAdminPage() {
   const router = useRouter();
   const checkPinMutation = useMutation(api.admin.checkPin);
   const [pin, setPin] = useState("");
+  const [adminSecret, setAdminSecret] = useState("");
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
@@ -669,6 +687,7 @@ export default function SuperAdminPage() {
     setPinError(null);
     try {
       await checkPinMutation({ pin });
+      setAdminSecret(pin);
       setAuthed(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Fehler";
@@ -739,8 +758,8 @@ export default function SuperAdminPage() {
       {/* Content */}
       <div className="flex-1 px-5 pt-5 pb-28 overflow-y-auto">
         <AnimatePresence mode="wait">
-          {activeTab === "overview" && <OverviewTab key="overview" />}
-          {activeTab === "shops" && <ShopsTab key="shops" />}
+          {activeTab === "overview" && <OverviewTab key="overview" adminSecret={adminSecret} />}
+          {activeTab === "shops" && <ShopsTab key="shops" adminSecret={adminSecret} />}
           {activeTab === "settings" && <SettingsTab key="settings" />}
         </AnimatePresence>
       </div>
