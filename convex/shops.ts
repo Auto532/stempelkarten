@@ -133,10 +133,6 @@ export const adminSetFeatures = mutation({
     if (flags.milestonesEnabled !== undefined) patch.milestonesEnabled = flags.milestonesEnabled;
     if (flags.customDesignEnabled !== undefined) {
       patch.customDesignEnabled = flags.customDesignEnabled;
-      if (flags.customDesignEnabled) {
-        const shop = await ctx.db.get(shopId);
-        if (shop && !shop.theme) patch.theme = "vintage";
-      }
     }
     await ctx.db.patch(shopId, patch);
   },
