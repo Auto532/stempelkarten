@@ -63,6 +63,7 @@ type MembershipEntry = {
     customDesignEnabled?: boolean;
     stampIcon?: string | null;
     theme?: string;
+    bonusProgramEnabled?: boolean;
     milestonesEnabled?: boolean;
     milestones?: { stamps: number; text: string; enabled: boolean }[];
   } | null;
@@ -81,7 +82,10 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
   // Overview always uses personal accent — custom design only shows when you open the shop
   const accent = personalAccent;
 
-  const activeTiers = getActiveTiers(shop);
+  // Bonus program OFF → always only base tier, regardless of rewardTiers in DB
+  const activeTiers = shop.bonusProgramEnabled
+    ? getActiveTiers(shop)
+    : [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true as const }];
   const lowestTier = activeTiers[0];
   const highestTier = activeTiers[activeTiers.length - 1];
   const totalSlots = highestTier.stamps;
