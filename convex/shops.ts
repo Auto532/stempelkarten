@@ -127,11 +127,17 @@ export const adminSetFeatures = mutation({
   },
   handler: async (ctx, { shopId, adminSecret, ...flags }) => {
     requireAdmin({ secret: adminSecret });
-    const patch: Partial<typeof flags> = {};
+    const patch: Record<string, unknown> = {};
     if (flags.showLeads !== undefined) patch.showLeads = flags.showLeads;
     if (flags.bonusProgramEnabled !== undefined) patch.bonusProgramEnabled = flags.bonusProgramEnabled;
     if (flags.milestonesEnabled !== undefined) patch.milestonesEnabled = flags.milestonesEnabled;
-    if (flags.customDesignEnabled !== undefined) patch.customDesignEnabled = flags.customDesignEnabled;
+    if (flags.customDesignEnabled !== undefined) {
+      patch.customDesignEnabled = flags.customDesignEnabled;
+      if (flags.customDesignEnabled) {
+        const shop = await ctx.db.get(shopId);
+        if (shop && !shop.theme) patch.theme = "vintage";
+      }
+    }
     await ctx.db.patch(shopId, patch);
   },
 });
