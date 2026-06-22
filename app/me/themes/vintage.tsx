@@ -94,14 +94,15 @@ function CoinStamp({ filled, index, animating }: { filled: boolean; index: numbe
 // ─── Vintage Loyalty Card ─────────────────────────────────────────────────────
 
 export function VintageLoyaltyCard({
-  shopName, stampsRequired, currentStamps, animateIndex, onShowQR, qrToken,
+  shopName, stampsRequired, currentStamps, animateIndex, onShowQR, qrToken, hideQR,
 }: {
   shopName: string;
   stampsRequired: number;
   currentStamps: number;
   animateIndex: number | null;
-  onShowQR: () => void;
+  onShowQR?: () => void;
   qrToken: string;
+  hideQR?: boolean;
 }) {
   const rows = Math.ceil(stampsRequired / 5);
 
@@ -150,15 +151,17 @@ export function VintageLoyaltyCard({
               {currentStamps} von {stampsRequired} Stempel
             </p>
           </div>
-          <button
-            onClick={onShowQR}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: 0 }}
-          >
-            <VintageQRMini qrToken={qrToken} />
-            <span style={{ fontSize: 8, fontWeight: 700, color: GOLD, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-              QR zeigen
-            </span>
-          </button>
+          {!hideQR && (
+            <button
+              onClick={onShowQR}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              <VintageQRMini qrToken={qrToken} />
+              <span style={{ fontSize: 8, fontWeight: 700, color: GOLD, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                QR zeigen
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Gold divider */}

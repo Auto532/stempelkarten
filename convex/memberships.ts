@@ -114,7 +114,7 @@ export const redeemReward = mutation({
 export const getRedemptionsForShop = query({
   args: { shopId: v.id("shops"), adminToken: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminToken, limit }) => {
-    await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
+    await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
     const q = ctx.db
       .query("stampEvents")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
