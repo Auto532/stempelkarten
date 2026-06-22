@@ -61,6 +61,11 @@ export const registerCustomer = mutation({
     acquisitionType: v.optional(v.union(v.literal("new"), v.literal("returning"))),
   },
   handler: async (ctx, { name, phone, shopSlug, existingQrToken, acquisitionType }) => {
+    const digits = phone.replace(/\D/g, "");
+    if (!/^[\+\d\s\-\(\)\/]+$/.test(phone.trim()) || digits.length < 7 || digits.length > 15) {
+      throw new Error("Ungültige Telefonnummer");
+    }
+
     const shop = await ctx.db
       .query("shops")
       .withIndex("by_slug", (q) => q.eq("slug", shopSlug))

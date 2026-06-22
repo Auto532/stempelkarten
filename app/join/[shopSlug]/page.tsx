@@ -65,6 +65,7 @@ export default function JoinPage() {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [consent, setConsent] = useState(false);
   const [acquisitionType, setAcquisitionType] = useState<"new" | "returning" | null>(null);
   const [loading, setLoading] = useState(false);
@@ -139,7 +140,24 @@ export default function JoinPage() {
   const customerName = existing?.customer?.name;
   const isReturning = !!qrToken && !!existing && !existing.membership;
 
+  const isValidPhone = (v: string) => {
+    const digits = v.replace(/\D/g, "");
+    return /^[\+\d\s\-\(\)\/]+$/.test(v.trim()) && digits.length >= 7 && digits.length <= 15;
+  };
+
+  const handlePhoneChange = (v: string) => {
+    setPhone(v);
+    if (v && !isValidPhone(v)) {
+      setPhoneError("Ungültige Nummer (mind. 7 Ziffern, nur +, -, Leerzeichen erlaubt)");
+    } else {
+      setPhoneError("");
+    }
+  };
+
+  const phoneValid = isValidPhone(phone);
+
   const inputStyle = { background: c.cardBg, border: `1px solid ${c.accentDim}44`, color: c.textBody };
+  const inputError = { background: c.cardBg, border: "1px solid #ef444488", color: c.textBody };
   const btnActive  = { background: c.gradient, color: "#18181b" };
   const btnOff     = { background: c.dark, color: c.accentFaint };
 
@@ -258,13 +276,14 @@ export default function JoinPage() {
             <div className="group">
               <label className="block text-xs font-medium mb-2 ml-1" style={{ color: c.accentDim }}>Handynummer</label>
               <div className="relative">
-                <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: c.accentDim }} />
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: phoneError ? "#ef4444" : c.accentDim }} />
+                <input type="tel" value={phone} onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="+49 151 12345678" required
                   className="w-full pl-11 pr-4 py-3.5 rounded-2xl placeholder-zinc-600 focus:outline-none transition-all"
-                  style={inputStyle}
+                  style={phoneError ? inputError : inputStyle}
                 />
               </div>
+              {phoneError && <p className="text-red-400 text-xs mt-1.5 ml-1">{phoneError}</p>}
             </div>
 
             {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
@@ -287,10 +306,10 @@ export default function JoinPage() {
               </span>
             </label>
 
-            <motion.button type="submit" disabled={loading || !name.trim() || !phone.trim() || !consent}
+            <motion.button type="submit" disabled={loading || !name.trim() || !phoneValid || !consent}
               whileTap={{ scale: 0.97 }}
               className="w-full py-4 font-semibold rounded-2xl transition-colors flex items-center justify-center gap-2 text-base"
-              style={!loading && name.trim() && phone.trim() && consent ? btnActive : btnOff}>
+              style={!loading && name.trim() && phoneValid && consent ? btnActive : btnOff}>
               {loading
                 ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-5 h-5 border-2 border-zinc-900/30 border-t-zinc-900 rounded-full" />
                 : <><span>Jetzt registrieren</span><ArrowRight size={18} /></>}
