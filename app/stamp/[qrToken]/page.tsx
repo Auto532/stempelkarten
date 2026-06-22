@@ -205,18 +205,23 @@ export default function StampPage() {
   const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
 
   return (
-    <div className="min-h-screen bg-zinc-950 px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col gap-5">
+    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col gap-5 ${isVintage ? "" : "bg-zinc-950"}`}>
       {isVintage && <VintageBackground />}
 
       {/* Header */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 relative z-10">
         <button onClick={() => router.push(adminRole === "mitarbeiter" ? `/betrieb/${shopSlug}/scan` : `/betrieb/${shopSlug}`)}
-          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-200 transition-colors">
-          <ArrowLeft size={18} />
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
+          style={isVintage
+            ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C49A2A" }
+            : undefined}
+        >
+          {!isVintage && <span className="sr-only" />}
+          <ArrowLeft size={18} className={isVintage ? "" : "text-zinc-400"} />
         </button>
         <div>
-          <p className="text-xs text-zinc-500">{shop.name}</p>
-          <h1 className="font-bold text-zinc-100 leading-tight">Stempel vergeben</h1>
+          <p className="text-xs" style={{ color: isVintage ? "#7A5C12" : "#71717a" }}>{shop.name}</p>
+          <h1 className="font-bold leading-tight" style={{ color: isVintage ? "#E8D070" : "#f4f4f5" }}>Stempel vergeben</h1>
         </div>
         {rewardReady && (
           <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
@@ -228,13 +233,19 @@ export default function StampPage() {
 
       {/* Customer name */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-3 relative z-10">
-        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-lg font-bold text-amber-400 shrink-0">
+        className="rounded-2xl px-5 py-4 flex items-center gap-3 relative z-10"
+        style={isVintage
+          ? { background: "#1C0E06", border: "1px solid #7A5C1244" }
+          : { background: "#18181b", border: "1px solid #27272a" }}>
+        <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0"
+          style={isVintage
+            ? { background: "radial-gradient(circle at 35% 35%, #3D2510, #1E1008)", border: "1px solid #C49A2A44", color: "#C49A2A" }
+            : { background: "#27272a", color: "#fbbf24" }}>
           {customer.name.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="font-bold text-zinc-100">{customer.name}</p>
-          <p className="text-xs text-zinc-500 truncate">{customer.phone}</p>
+          <p className="font-bold" style={{ color: isVintage ? "#E8D070" : "#f4f4f5" }}>{customer.name}</p>
+          <p className="text-xs truncate" style={{ color: isVintage ? "#7A5C12" : "#71717a" }}>{customer.phone}</p>
         </div>
       </motion.div>
 
