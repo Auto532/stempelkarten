@@ -97,18 +97,24 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
 
   const { customer, membership } = data;
 
+  const vintageCard = isVintage
+    ? { background: "#130A04", border: "1px solid #7A5C1244" }
+    : { background: "#18181b", border: "1px solid #27272a" };
+
   if (actionState.type === "stamped") {
     return (
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center space-y-5">
+        className="rounded-2xl p-8 text-center space-y-5" style={vintageCard}>
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, delay: 0.1 }}>
           <div className={`w-20 h-20 rounded-full mx-auto flex items-center justify-center ${actionState.rewardReached ? "bg-amber-400" : "bg-green-500"}`}>
             {actionState.rewardReached ? <Gift size={36} className="text-zinc-900" /> : <Stamp size={36} className="text-white" />}
           </div>
         </motion.div>
         <div>
-          <h2 className="text-xl font-bold">{actionState.rewardReached ? "Belohnung erreicht! 🎉" : "Stempel gesetzt!"}</h2>
-          <p className="text-zinc-400 text-sm mt-1">
+          <h2 className="text-xl font-bold" style={{ color: isVintage ? "#E8D070" : undefined }}>
+            {actionState.rewardReached ? "Belohnung erreicht! 🎉" : "Stempel gesetzt!"}
+          </h2>
+          <p className="text-sm mt-1" style={{ color: isVintage ? "#7A5C12" : "#a1a1aa" }}>
             {actionState.customerName} · {actionState.newStamps}/{actionState.stampsRequired} Stempel
           </p>
           {actionState.rewardReached && (
@@ -118,7 +124,9 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
             </motion.div>
           )}
         </div>
-        <button onClick={onDone} className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors">
+        <button onClick={onDone}
+          className={isVintage ? "w-full py-3.5 rounded-xl font-medium transition-colors" : "w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors"}
+          style={isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" } : undefined}>
           Nächsten Kunden scannen
         </button>
       </motion.div>
@@ -128,18 +136,20 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
   if (actionState.type === "redeemed") {
     return (
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center space-y-5">
+        className="rounded-2xl p-8 text-center space-y-5" style={vintageCard}>
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, delay: 0.1 }}>
           <div className="w-20 h-20 rounded-full bg-amber-400 mx-auto flex items-center justify-center">
             <Gift size={36} className="text-zinc-900" />
           </div>
         </motion.div>
         <div>
-          <h2 className="text-xl font-bold">Belohnung eingelöst! 🏆</h2>
-          <p className="text-zinc-400 text-sm mt-1">{actionState.customerName} erhält:</p>
+          <h2 className="text-xl font-bold" style={{ color: isVintage ? "#E8D070" : undefined }}>Belohnung eingelöst! 🏆</h2>
+          <p className="text-sm mt-1" style={{ color: isVintage ? "#7A5C12" : "#a1a1aa" }}>{actionState.customerName} erhält:</p>
           <p className="text-amber-400 font-semibold mt-1">{actionState.rewardText}</p>
         </div>
-        <button onClick={onDone} className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors">
+        <button onClick={onDone}
+          className={isVintage ? "w-full py-3.5 rounded-xl font-medium transition-colors" : "w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors"}
+          style={isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" } : undefined}>
           Nächsten Kunden scannen
         </button>
       </motion.div>
@@ -355,6 +365,7 @@ export default function ScanPage() {
   }
   if (!shop) return null;
 
+  const showLeads = false; // Mitarbeiter sehen nie Leads/Telefonnummern
   const totalStamps = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
   const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
   const activeTiers = shop.bonusProgramEnabled && shop.rewardTiers && shop.rewardTiers.some(t => t.enabled)
@@ -364,7 +375,7 @@ export default function ScanPage() {
   const filteredCustomers = customers?.filter(({ customer }) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return customer?.name.toLowerCase().includes(q) || (shop.showLeads && customer?.phone.includes(q));
+    return customer?.name.toLowerCase().includes(q) || (showLeads && customer?.phone.includes(q));
   }) ?? [];
   const readyCount = customers?.filter(({ membership }) => membership.currentStamps >= lowestTierStamps).length ?? 0;
 
@@ -373,7 +384,7 @@ export default function ScanPage() {
     const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
     return (
       <div className="min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto">
-        {scannedToken && isVintage && <VintageBackground />}
+        {isVintage && <VintageBackground />}
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 mb-6">
           <button
@@ -583,7 +594,7 @@ export default function ScanPage() {
           className="w-full flex items-center gap-2 px-5 py-4 hover:bg-zinc-800/30 transition-colors">
           <Users size={15} className="text-zinc-400 shrink-0" />
           <span className="font-medium text-zinc-200 text-sm">Kunden</span>
-          {shop.showLeads && (
+          {showLeads && (
             <span className="flex items-center gap-1 text-[10px] text-amber-400">
               <Eye size={10} /> Leads
             </span>
@@ -622,7 +633,7 @@ export default function ScanPage() {
                 <div className="w-7 shrink-0 mr-3" />
                 <span className="flex-1 text-[10px] text-zinc-600 uppercase tracking-wider">Kunde</span>
                 <span className="text-[10px] text-zinc-600 uppercase tracking-wider w-10 text-right mr-1">Stand</span>
-                {shop.showLeads && <div className="w-4" />}
+                {showLeads && <div className="w-4" />}
               </div>
 
               <div className="divide-y divide-zinc-800/40">
@@ -638,8 +649,8 @@ export default function ScanPage() {
                   return (
                     <motion.div key={membership._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i * 0.02, 0.2) }}>
                       <button
-                        onClick={() => shop.showLeads ? setSelectedCustomerId(isSelected ? null : customer._id) : undefined}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${shop.showLeads ? "hover:bg-zinc-800/50 cursor-pointer" : "cursor-default"}`}
+                        onClick={() => showLeads ? setSelectedCustomerId(isSelected ? null : customer._id) : undefined}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${showLeads ? "hover:bg-zinc-800/50 cursor-pointer" : "cursor-default"}`}
                       >
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                           isReady ? "bg-amber-400 text-zinc-900" : "bg-zinc-800 text-amber-400 border border-zinc-700"
@@ -653,12 +664,12 @@ export default function ScanPage() {
                         <span className="text-xs text-zinc-500 shrink-0 w-10 text-right">
                           {membership.currentStamps}/{lowestTierStamps}
                         </span>
-                        {shop.showLeads && (
+                        {showLeads && (
                           <ChevronRight size={13} className={`text-zinc-700 shrink-0 transition-transform ${isSelected ? "rotate-90" : ""}`} />
                         )}
                       </button>
                       <AnimatePresence>
-                        {shop.showLeads && isSelected && (
+                        {showLeads && isSelected && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                             <div className="mx-4 mb-3 bg-zinc-800/70 rounded-xl p-4 space-y-3">
                               <div className="flex items-center gap-2">

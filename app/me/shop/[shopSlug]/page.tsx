@@ -49,6 +49,7 @@ export default function MeShopPage() {
     if (current > prev) {
       setStampAnim(current - 1);
       setShowStampOverlay(true);
+      setShowQR(false);
       setTimeout(() => setStampAnim(null), 1200);
     }
     prevStampsRef.current = current;
