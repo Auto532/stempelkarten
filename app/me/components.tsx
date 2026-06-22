@@ -271,7 +271,7 @@ export function MilestonesSection({
 
 export function LoyaltyCard({
   shopName, rewardText, stampsRequired, currentStamps, rewardsRedeemed,
-  animateIndex, onShowQR, qrToken, rewardTiers, accentColor, stampIcon,
+  animateIndex, onShowQR, qrToken, rewardTiers, accentColor, stampIcon, hideQR,
 }: {
   shopName: string;
   rewardText: string;
@@ -279,11 +279,12 @@ export function LoyaltyCard({
   currentStamps: number;
   rewardsRedeemed: number;
   animateIndex: number | null;
-  onShowQR: () => void;
+  onShowQR?: () => void;
   qrToken: string;
   rewardTiers?: CardTier[];
   accentColor?: string;
   stampIcon?: string | null;
+  hideQR?: boolean;
 }) {
   const accent = accentColor ?? "#fbbf24";
   const StampIconComponent = getStampIcon(stampIcon);
@@ -314,12 +315,14 @@ export function LoyaltyCard({
           <h2 className="text-2xl font-bold text-neutral-100 leading-tight">{shopName}</h2>
           <p className="text-neutral-500 text-sm mt-1">{currentStamps} von {maxStamps} Stempel</p>
         </div>
-        <button onClick={onShowQR} className="shrink-0 flex flex-col items-center gap-1.5 group mt-0.5">
-          <QRMini qrToken={qrToken} />
-          <span className="text-[9px] group-hover:text-neutral-400 transition-colors" style={{ color: accent }}>
-            QR zeigen
-          </span>
-        </button>
+        {!hideQR && (
+          <button onClick={onShowQR} className="shrink-0 flex flex-col items-center gap-1.5 group mt-0.5">
+            <QRMini qrToken={qrToken} />
+            <span className="text-[9px] group-hover:text-neutral-400 transition-colors" style={{ color: accent }}>
+              QR zeigen
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Stempel-Raster */}

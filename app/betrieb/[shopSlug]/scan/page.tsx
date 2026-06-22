@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, UserPlus, Stamp, Gift, ScanLine } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { IDetectedBarcode } from "@yudiel/react-qr-scanner";
+import { LoyaltyCard } from "@/app/me/components";
+import type { CardTier } from "@/app/me/components";
 
 const Scanner = dynamic(
   () => import("@yudiel/react-qr-scanner").then((m) => m.Scanner),
@@ -20,9 +22,22 @@ type ActionState =
   | { type: "stamped"; customerName: string; newStamps: number; stampsRequired: number; rewardReached: boolean; rewardText: string }
   | { type: "redeemed"; customerName: string; rewardText: string };
 
-function CustomerCard({ shopId, qrToken, stampsRequired, rewardText, bonusProgramEnabled, adminToken, onDone }: {
-  shopId: Id<"shops">; qrToken: string; stampsRequired: number; rewardText: string; bonusProgramEnabled: boolean; adminToken: string; onDone: () => void;
+type ScanShop = {
+  _id: Id<"shops">;
+  name: string;
+  stampsRequired: number;
+  rewardText: string;
+  bonusProgramEnabled?: boolean;
+  customDesignEnabled?: boolean;
+  accentColor?: string;
+  stampIcon?: string | null;
+  rewardTiers?: CardTier[];
+};
+
+function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
+  shopId: Id<"shops">; shop: ScanShop; qrToken: string; adminToken: string; onDone: () => void;
 }) {
+  const { stampsRequired, rewardText, bonusProgramEnabled } = shop;
   const data = useQuery(api.memberships.getForCustomerAndShop, { qrToken, shopId });
   const addStamp = useMutation(api.memberships.addStamp);
   const redeemReward = useMutation(api.memberships.redeemReward);
@@ -150,55 +165,72 @@ function CustomerCard({ shopId, qrToken, stampsRequired, rewardText, bonusProgra
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      className="space-y-4">
+
       {/* Customer header */}
-      <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-11 h-11 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-amber-400 text-lg">
-            {customer.name.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <h2 className="font-bold text-zinc-100 text-lg">{customer.name}</h2>
-            <p className="text-zinc-500 text-xs">{customer.phone}</p>
-          </div>
-          {rewardReady && (
-            <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
-              className="ml-auto text-xs bg-amber-400 text-zinc-900 font-bold px-2.5 py-1 rounded-full">
-              Belohnung!
-            </motion.span>
-          )}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-amber-400 text-lg">
+          {customer.name.charAt(0).toUpperCase()}
         </div>
-
-        {/* Stamp dots */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {Array.from({ length: stampsRequired }).map((_, i) => (
-            <div key={i}
-              className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
-                i < membership.currentStamps ? "bg-amber-400 border-amber-400 text-zinc-900" : "border-zinc-700"
-              }`}>
-              {i < membership.currentStamps && "✓"}
-            </div>
-          ))}
+        <div className="flex-1 min-w-0">
+          <h2 className="font-bold text-zinc-100">{customer.name}</h2>
+          <p className="text-zinc-500 text-xs">{customer.phone}</p>
         </div>
-
-        <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min((membership.currentStamps / stampsRequired) * 100, 100)}%` }}
-            transition={{ duration: 0.6 }}
-            className="h-full bg-amber-400 rounded-full"
-          />
-        </div>
-        <p className="text-xs text-zinc-500 mt-2">{membership.currentStamps} / {stampsRequired} Stempel</p>
+        {rewardReady && (
+          <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+            className="text-xs bg-amber-400 text-zinc-900 font-bold px-2.5 py-1 rounded-full">
+            Belohnung!
+          </motion.span>
+        )}
       </div>
 
-      {error && <p className="px-6 pb-2 text-red-400 text-sm">{error}</p>}
+      {/* Card preview */}
+      {shop.customDesignEnabled ? (
+        <LoyaltyCard
+          shopName={shop.name}
+          rewardText={rewardText}
+          stampsRequired={stampsRequired}
+          currentStamps={membership.currentStamps}
+          rewardsRedeemed={membership.rewardsRedeemed}
+          animateIndex={null}
+          onShowQR={() => {}}
+          qrToken={qrToken}
+          rewardTiers={shop.rewardTiers}
+          accentColor={shop.accentColor}
+          stampIcon={shop.stampIcon}
+          hideQR
+        />
+      ) : (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-5">
+          <div className="flex flex-wrap gap-2 mb-4">
+            {Array.from({ length: stampsRequired }).map((_, i) => (
+              <div key={i}
+                className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                  i < membership.currentStamps ? "bg-amber-400 border-amber-400 text-zinc-900" : "border-zinc-700"
+                }`}>
+                {i < membership.currentStamps && "✓"}
+              </div>
+            ))}
+          </div>
+          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min((membership.currentStamps / stampsRequired) * 100, 100)}%` }}
+              transition={{ duration: 0.6 }}
+              className="h-full bg-amber-400 rounded-full"
+            />
+          </div>
+          <p className="text-xs text-zinc-500 mt-2">{membership.currentStamps} / {stampsRequired} Stempel</p>
+        </div>
+      )}
+
+      {error && <p className="text-red-400 text-sm px-1">{error}</p>}
 
       {/* Actions */}
-      <div className="px-6 pb-6 space-y-3 pt-2">
+      <div className="space-y-3">
         {rewardReady ? (
           <>
-            <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center mb-1">
+            <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center">
               <p className="text-amber-400 text-sm font-semibold">🎉 {rewardText}</p>
             </div>
             {bonusProgramEnabled ? (
@@ -301,10 +333,8 @@ export default function ScanPage() {
           <motion.div key="customer" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <CustomerCard
               shopId={shop._id}
+              shop={shop}
               qrToken={scannedToken}
-              stampsRequired={shop.stampsRequired}
-              rewardText={shop.rewardText}
-              bonusProgramEnabled={!!shop.bonusProgramEnabled}
               adminToken={adminToken}
               onDone={() => setScannedToken(null)}
             />
