@@ -232,8 +232,7 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
                   <div className="px-5 py-3 space-y-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {[
-                        { id: "vintage", label: "Vintage", color: "#C49A2A" },
-                        { id: "grill",   label: "Grill",   color: "#E07A20" },
+                        { id: "beates-grill", label: "Beate's Grill", color: "#E8A020" },
                       ].map(({ id, label, color }) => (
                         <button
                           key={id}
