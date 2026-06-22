@@ -10,20 +10,21 @@ import { getShopTheme, DEFAULT_COLORS, type ThemeColors } from "@/app/me/themes/
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
 function AcquisitionPicker({
-  value, onChange, c,
+  value, onChange, c, shopName,
 }: {
   value: "new" | "returning" | null;
   onChange: (v: "new" | "returning" | null) => void;
   c: ThemeColors;
+  shopName: string;
 }) {
   const options: { key: "new" | "returning"; label: string }[] = [
-    { key: "new", label: "Bin neu hier" },
-    { key: "returning", label: "Komm schon länger" },
+    { key: "new", label: "Neukunde" },
+    { key: "returning", label: "Bestandskunde" },
   ];
   return (
     <div className="space-y-1.5">
       <p className="text-xs ml-0.5" style={{ color: c.accentDim }}>
-        Warst du schon mal hier? <span style={{ color: c.accentFaint }}>(optional)</span>
+        Bist du schon Kunde bei {shopName}? <span style={{ color: c.accentFaint }}>(optional)</span>
       </p>
       <div className="flex gap-2">
         {options.map(({ key, label }) => (
@@ -229,7 +230,7 @@ export default function JoinPage() {
 
             {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
             <div className="flex-1" />
-            <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} c={c} />
+            <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} c={c} shopName={shop.name} />
 
             <label className="flex items-start gap-3 cursor-pointer">
               <div className="relative mt-0.5 shrink-0">
@@ -288,7 +289,7 @@ export default function JoinPage() {
 
             {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
             <div className="flex-1" />
-            <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} c={c} />
+            <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} c={c} shopName={shop.name} />
 
             <label className="flex items-start gap-3 cursor-pointer group">
               <div className="relative mt-0.5 shrink-0">
