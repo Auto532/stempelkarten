@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
+import { VintageBackground } from "@/app/me/themes/vintage";
 
 export default function DatenschutzPage() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -31,30 +32,43 @@ export default function DatenschutzPage() {
     );
   }
 
+  const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
+
   return (
-    <div className="min-h-screen px-5 pt-10 pb-16 max-w-sm mx-auto">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <div className="min-h-screen px-5 pt-10 pb-16 max-w-sm mx-auto relative">
+      {isVintage && <VintageBackground />}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative z-10">
 
         <button onClick={() => router.back()}
-          className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors mb-8">
+          className="flex items-center gap-2 text-sm transition-colors mb-8"
+          style={{ color: isVintage ? "#7A5C12" : undefined }}
+        >
           <ArrowLeft size={15} /> Zurück
         </button>
 
         <div className="mb-8">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-600 mb-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-1"
+            style={{ color: isVintage ? "#7A5C12" : "#52525b" }}>
             {shop.name}
           </p>
-          <h1 className="text-2xl font-bold text-zinc-100">Datenschutzerklärung</h1>
-          <div className="mt-2 h-px bg-gradient-to-r from-amber-400/40 to-transparent" />
+          <h1 className={isVintage ? "text-2xl font-bold" : "text-2xl font-bold text-zinc-100"}
+            style={{ color: isVintage ? "#E8D070" : undefined }}>
+            Datenschutzerklärung
+          </h1>
+          <div className="mt-2 h-px" style={{ background: isVintage ? "linear-gradient(to right, #C49A2A66, transparent)" : "linear-gradient(to right, rgba(251,191,36,0.4), transparent)" }} />
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-          <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
+        <div className="rounded-2xl p-5"
+          style={isVintage
+            ? { background: "#130A04", border: "1px solid #7A5C1244" }
+            : { background: "#18181b", border: "1px solid #27272a" }}>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap"
+            style={{ color: isVintage ? "#C8A86A" : "#d4d4d8" }}>
             {shop.datenschutzText}
           </p>
         </div>
 
-        <p className="text-[11px] text-zinc-700 text-center mt-6">
+        <p className="text-[11px] text-center mt-6" style={{ color: isVintage ? "#3D2510" : "#3f3f46" }}>
           Digitale Stempelkarte · {shop.name}
         </p>
       </motion.div>
