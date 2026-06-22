@@ -75,7 +75,8 @@ export const registerCustomer = mutation({
         .query("customers")
         .withIndex("by_qrToken", (q) => q.eq("qrToken", existingQrToken))
         .unique();
-      if (existing) {
+      // Nur akzeptieren wenn Telefonnummer zum bestehenden Account passt
+      if (existing && existing.phone === phone) {
         customerId = existing._id;
         qrToken = existingQrToken;
       }
