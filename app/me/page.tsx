@@ -63,6 +63,8 @@ type MembershipEntry = {
     customDesignEnabled?: boolean;
     stampIcon?: string | null;
     theme?: string;
+    milestonesEnabled?: boolean;
+    milestones?: { stamps: number; text: string; enabled: boolean }[];
   } | null;
 };
 
@@ -84,10 +86,27 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
   const highestTier = activeTiers[activeTiers.length - 1];
   const totalSlots = highestTier.stamps;
   const tierCheckpoints = new Set(activeTiers.map(t => t.stamps));
-  const nextTier = activeTiers.find(t => membership.currentStamps < t.stamps);
-  const targetStamps = nextTier?.stamps ?? totalSlots;
+
+  // Current tier: the one being worked toward
+  const completedTiers = activeTiers.filter(t => membership.currentStamps >= t.stamps);
+  const currentTierIndex = completedTiers.length; // 0 = working on tier 1, 1 = working on tier 2, …
+  const prevTierStamps = completedTiers.length > 0 ? completedTiers[completedTiers.length - 1].stamps : 0;
+  const nextTier = activeTiers[currentTierIndex]; // undefined when all tiers done
+
+  const targetStamps = nextTier?.stamps ?? highestTier.stamps;
   const isReady = membership.currentStamps >= lowestTier.stamps;
-  const progress = Math.min(membership.currentStamps / targetStamps, 1);
+
+  // Bar: relative progress within current tier (resets after each tier)
+  const tierSize = targetStamps - prevTierStamps;
+  const stampsIntoTier = Math.max(0, membership.currentStamps - prevTierStamps);
+  const barProgress = nextTier
+    ? Math.min(stampsIntoTier / tierSize, 1)
+    : 1; // all tiers done → full bar
+
+  // Milestones reached
+  const reachedMilestones = (shop.milestonesEnabled && shop.milestones)
+    ? shop.milestones.filter(m => m.enabled && membership.totalStampsEver >= m.stamps)
+    : [];
 
   const StampIcon = getStampIcon(shop.stampIcon);
   const dotSize = totalSlots <= 10 ? 32 : totalSlots <= 15 ? 27 : totalSlots <= 20 ? 23 : 19;
@@ -172,25 +191,49 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
           )}
         </div>
 
-        {/* Progress */}
+        {/* Progress toward current tier */}
         <div className="space-y-1.5">
-          <div className="flex justify-between items-center">
-            <span className="text-[11px] text-neutral-500">
-              {membership.currentStamps} / {targetStamps} · {nextTier?.text ?? lowestTier.text}
-            </span>
-            <span className="text-[11px] font-bold tabular-nums" style={{ color: accent }}>
-              {Math.round(progress * 100)}%
+          <div className="flex justify-between items-center gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              {activeTiers.length > 1 && nextTier && (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                  style={{ background: hexToRgba(accent, 0.15), color: accent }}>
+                  STUFE {currentTierIndex + 1}
+                </span>
+              )}
+              <span className="text-[11px] text-neutral-500 truncate">
+                {nextTier ? nextTier.text : highestTier.text}
+              </span>
+            </div>
+            <span className="text-[11px] font-bold tabular-nums shrink-0" style={{ color: accent }}>
+              {nextTier
+                ? `${membership.currentStamps}/${targetStamps}`
+                : `✓ ${highestTier.text}`}
             </span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden bg-zinc-800">
             <motion.div
-              initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }}
+              initial={{ width: 0 }} animate={{ width: `${barProgress * 100}%` }}
               transition={{ duration: 0.7, delay: index * 0.07 + 0.2 }}
               className="h-full rounded-full"
               style={{ background: accent }}
             />
           </div>
         </div>
+
+        {/* Reached milestones */}
+        {reachedMilestones.length > 0 && (
+          <div className="mt-2.5 pt-2.5 flex items-center gap-1.5 flex-wrap"
+            style={{ borderTop: `1px solid #242424` }}>
+            <Trophy size={11} style={{ color: accent }} className="shrink-0" />
+            {reachedMilestones.map((m, i) => (
+              <span key={i} className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: hexToRgba(accent, 0.1), color: hexToRgba(accent, 0.8) }}>
+                {m.text}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </motion.button>
   );
