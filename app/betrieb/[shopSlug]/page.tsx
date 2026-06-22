@@ -398,12 +398,12 @@ export default function BetriebDashboard() {
                       <TrendingUp size={13} style={{ color: ic }} />
                       <p className="text-xs font-semibold" style={{ color: tx }}>Weitere Bonus-Stufen</p>
                     </div>
-                    <p className="text-[11px]" style={{ color: tm }}>Zusätzliche Belohnungen für mehr Stempel — ergänzen die Standard-Stufe oben.</p>
-                    {tiers.filter((_, i) => i > 0 || tiers.length > 1).length === 0 && (
+                    <p className="text-[11px]" style={{ color: tm }}>Zusätzliche Belohnungen für mehr Stempel — Stufe 1 ist der Standard oben.</p>
+                    {tiers.length <= 1 && (
                       <p className="text-[11px] py-1" style={{ color: tm }}>Noch keine weiteren Stufen — füge eine hinzu.</p>
                     )}
                     {tiers.map((tier, i) => (
-                      i === 0 && tiers.length === 1 ? null : (
+                      i === 0 ? null : (
                         <div key={i} className="rounded-xl p-3 space-y-2" style={sub}>
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-semibold" style={{ color: tm }}>Stufe {i + 1}</span>
