@@ -203,17 +203,19 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
 
       {/* Customer header */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-amber-400 text-lg">
+      <div className="rounded-2xl px-5 py-4 flex items-center gap-3" style={c.card}>
+        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shrink-0"
+          style={{ background: c.dark, color: c.accent, border: `1px solid ${c.accent}44` }}>
           {customer.name.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="font-bold text-zinc-100">{customer.name}</h2>
-          <p className="text-zinc-500 text-xs">{customer.phone}</p>
+          <h2 className="font-bold" style={{ color: c.text }}>{customer.name}</h2>
+          <p className="text-xs" style={{ color: c.accentDim }}>{customer.phone}</p>
         </div>
         {rewardReady && (
           <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
-            className="text-xs bg-amber-400 text-zinc-900 font-bold px-2.5 py-1 rounded-full">
+            className="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
+            style={{ background: c.accent, color: "#18181b" }}>
             Belohnung!
           </motion.span>
         )}
