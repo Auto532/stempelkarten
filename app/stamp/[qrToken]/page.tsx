@@ -8,8 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Stamp, Gift, UserPlus, ArrowLeft, LogIn } from "lucide-react";
 import { LoyaltyCard } from "@/app/me/components";
 import type { CardTier } from "@/app/me/components";
-import { VintageBackground, VintageLoyaltyCard, VintageRewardBanner } from "@/app/me/themes/vintage";
-import { GrillBackground, GrillLoyaltyCard, GrillRewardBanner } from "@/app/me/themes/grill";
+import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
 type Tier = { stamps: number; text: string; enabled: boolean };
@@ -88,7 +87,6 @@ export default function StampPage() {
     finally { setLoading(false); }
   };
 
-  // Loading
   if (!ready || !shop || data === undefined) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -98,7 +96,6 @@ export default function StampPage() {
     );
   }
 
-  // Kein Betrieb-Login
   if (!shopSlug) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-5">
@@ -115,7 +112,6 @@ export default function StampPage() {
     );
   }
 
-  // Kein Kunde gefunden
   if (!data?.customer) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-5">
@@ -130,25 +126,17 @@ export default function StampPage() {
   const activeTiers = getActiveTiers(shop);
   const maxStamps = activeTiers[activeTiers.length - 1].stamps;
 
-  // The tier the customer is currently sitting on EXACTLY
   const exactTier = activeTiers.find(t => currentStamps === t.stamps);
-  // The next tier above that (if any) — this is when we offer the choice
   const nextTierUp = exactTier ? activeTiers.find(t => t.stamps > exactTier.stamps) : undefined;
-  // The highest tier with no further tier above — plain redeem
   const topTier = activeTiers[activeTiers.length - 1];
   const atTopTier = currentStamps >= topTier.stamps;
 
-  // Show one-time choice: exactly AT a tier threshold AND a higher tier exists
   const showTierChoice = !!membership && !!exactTier && !!nextTierUp;
-  // Show plain redeem: at or past highest tier (no higher tier to continue to)
   const showRedeem = !!membership && atTopTier && !nextTierUp;
-  // Show badge when any kind of decision is pending
   const rewardReady = showTierChoice || showRedeem;
 
-  // Erfolg: Stempel gesetzt
   if (done === "stamped") {
     const newStamps = currentStamps + 1;
-    // Did this stamp land exactly on a tier boundary with a next tier?
     const landedOnTier = activeTiers.find(t => newStamps === t.stamps);
     const landedNextTier = landedOnTier ? activeTiers.find(t => t.stamps > landedOnTier.stamps) : undefined;
     const landedOnTop = newStamps >= topTier.stamps;
@@ -183,7 +171,6 @@ export default function StampPage() {
     );
   }
 
-  // Erfolg: Belohnung eingelöst
   if (done === "redeemed") {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-6">
@@ -205,29 +192,24 @@ export default function StampPage() {
     );
   }
 
-  const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
-  const isGrill   = !!shop.customDesignEnabled && shop.theme === "grill";
+  const theme = getShopTheme(shop);
+  const c = theme?.colors ?? DEFAULT_COLORS;
 
   return (
-    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col gap-5 ${isVintage || isGrill ? "relative z-[2]" : "bg-zinc-950"}`}>
-      {isVintage && <VintageBackground />}
-      {isGrill && <GrillBackground />}
+    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col gap-5 ${theme ? "relative z-[2]" : "bg-zinc-950"}`}>
+      {theme && <theme.Background />}
 
       {/* Header */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 relative z-10">
         <button onClick={() => router.push(adminRole === "mitarbeiter" ? `/betrieb/${shopSlug}/scan` : `/betrieb/${shopSlug}`)}
           className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
-          style={isGrill
-            ? { background: "#1E0E04", border: "1px solid #8A401044", color: "#E07A20" }
-            : isVintage
-            ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C49A2A" }
-            : undefined}
+          style={theme ? { background: c.cardBg, border: c.card.border, color: c.accent } : undefined}
         >
-          <ArrowLeft size={18} className={isVintage || isGrill ? "" : "text-zinc-400"} />
+          <ArrowLeft size={18} className={theme ? "" : "text-zinc-400"} />
         </button>
         <div>
-          <p className="text-xs" style={{ color: isGrill ? "#8A5030" : isVintage ? "#7A5C12" : "#71717a" }}>{shop.name}</p>
-          <h1 className="font-bold leading-tight" style={{ color: isGrill ? "#F5D5A8" : isVintage ? "#E8D070" : "#f4f4f5" }}>Stempel vergeben</h1>
+          <p className="text-xs" style={{ color: c.accentDim }}>{shop.name}</p>
+          <h1 className="font-bold leading-tight" style={{ color: c.text }}>Stempel vergeben</h1>
         </div>
         {rewardReady && (
           <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
@@ -240,81 +222,55 @@ export default function StampPage() {
       {/* Customer name */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
         className="rounded-2xl px-5 py-4 flex items-center gap-3 relative z-10"
-        style={isGrill
-          ? { background: "#1E0E04", border: "1px solid #8A401044" }
-          : isVintage
-          ? { background: "#1C0E06", border: "1px solid #7A5C1244" }
-          : { background: "#18181b", border: "1px solid #27272a" }}>
+        style={c.card}>
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0"
-          style={isGrill
-            ? { background: "radial-gradient(circle at 35% 35%, #3D1808, #1E0E04)", border: "1px solid #E07A2044", color: "#E07A20" }
-            : isVintage
-            ? { background: "radial-gradient(circle at 35% 35%, #3D2510, #1E1008)", border: "1px solid #C49A2A44", color: "#C49A2A" }
+          style={theme
+            ? { background: `radial-gradient(circle at 35% 35%, ${c.dark}, ${c.cardBg})`, border: `1px solid ${c.accent}44`, color: c.accent }
             : { background: "#27272a", color: "#fbbf24" }}>
           {customer.name.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="font-bold" style={{ color: isGrill ? "#F5D5A8" : isVintage ? "#E8D070" : "#f4f4f5" }}>{customer.name}</p>
-          <p className="text-xs truncate" style={{ color: isGrill ? "#8A5030" : isVintage ? "#7A5C12" : "#71717a" }}>{customer.phone}</p>
+          <p className="font-bold" style={{ color: c.text }}>{customer.name}</p>
+          <p className="text-xs truncate" style={{ color: c.accentDim }}>{customer.phone}</p>
         </div>
       </motion.div>
 
       {/* Card */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        {shop.customDesignEnabled ? (
-          isGrill ? (
-            <div className="space-y-3 relative z-10">
-              <GrillLoyaltyCard
-                shopName={shop.name}
-                stampsRequired={shop.stampsRequired}
-                currentStamps={currentStamps}
-                animateIndex={null}
-                onShowQR={() => {}}
-                qrToken={qrToken}
-                hideQR
-                rewardTiers={shop.rewardTiers as Array<{stamps:number;text:string;enabled:boolean}> | undefined}
-                accentColor={shop.accentColor}
-              />
-              <GrillRewardBanner
-                rewardText={shop.rewardText}
-                stampsRequired={shop.stampsRequired}
-                rewardTiers={shop.rewardTiers as CardTier[] | undefined}
-              />
-            </div>
-          ) : isVintage ? (
-            <div className="space-y-3 relative z-10">
-              <VintageLoyaltyCard
-                shopName={shop.name}
-                stampsRequired={shop.stampsRequired}
-                currentStamps={currentStamps}
-                animateIndex={null}
-                onShowQR={() => {}}
-                qrToken={qrToken}
-                hideQR
-                rewardTiers={shop.rewardTiers as Array<{stamps:number;text:string;enabled:boolean}> | undefined}
-              />
-              <VintageRewardBanner
-                rewardText={shop.rewardText}
-                stampsRequired={shop.stampsRequired}
-                rewardTiers={shop.rewardTiers as CardTier[] | undefined}
-              />
-            </div>
-          ) : (
-            <LoyaltyCard
+        {theme ? (
+          <div className="space-y-3 relative z-10">
+            <theme.Card
               shopName={shop.name}
-              rewardText={shop.rewardText}
               stampsRequired={shop.stampsRequired}
               currentStamps={currentStamps}
-              rewardsRedeemed={membership?.rewardsRedeemed ?? 0}
               animateIndex={null}
               onShowQR={() => {}}
               qrToken={qrToken}
-              rewardTiers={shop.rewardTiers as CardTier[] | undefined}
-              accentColor={shop.accentColor}
-              stampIcon={shop.stampIcon}
               hideQR
+              rewardTiers={shop.rewardTiers as Array<{stamps:number;text:string;enabled:boolean}> | undefined}
+              accentColor={shop.accentColor}
             />
-          )
+            <theme.Banner
+              rewardText={shop.rewardText}
+              stampsRequired={shop.stampsRequired}
+              rewardTiers={shop.rewardTiers as CardTier[] | undefined}
+            />
+          </div>
+        ) : shop.customDesignEnabled ? (
+          <LoyaltyCard
+            shopName={shop.name}
+            rewardText={shop.rewardText}
+            stampsRequired={shop.stampsRequired}
+            currentStamps={currentStamps}
+            rewardsRedeemed={membership?.rewardsRedeemed ?? 0}
+            animateIndex={null}
+            onShowQR={() => {}}
+            qrToken={qrToken}
+            rewardTiers={shop.rewardTiers as CardTier[] | undefined}
+            accentColor={shop.accentColor}
+            stampIcon={shop.stampIcon}
+            hideQR
+          />
         ) : (
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -366,7 +322,6 @@ export default function StampPage() {
           </motion.div>
 
         ) : showTierChoice ? (
-          /* One-time choice: exactly at a tier boundary with a higher tier available */
           <motion.div key="choice" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
             <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center">
               <p className="text-xs text-zinc-400 mb-1">
@@ -390,7 +345,6 @@ export default function StampPage() {
           </motion.div>
 
         ) : showRedeem ? (
-          /* At highest tier — plain redeem (no further tiers) */
           <motion.div key="reward" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
             <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center">
               <p className="text-amber-400 font-semibold">🎉 {topTier.text}</p>
@@ -406,7 +360,6 @@ export default function StampPage() {
           </motion.div>
 
         ) : (
-          /* Normal: stamp */
           <motion.button key="stamp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             onClick={handleStamp} disabled={loading}
             whileTap={{ scale: 0.97 }}

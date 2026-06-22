@@ -7,8 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection } from "../../components";
-import { VintageBackground, VintageLoyaltyCard, VintageRewardBanner, VintageMilestonesSection } from "../../themes/vintage";
-import { GrillBackground, GrillLoyaltyCard, GrillRewardBanner, GrillMilestonesSection } from "../../themes/grill";
+import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
 export default function MeShopPage() {
@@ -72,14 +71,13 @@ export default function MeShopPage() {
     return null;
   }
 
-  const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
-  const isGrill   = !!shop.customDesignEnabled && shop.theme === "grill";
+  const theme = getShopTheme(shop);
+  const c = theme?.colors ?? DEFAULT_COLORS;
 
   return (
-    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col relative ${isVintage || isGrill ? "z-[2]" : ""}`}>
+    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col relative ${theme ? "z-[2]" : ""}`}>
 
-      {isVintage && <VintageBackground />}
-      {isGrill && <GrillBackground />}
+      {theme && <theme.Background />}
 
       <AnimatePresence>
         {showStampOverlay && <StampOverlay onDone={() => setShowStampOverlay(false)} />}
@@ -132,9 +130,9 @@ export default function MeShopPage() {
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-4"
             >
-              {isGrill ? (
+              {theme ? (
                 <>
-                  <GrillLoyaltyCard
+                  <theme.Card
                     shopName={shop.name}
                     stampsRequired={shop.stampsRequired}
                     currentStamps={membership.currentStamps}
@@ -144,28 +142,9 @@ export default function MeShopPage() {
                     rewardTiers={shop.rewardTiers}
                     accentColor={shop.accentColor}
                   />
-                  <GrillRewardBanner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.rewardTiers} />
+                  <theme.Banner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.rewardTiers} />
                   {shop.milestonesEnabled && shop.milestones && (
-                    <GrillMilestonesSection milestones={shop.milestones} totalStampsEver={membership.totalStampsEver} />
-                  )}
-                </>
-              ) : isVintage ? (
-                <>
-                  <VintageLoyaltyCard
-                    shopName={shop.name}
-                    stampsRequired={shop.stampsRequired}
-                    currentStamps={membership.currentStamps}
-                    animateIndex={stampAnim}
-                    onShowQR={() => setShowQR(true)}
-                    qrToken={qrToken}
-                    rewardTiers={shop.rewardTiers}
-                  />
-                  <VintageRewardBanner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.rewardTiers} />
-                  {shop.milestonesEnabled && shop.milestones && (
-                    <VintageMilestonesSection
-                      milestones={shop.milestones}
-                      totalStampsEver={membership.totalStampsEver}
-                    />
+                    <theme.Milestones milestones={shop.milestones} totalStampsEver={membership.totalStampsEver} />
                   )}
                 </>
               ) : (
@@ -200,17 +179,15 @@ export default function MeShopPage() {
       {/* Legal links */}
       <div className="flex flex-wrap justify-center gap-3 pt-6 pb-2 relative z-10">
         {shop.impressumText && (
-          <a href={`/me/impressum/${shopSlug}`}
-            style={isGrill ? { fontSize: 11, color: "#8A5030" } : isVintage ? { fontSize: 11, color: "#7A5C12" } : undefined}
-            className={isGrill || isVintage ? "" : "text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors"}>Impressum</a>
+          <a href={`/me/impressum/${shopSlug}`} className="text-[11px] transition-colors"
+            style={{ color: c.accentDim }}>Impressum</a>
         )}
         {shop.impressumText && shop.datenschutzText && (
-          <span style={isGrill ? { color: "#4A2010" } : isVintage ? { color: "#5A3C0A" } : undefined} className={isGrill || isVintage ? "" : "text-zinc-800"}>·</span>
+          <span style={{ color: c.accentFaint }}>·</span>
         )}
         {shop.datenschutzText && (
-          <a href={`/me/datenschutz/${shopSlug}`}
-            style={isGrill ? { fontSize: 11, color: "#8A5030" } : isVintage ? { fontSize: 11, color: "#7A5C12" } : undefined}
-            className={isGrill || isVintage ? "" : "text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors"}>Datenschutz</a>
+          <a href={`/me/datenschutz/${shopSlug}`} className="text-[11px] transition-colors"
+            style={{ color: c.accentDim }}>Datenschutz</a>
         )}
       </div>
     </div>

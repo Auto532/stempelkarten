@@ -15,8 +15,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { LoyaltyCard } from "@/app/me/components";
 import type { CardTier } from "@/app/me/components";
-import { VintageBackground, VintageLoyaltyCard, VintageRewardBanner } from "@/app/me/themes/vintage";
-import { GrillBackground, GrillLoyaltyCard, GrillRewardBanner } from "@/app/me/themes/grill";
+import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import { QRImage } from "@/app/components/QRImage";
 import QRCode from "qrcode";
@@ -68,8 +67,8 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
   shopId: Id<"shops">; shop: ScanShop; qrToken: string; adminToken: string; onDone: () => void;
 }) {
   const { stampsRequired, rewardText, bonusProgramEnabled } = shop;
-  const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
-  const isGrill   = !!shop.customDesignEnabled && shop.theme === "grill";
+  const shopTheme = getShopTheme(shop);
+  const c = shopTheme?.colors ?? DEFAULT_COLORS;
   const data = useQuery(api.memberships.getForCustomerAndShop, { qrToken, shopId });
   const addStamp = useMutation(api.memberships.addStamp);
   const redeemReward = useMutation(api.memberships.redeemReward);
@@ -100,26 +99,20 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
 
   const { customer, membership } = data;
 
-  const vintageCard = isGrill
-    ? { background: "#1E0E04", border: "1px solid #8A401044" }
-    : isVintage
-    ? { background: "#130A04", border: "1px solid #7A5C1244" }
-    : { background: "#18181b", border: "1px solid #27272a" };
-
   if (actionState.type === "stamped") {
     return (
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-        className="rounded-2xl p-8 text-center space-y-5" style={vintageCard}>
+        className="rounded-2xl p-8 text-center space-y-5" style={c.card}>
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, delay: 0.1 }}>
           <div className={`w-20 h-20 rounded-full mx-auto flex items-center justify-center ${actionState.rewardReached ? "bg-amber-400" : "bg-green-500"}`}>
             {actionState.rewardReached ? <Gift size={36} className="text-zinc-900" /> : <Stamp size={36} className="text-white" />}
           </div>
         </motion.div>
         <div>
-          <h2 className="text-xl font-bold" style={{ color: isGrill ? "#F5D5A8" : isVintage ? "#E8D070" : undefined }}>
+          <h2 className="text-xl font-bold" style={{ color: shopTheme ? c.text : undefined }}>
             {actionState.rewardReached ? "Belohnung erreicht! 🎉" : "Stempel gesetzt!"}
           </h2>
-          <p className="text-sm mt-1" style={{ color: isGrill ? "#8A5030" : isVintage ? "#7A5C12" : "#a1a1aa" }}>
+          <p className="text-sm mt-1" style={{ color: c.accentDim }}>
             {actionState.customerName} · {actionState.newStamps}/{actionState.stampsRequired} Stempel
           </p>
           {actionState.rewardReached && (
@@ -130,8 +123,8 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
           )}
         </div>
         <button onClick={onDone}
-          className={isGrill || isVintage ? "w-full py-3.5 rounded-xl font-medium transition-colors" : "w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors"}
-          style={isGrill ? { background: "#1E0E04", border: "1px solid #8A401044", color: "#C89060" } : isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" } : undefined}>
+          className={shopTheme ? "w-full py-3.5 rounded-xl font-medium transition-colors" : "w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors"}
+          style={shopTheme ? { ...c.card, color: c.textBody } : undefined}>
           Nächsten Kunden scannen
         </button>
       </motion.div>
@@ -141,20 +134,20 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
   if (actionState.type === "redeemed") {
     return (
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-        className="rounded-2xl p-8 text-center space-y-5" style={vintageCard}>
+        className="rounded-2xl p-8 text-center space-y-5" style={c.card}>
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, delay: 0.1 }}>
           <div className="w-20 h-20 rounded-full bg-amber-400 mx-auto flex items-center justify-center">
             <Gift size={36} className="text-zinc-900" />
           </div>
         </motion.div>
         <div>
-          <h2 className="text-xl font-bold" style={{ color: isGrill ? "#F5D5A8" : isVintage ? "#E8D070" : undefined }}>Belohnung eingelöst! 🏆</h2>
-          <p className="text-sm mt-1" style={{ color: isGrill ? "#8A5030" : isVintage ? "#7A5C12" : "#a1a1aa" }}>{actionState.customerName} erhält:</p>
+          <h2 className="text-xl font-bold" style={{ color: shopTheme ? c.text : undefined }}>Belohnung eingelöst! 🏆</h2>
+          <p className="text-sm mt-1" style={{ color: c.accentDim }}>{actionState.customerName} erhält:</p>
           <p className="text-amber-400 font-semibold mt-1">{actionState.rewardText}</p>
         </div>
         <button onClick={onDone}
-          className={isGrill || isVintage ? "w-full py-3.5 rounded-xl font-medium transition-colors" : "w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors"}
-          style={isGrill ? { background: "#1E0E04", border: "1px solid #8A401044", color: "#C89060" } : isVintage ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" } : undefined}>
+          className={shopTheme ? "w-full py-3.5 rounded-xl font-medium transition-colors" : "w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl font-medium transition-colors"}
+          style={shopTheme ? { ...c.card, color: c.textBody } : undefined}>
           Nächsten Kunden scannen
         </button>
       </motion.div>
@@ -228,60 +221,36 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
       </div>
 
       {/* Card preview */}
-      {shop.customDesignEnabled ? (
-        isGrill ? (
-          <div className="space-y-3 relative z-10">
-            <GrillLoyaltyCard
-              shopName={shop.name}
-              stampsRequired={stampsRequired}
-              currentStamps={membership.currentStamps}
-              animateIndex={null}
-              onShowQR={() => {}}
-              qrToken={qrToken}
-              hideQR
-              rewardTiers={shop.rewardTiers}
-              accentColor={shop.accentColor}
-            />
-            <GrillRewardBanner
-              rewardText={rewardText}
-              stampsRequired={stampsRequired}
-              rewardTiers={shop.rewardTiers}
-            />
-          </div>
-        ) : isVintage ? (
-          <div className="space-y-3 relative z-10">
-            <VintageLoyaltyCard
-              shopName={shop.name}
-              stampsRequired={stampsRequired}
-              currentStamps={membership.currentStamps}
-              animateIndex={null}
-              onShowQR={() => {}}
-              qrToken={qrToken}
-              hideQR
-              rewardTiers={shop.rewardTiers}
-            />
-            <VintageRewardBanner
-              rewardText={rewardText}
-              stampsRequired={stampsRequired}
-              rewardTiers={shop.rewardTiers}
-            />
-          </div>
-        ) : (
-          <LoyaltyCard
+      {shopTheme ? (
+        <div className="space-y-3 relative z-10">
+          <shopTheme.Card
             shopName={shop.name}
-            rewardText={rewardText}
             stampsRequired={stampsRequired}
             currentStamps={membership.currentStamps}
-            rewardsRedeemed={membership.rewardsRedeemed}
             animateIndex={null}
             onShowQR={() => {}}
             qrToken={qrToken}
+            hideQR
             rewardTiers={shop.rewardTiers}
             accentColor={shop.accentColor}
-            stampIcon={shop.stampIcon}
-            hideQR
           />
-        )
+          <shopTheme.Banner rewardText={rewardText} stampsRequired={stampsRequired} rewardTiers={shop.rewardTiers} />
+        </div>
+      ) : shop.customDesignEnabled ? (
+        <LoyaltyCard
+          shopName={shop.name}
+          rewardText={rewardText}
+          stampsRequired={stampsRequired}
+          currentStamps={membership.currentStamps}
+          rewardsRedeemed={membership.rewardsRedeemed}
+          animateIndex={null}
+          onShowQR={() => {}}
+          qrToken={qrToken}
+          rewardTiers={shop.rewardTiers}
+          accentColor={shop.accentColor}
+          stampIcon={shop.stampIcon}
+          hideQR
+        />
       ) : (
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-5">
           <div className="flex flex-wrap gap-2 mb-4">
@@ -393,8 +362,8 @@ export default function ScanPage() {
   if (!shop) return null;
 
   const showLeads = false; // Mitarbeiter sehen nie Leads/Telefonnummern
-  const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
-  const isGrill   = !!shop.customDesignEnabled && shop.theme === "grill";
+  const theme = getShopTheme(shop);
+  const c = theme?.colors ?? DEFAULT_COLORS;
   const totalStamps = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
   const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
   const activeTiers = shop.bonusProgramEnabled && shop.rewardTiers && shop.rewardTiers.some(t => t.enabled)
@@ -411,9 +380,8 @@ export default function ScanPage() {
   // ── Scanner view ────────────────────────────────────────────────────────────
   if (view === "scanning") {
     return (
-      <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto ${isVintage || isGrill ? "relative z-[2]" : ""}`}>
-        {isVintage && <VintageBackground />}
-        {isGrill && <GrillBackground />}
+      <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto ${theme ? "relative z-[2]" : ""}`}>
+        {theme && <theme.Background />}
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 mb-6">
           <button
@@ -470,39 +438,14 @@ export default function ScanPage() {
   }
 
   // ── Dashboard view ──────────────────────────────────────────────────────────
-  const V = isGrill ? {
-    card: { background: "#1E0E04", border: "1px solid #8A401044" },
-    cardHover: "#1E0E0488",
-    divider: "#8A401022",
-    text: "#F5D5A8",
-    textDim: "#8A5030",
-    textBody: "#C89060",
-    icon: "#E07A20",
-    badge: { background: "#E07A2022", border: "1px solid #8A4010", color: "#F5D5A8" },
-    input: { background: "#1E0E04", border: "1px solid #8A401044", color: "#C89060" },
-    subCard: { background: "#1E0E0488", borderRadius: "0.75rem", padding: "0.75rem" },
-  } : isVintage ? {
-    card: { background: "#130A04", border: "1px solid #7A5C1244" },
-    cardHover: "#1C0E0688",
-    divider: "#7A5C1222",
-    text: "#E8D070",
-    textDim: "#7A5C12",
-    textBody: "#C8A86A",
-    icon: "#C49A2A",
-    badge: { background: "#C49A2A22", border: "1px solid #7A5C12", color: "#E8D070" },
-    input: { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" },
-    subCard: { background: "#1C0E0688", borderRadius: "0.75rem", padding: "0.75rem" },
-  } : null;
-
   return (
-    <div className={`min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto space-y-6 ${isVintage || isGrill ? "relative z-[2]" : ""}`}>
-      {isVintage && <VintageBackground />}
-      {isGrill && <GrillBackground />}
+    <div className={`min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto space-y-6 ${theme ? "relative z-[2]" : ""}`}>
+      {theme && <theme.Background />}
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <p className="text-xs font-medium uppercase tracking-widest" style={{ color: V?.textDim ?? "#71717a" }}>Mitarbeiter</p>
-        <h1 className="text-2xl font-bold mt-1" style={{ color: V?.text ?? "#f4f4f5" }}>{shop.name}</h1>
+        <p className="text-xs font-medium uppercase tracking-widest" style={{ color: c.accentDim }}>Mitarbeiter</p>
+        <h1 className="text-2xl font-bold mt-1" style={{ color: c.text }}>{shop.name}</h1>
       </motion.div>
 
       {/* Scan Button */}
@@ -510,7 +453,7 @@ export default function ScanPage() {
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} whileTap={{ scale: 0.97 }}
         onClick={() => setView("scanning")}
         className="w-full text-zinc-900 rounded-2xl p-5 flex items-center gap-4 transition-colors"
-        style={{ background: isGrill ? "linear-gradient(135deg, #E07A20, #8A4010)" : isVintage ? "linear-gradient(135deg, #C49A2A, #7A5C12)" : "#fbbf24" }}
+        style={{ background: c.gradient }}
       >
         <div className="w-12 h-12 bg-zinc-900/20 rounded-xl flex items-center justify-center shrink-0">
           <ScanLine size={24} />
@@ -529,55 +472,55 @@ export default function ScanPage() {
           { label: "Stempel", value: totalStamps, icon: Stamp },
           { label: "Belohnungen", value: totalRewards, icon: Award },
         ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="rounded-2xl p-4 text-center" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
-            <Icon size={18} className="mx-auto mb-2" style={{ color: V?.icon ?? "#fbbf24" }} />
-            <p className="text-xl font-bold" style={{ color: V?.text ?? "#f4f4f5" }}>{value}</p>
-            <p className="text-[11px] mt-0.5" style={{ color: V?.textDim ?? "#71717a" }}>{label}</p>
+          <div key={label} className="rounded-2xl p-4 text-center" style={c.card}>
+            <Icon size={18} className="mx-auto mb-2" style={{ color: c.accent }} />
+            <p className="text-xl font-bold" style={{ color: c.text }}>{value}</p>
+            <p className="text-[11px] mt-0.5" style={{ color: c.accentDim }}>{label}</p>
           </div>
         ))}
       </motion.div>
 
       {/* Join QR */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-        className="rounded-2xl p-5 space-y-4" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
+        className="rounded-2xl p-5 space-y-4" style={c.card}>
         <div className="flex items-center gap-2">
-          <QrCode size={16} style={{ color: V?.icon ?? "#a1a1aa" }} />
-          <span className="font-medium text-sm" style={{ color: V?.text ?? "#e4e4e7" }}>Kunden-QR-Code</span>
+          <QrCode size={16} style={{ color: c.accent }} />
+          <span className="font-medium text-sm" style={{ color: c.text }}>Kunden-QR-Code</span>
         </div>
         <div className="flex justify-center">
           <QRImage value={`${typeof window !== "undefined" ? window.location.origin : ""}/join/${shopSlug}`} size={160} />
         </div>
-        <p className="text-center text-xs" style={{ color: V?.textDim ?? "#71717a" }}>
+        <p className="text-center text-xs" style={{ color: c.accentDim }}>
           Neue Kunden können diesen Code scannen um sich zu registrieren
         </p>
         <button
           onClick={() => printQR(shop.name, `${window.location.origin}/join/${shopSlug}`)}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm transition-colors"
-          style={V ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" } : { background: "#27272a", border: "1px solid #3f3f46", color: "#d4d4d8" }}
+          style={c.input}
         >
-          <Printer size={15} style={{ color: V?.icon ?? "#fbbf24" }} />
+          <Printer size={15} style={{ color: c.accent }} />
           Drucken / Druckvorschau
         </button>
       </motion.div>
 
       {/* Belohnungen (read-only) */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-        className="rounded-2xl overflow-hidden" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
+        className="rounded-2xl overflow-hidden" style={c.card}>
         <div className="px-5 py-4 flex items-center gap-2">
-          <Gift size={15} style={{ color: V?.icon ?? "#fbbf24" }} />
-          <span className="font-medium text-sm" style={{ color: V?.text ?? "#e4e4e7" }}>Belohnungen</span>
+          <Gift size={15} style={{ color: c.accent }} />
+          <span className="font-medium text-sm" style={{ color: c.text }}>Belohnungen</span>
         </div>
-        <div className="divide-y px-5 pb-4 space-y-2" style={{ borderColor: V?.divider }}>
+        <div className="divide-y px-5 pb-4 space-y-2" style={{ borderColor: c.divider }}>
           {activeTiers.map((tier, i) => (
             <div key={i} className="flex items-center justify-between py-2">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={V ? { background: "#C49A2A22", border: "1px solid #7A5C12", color: "#E8D070" } : { background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24" }}>
+                  style={c.badge}>
                   {tier.stamps}
                 </div>
-                <span className="text-sm" style={{ color: V?.textBody ?? "#d4d4d8" }}>{tier.text}</span>
+                <span className="text-sm" style={{ color: c.textBody }}>{tier.text}</span>
               </div>
-              <span className="text-[11px]" style={{ color: V?.textDim ?? "#71717a" }}>{tier.stamps} ✕</span>
+              <span className="text-[11px]" style={{ color: c.accentDim }}>{tier.stamps} ✕</span>
             </div>
           ))}
         </div>
@@ -586,25 +529,25 @@ export default function ScanPage() {
       {/* Meilensteine (read-only) */}
       {shop.milestonesEnabled && shop.milestones && shop.milestones.filter(m => m.enabled).length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-          className="rounded-2xl overflow-hidden" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
+          className="rounded-2xl overflow-hidden" style={c.card}>
           <div className="px-5 py-4 flex items-center gap-2">
-            <Award size={15} style={{ color: V?.icon ?? "#fbbf24" }} />
-            <span className="font-medium text-sm" style={{ color: V?.text ?? "#e4e4e7" }}>Treue-Meilensteine</span>
+            <Award size={15} style={{ color: c.accent }} />
+            <span className="font-medium text-sm" style={{ color: c.text }}>Treue-Meilensteine</span>
           </div>
           <div className="px-5 pb-4 space-y-2">
-            <p className="text-xs mb-3" style={{ color: V?.textDim ?? "#71717a" }}>
+            <p className="text-xs mb-3" style={{ color: c.accentDim }}>
               Basieren auf Gesamtstempeln — nie zurückgesetzt
             </p>
             {shop.milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps).map((m, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-t" style={{ borderColor: V?.divider ?? "#27272a" }}>
+              <div key={i} className="flex items-center justify-between py-2 border-t" style={{ borderColor: c.divider }}>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                    style={V ? { background: "#C49A2A22", border: "1px solid #7A5C12", color: "#E8D070" } : { background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }}>
+                    style={c.badge}>
                     {m.stamps}
                   </div>
-                  <span className="text-sm" style={{ color: V?.textBody ?? "#d4d4d8" }}>{m.text}</span>
+                  <span className="text-sm" style={{ color: c.textBody }}>{m.text}</span>
                 </div>
-                <span className="text-[11px]" style={{ color: V?.textDim ?? "#71717a" }}>ab {m.stamps}</span>
+                <span className="text-[11px]" style={{ color: c.accentDim }}>ab {m.stamps}</span>
               </div>
             ))}
           </div>
@@ -615,56 +558,56 @@ export default function ScanPage() {
       <AnimatePresence>
         {shop.bonusProgramEnabled && (
           <motion.div key="gifts" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="rounded-2xl overflow-hidden" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
+            className="rounded-2xl overflow-hidden" style={c.card}>
             <button onClick={() => setShowGifts(v => !v)}
               className="w-full flex items-center gap-2 px-5 py-4 transition-colors text-left">
-              <Gift size={15} style={{ color: V?.icon ?? "#fbbf24" }} className="shrink-0" />
-              <span className="font-medium text-sm flex-1" style={{ color: V?.text ?? "#e4e4e7" }}>Treue Bonus (Einlösungen)</span>
+              <Gift size={15} style={{ color: c.accent }} className="shrink-0" />
+              <span className="font-medium text-sm flex-1" style={{ color: c.text }}>Treue Bonus (Einlösungen)</span>
               {redemptions && redemptions.length > 0 && (
-                <span className="text-xs mr-1" style={{ color: V?.textDim ?? "#52525b" }}>{redemptions.length}</span>
+                <span className="text-xs mr-1" style={{ color: c.accentDim }}>{redemptions.length}</span>
               )}
-              <ChevronRight size={13} style={{ color: V?.textDim ?? "#52525b" }} className={`transition-transform ${showGifts ? "rotate-90" : ""}`} />
+              <ChevronRight size={13} style={{ color: c.accentDim }} className={`transition-transform ${showGifts ? "rotate-90" : ""}`} />
             </button>
             <AnimatePresence>
               {showGifts && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <div className="max-h-[320px] overflow-y-auto" style={{ borderTop: `1px solid ${V?.divider ?? "#27272a"}` }}>
-                    {redemptions === undefined && <div className="px-5 py-6 text-center text-sm" style={{ color: V?.textDim ?? "#52525b" }}>Laden…</div>}
-                    {redemptions?.length === 0 && <div className="px-5 py-6 text-center text-sm" style={{ color: V?.textDim ?? "#52525b" }}>Noch keine Einlösungen</div>}
+                  <div className="max-h-[320px] overflow-y-auto" style={{ borderTop: `1px solid ${c.divider}` }}>
+                    {redemptions === undefined && <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Laden…</div>}
+                    {redemptions?.length === 0 && <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Noch keine Einlösungen</div>}
                     {redemptions?.map((r) => {
                       const isOpen = openRedemptionId === r._id;
                       return (
-                        <div key={r._id} style={{ borderBottom: `1px solid ${V?.divider ?? "#27272a"}` }}>
+                        <div key={r._id} style={{ borderBottom: `1px solid ${c.divider}` }}>
                           <button onClick={() => setOpenRedemptionId(isOpen ? null : r._id)}
                             className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left">
                             <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                              style={V ? { background: "#C49A2A22", border: "1px solid #7A5C12" } : { background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.2)" }}>
-                              <span className="text-xs font-bold" style={{ color: V?.icon ?? "#fbbf24" }}>{r.customerName.charAt(0).toUpperCase()}</span>
+                              style={{ background: c.badge.background, border: c.badge.border }}>
+                              <span className="text-xs font-bold" style={{ color: c.accent }}>{r.customerName.charAt(0).toUpperCase()}</span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold truncate" style={{ color: V?.text ?? "#e4e4e7" }}>{r.customerName}</p>
-                              <p className="text-xs truncate" style={{ color: V?.icon ?? "#fbbf24" }}>{r.rewardText ?? shop.rewardText}</p>
+                              <p className="text-sm font-semibold truncate" style={{ color: c.text }}>{r.customerName}</p>
+                              <p className="text-xs truncate" style={{ color: c.accent }}>{r.rewardText ?? shop.rewardText}</p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <p className="text-[11px]" style={{ color: V?.textDim ?? "#52525b" }}>
+                              <p className="text-[11px]" style={{ color: c.accentDim }}>
                                 {new Date(r.timestamp).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
                               </p>
-                              <ChevronRight size={13} style={{ color: V?.textDim ?? "#3f3f46" }} className={`transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                              <ChevronRight size={13} style={{ color: c.accentDim }} className={`transition-transform ${isOpen ? "rotate-90" : ""}`} />
                             </div>
                           </button>
                           <AnimatePresence>
                             {isOpen && (
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                                 <div className="mx-4 mb-3 rounded-xl p-3 space-y-1.5"
-                                  style={V ? { background: "#1C0E0688" } : { background: "#27272a" }}>
+                                  style={{ background: c.subCard.background }}>
                                   {[
                                     { label: "Belohnung", value: r.rewardText ?? shop.rewardText, accent: true },
                                     { label: "Datum", value: new Date(r.timestamp).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }), accent: false },
                                     { label: "Uhrzeit", value: new Date(r.timestamp).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }), accent: false },
                                   ].map(({ label, value, accent }) => (
                                     <div key={label} className="flex justify-between items-center">
-                                      <span className="text-xs" style={{ color: V?.textDim ?? "#71717a" }}>{label}</span>
-                                      <span className="text-xs font-semibold" style={{ color: accent ? (V?.icon ?? "#fbbf24") : (V?.textBody ?? "#d4d4d8") }}>{value}</span>
+                                      <span className="text-xs" style={{ color: c.accentDim }}>{label}</span>
+                                      <span className="text-xs font-semibold" style={{ color: accent ? (c.accent) : (c.textBody) }}>{value}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -677,7 +620,7 @@ export default function ScanPage() {
                   </div>
                   {redemptions && redemptions.length >= 10 && (
                     <button onClick={() => setShowAllRedemptions(v => !v)}
-                      className="w-full py-3 text-xs transition-colors" style={{ color: V?.textDim ?? "#71717a", borderTop: `1px solid ${V?.divider ?? "#27272a"}` }}>
+                      className="w-full py-3 text-xs transition-colors" style={{ color: c.accentDim, borderTop: `1px solid ${c.divider}` }}>
                       {showAllRedemptions ? "Weniger anzeigen" : "Alle anzeigen"}
                     </button>
                   )}
@@ -690,75 +633,75 @@ export default function ScanPage() {
 
       {/* Customer List */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-        className="rounded-2xl overflow-hidden" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
+        className="rounded-2xl overflow-hidden" style={c.card}>
         <button onClick={() => setShowCustomers(v => !v)}
           className="w-full flex items-center gap-2 px-5 py-4 transition-colors">
-          <Users size={15} style={{ color: V?.textDim ?? "#71717a" }} className="shrink-0" />
-          <span className="font-medium text-sm" style={{ color: V?.text ?? "#e4e4e7" }}>Kunden</span>
+          <Users size={15} style={{ color: c.accentDim }} className="shrink-0" />
+          <span className="font-medium text-sm" style={{ color: c.text }}>Kunden</span>
           <div className="ml-auto flex items-center gap-2">
             {readyCount > 0 && (
               <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold"
-                style={V ? { background: "#C49A2A22", border: "1px solid #7A5C12", color: "#E8D070" } : { background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }}>
+                style={c.badge}>
                 <Gift size={9} /> {readyCount} bereit
               </span>
             )}
-            <span className="text-xs" style={{ color: V?.textDim ?? "#52525b" }}>{customers?.length ?? "–"}</span>
-            <ChevronRight size={13} style={{ color: V?.textDim ?? "#52525b" }} className={`transition-transform ${showCustomers ? "rotate-90" : ""}`} />
+            <span className="text-xs" style={{ color: c.accentDim }}>{customers?.length ?? "–"}</span>
+            <ChevronRight size={13} style={{ color: c.accentDim }} className={`transition-transform ${showCustomers ? "rotate-90" : ""}`} />
           </div>
         </button>
 
         <AnimatePresence>
           {showCustomers && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="px-5 pt-1 pb-3" style={{ borderBottom: `1px solid ${V?.divider ?? "#27272a"}` }}>
+              <div className="px-5 pt-1 pb-3" style={{ borderBottom: `1px solid ${c.divider}` }}>
                 <div className="relative">
-                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: V?.textDim ?? "#52525b" }} />
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: c.accentDim }} />
                   <input
                     value={search} onChange={e => setSearch(e.target.value)}
                     placeholder="Suchen…"
                     className="w-full pl-8 pr-3 py-2 rounded-xl text-sm placeholder-zinc-600 focus:outline-none"
-                    style={V?.input ?? { background: "#27272a", border: "1px solid #3f3f46", color: "#d4d4d8" }}
+                    style={c.input}
                   />
                   {search && (
-                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: V?.textDim ?? "#52525b" }}>
+                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: c.accentDim }}>
                       <X size={13} />
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center px-4 py-2" style={{ borderBottom: `1px solid ${V?.divider ?? "#27272a"}` }}>
+              <div className="flex items-center px-4 py-2" style={{ borderBottom: `1px solid ${c.divider}` }}>
                 <div className="w-7 shrink-0 mr-3" />
-                <span className="flex-1 text-[10px] uppercase tracking-wider" style={{ color: V?.textDim ?? "#52525b" }}>Kunde</span>
-                <span className="text-[10px] uppercase tracking-wider w-10 text-right mr-1" style={{ color: V?.textDim ?? "#52525b" }}>Stand</span>
+                <span className="flex-1 text-[10px] uppercase tracking-wider" style={{ color: c.accentDim }}>Kunde</span>
+                <span className="text-[10px] uppercase tracking-wider w-10 text-right mr-1" style={{ color: c.accentDim }}>Stand</span>
               </div>
 
               <div>
-                {customers === undefined && <div className="px-5 py-6 text-center text-sm" style={{ color: V?.textDim ?? "#52525b" }}>Laden...</div>}
-                {customers?.length === 0 && <div className="px-5 py-6 text-center text-sm" style={{ color: V?.textDim ?? "#52525b" }}>Noch keine Kunden</div>}
+                {customers === undefined && <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Laden...</div>}
+                {customers?.length === 0 && <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Noch keine Kunden</div>}
                 {customers !== undefined && filteredCustomers.length === 0 && search && (
-                  <div className="px-5 py-6 text-center text-sm" style={{ color: V?.textDim ?? "#52525b" }}>Keine Treffer für „{search}"</div>
+                  <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Keine Treffer für „{search}"</div>
                 )}
                 {filteredCustomers.map(({ customer, membership }, i) => {
                   if (!customer) return null;
                   const isReady = membership.currentStamps >= lowestTierStamps;
                   return (
                     <motion.div key={membership._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i * 0.02, 0.2) }}
-                      className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: `1px solid ${V?.divider ?? "#27272a22"}` }}>
+                      className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: `1px solid ${c.divider}` }}>
                       <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                         style={isReady
-                          ? { background: V?.icon ?? "#fbbf24", color: "#18181b" }
-                          : V ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C49A2A" } : { background: "#27272a", border: "1px solid #3f3f46", color: "#fbbf24" }}>
+                          ? { background: c.accent, color: "#18181b" }
+                          : { background: c.dark, border: c.card.border, color: c.accent }}>
                         {customer.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="flex-1 text-sm truncate" style={{ color: V?.textBody ?? "#d4d4d8" }}>{customer.name}</span>
+                      <span className="flex-1 text-sm truncate" style={{ color: c.textBody }}>{customer.name}</span>
                       {isReady && (
                         <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                          style={V ? { background: "#C49A2A22", border: "1px solid #7A5C12", color: "#E8D070" } : { background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }}>
+                          style={c.badge}>
                           BEREIT
                         </span>
                       )}
-                      <span className="text-xs shrink-0 w-10 text-right" style={{ color: V?.textDim ?? "#71717a" }}>
+                      <span className="text-xs shrink-0 w-10 text-right" style={{ color: c.accentDim }}>
                         {membership.currentStamps}/{lowestTierStamps}
                       </span>
                     </motion.div>
@@ -768,7 +711,7 @@ export default function ScanPage() {
 
               {customers && customers.length >= 10 && (
                 <button onClick={() => setShowAllCustomers(v => !v)}
-                  className="w-full py-3 text-xs transition-colors" style={{ color: V?.textDim ?? "#71717a", borderTop: `1px solid ${V?.divider ?? "#27272a"}` }}>
+                  className="w-full py-3 text-xs transition-colors" style={{ color: c.accentDim, borderTop: `1px solid ${c.divider}` }}>
                   {showAllCustomers ? "Weniger anzeigen" : "Alle anzeigen"}
                 </button>
               )}
