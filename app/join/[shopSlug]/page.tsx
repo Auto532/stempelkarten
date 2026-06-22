@@ -149,7 +149,7 @@ export default function JoinPage() {
     : undefined;
 
   return (
-    <div className="min-h-screen flex flex-col px-6 py-12 max-w-sm mx-auto relative">
+    <div className={`min-h-screen flex flex-col px-6 py-12 max-w-sm mx-auto relative ${isVintage ? "z-[2]" : ""}`}>
       {isVintage && <VintageBackground />}
 
       {/* Header */}

@@ -205,7 +205,7 @@ export default function StampPage() {
   const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
 
   return (
-    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col gap-5 ${isVintage ? "" : "bg-zinc-950"}`}>
+    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col gap-5 ${isVintage ? "relative z-[2]" : "bg-zinc-950"}`}>
       {isVintage && <VintageBackground />}
 
       {/* Header */}

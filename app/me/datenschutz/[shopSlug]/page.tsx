@@ -35,7 +35,7 @@ export default function DatenschutzPage() {
   const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
 
   return (
-    <div className="min-h-screen px-5 pt-10 pb-16 max-w-sm mx-auto relative">
+    <div className={`min-h-screen px-5 pt-10 pb-16 max-w-sm mx-auto relative ${isVintage ? "z-[2]" : ""}`}>
       {isVintage && <VintageBackground />}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative z-10">
 

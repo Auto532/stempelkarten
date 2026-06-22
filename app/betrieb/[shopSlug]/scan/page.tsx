@@ -366,6 +366,7 @@ export default function ScanPage() {
   if (!shop) return null;
 
   const showLeads = false; // Mitarbeiter sehen nie Leads/Telefonnummern
+  const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
   const totalStamps = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
   const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
   const activeTiers = shop.bonusProgramEnabled && shop.rewardTiers && shop.rewardTiers.some(t => t.enabled)
@@ -381,9 +382,8 @@ export default function ScanPage() {
 
   // ── Scanner view ────────────────────────────────────────────────────────────
   if (view === "scanning") {
-    const isVintage = !!shop.customDesignEnabled && shop.theme === "vintage";
     return (
-      <div className="min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto">
+      <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto ${isVintage ? "relative z-[2]" : ""}`}>
         {isVintage && <VintageBackground />}
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 mb-6">
@@ -442,7 +442,8 @@ export default function ScanPage() {
 
   // ── Dashboard view ──────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto space-y-6">
+    <div className={`min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto space-y-6 ${isVintage ? "relative z-[2]" : ""}`}>
+      {isVintage && <VintageBackground />}
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>

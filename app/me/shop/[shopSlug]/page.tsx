@@ -127,7 +127,7 @@ export default function MeShopPage() {
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-4"
             >
-              {shop.theme === "vintage" ? (
+              {isVintage ? (
                 <>
                   <VintageLoyaltyCard
                     shopName={shop.name}
