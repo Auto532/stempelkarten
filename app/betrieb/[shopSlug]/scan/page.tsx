@@ -441,24 +441,35 @@ export default function ScanPage() {
   }
 
   // ── Dashboard view ──────────────────────────────────────────────────────────
+  const V = isVintage ? {
+    card: { background: "#130A04", border: "1px solid #7A5C1244" },
+    cardHover: "#1C0E0688",
+    divider: "#7A5C1222",
+    text: "#E8D070",
+    textDim: "#7A5C12",
+    textBody: "#C8A86A",
+    icon: "#C49A2A",
+    badge: { background: "#C49A2A22", border: "1px solid #7A5C12", color: "#E8D070" },
+    input: { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" },
+    subCard: { background: "#1C0E0688", borderRadius: "0.75rem", padding: "0.75rem" },
+  } : null;
+
   return (
     <div className={`min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto space-y-6 ${isVintage ? "relative z-[2]" : ""}`}>
       {isVintage && <VintageBackground />}
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <p className="text-zinc-500 text-xs font-medium uppercase tracking-widest">Mitarbeiter</p>
-        <h1 className="text-2xl font-bold text-zinc-100 mt-1">{shop.name}</h1>
+        <p className="text-xs font-medium uppercase tracking-widest" style={{ color: V?.textDim ?? "#71717a" }}>Mitarbeiter</p>
+        <h1 className="text-2xl font-bold mt-1" style={{ color: V?.text ?? "#f4f4f5" }}>{shop.name}</h1>
       </motion.div>
 
       {/* Scan Button */}
       <motion.button
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        whileTap={{ scale: 0.97 }}
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} whileTap={{ scale: 0.97 }}
         onClick={() => setView("scanning")}
-        className="w-full bg-amber-400 hover:bg-amber-300 text-zinc-900 rounded-2xl p-5 flex items-center gap-4 transition-colors"
+        className="w-full text-zinc-900 rounded-2xl p-5 flex items-center gap-4 transition-colors"
+        style={{ background: isVintage ? "linear-gradient(135deg, #C49A2A, #7A5C12)" : "#fbbf24" }}
       >
         <div className="w-12 h-12 bg-zinc-900/20 rounded-xl flex items-center justify-center shrink-0">
           <ScanLine size={24} />
@@ -477,96 +488,144 @@ export default function ScanPage() {
           { label: "Stempel", value: totalStamps, icon: Stamp },
           { label: "Belohnungen", value: totalRewards, icon: Award },
         ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center">
-            <Icon size={18} className="text-amber-400 mx-auto mb-2" />
-            <p className="text-xl font-bold text-zinc-100">{value}</p>
-            <p className="text-[11px] text-zinc-500 mt-0.5">{label}</p>
+          <div key={label} className="rounded-2xl p-4 text-center" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
+            <Icon size={18} className="mx-auto mb-2" style={{ color: V?.icon ?? "#fbbf24" }} />
+            <p className="text-xl font-bold" style={{ color: V?.text ?? "#f4f4f5" }}>{value}</p>
+            <p className="text-[11px] mt-0.5" style={{ color: V?.textDim ?? "#71717a" }}>{label}</p>
           </div>
         ))}
       </motion.div>
 
       {/* Join QR */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-        className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
+        className="rounded-2xl p-5 space-y-4" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
         <div className="flex items-center gap-2">
-          <QrCode size={16} className="text-zinc-400" />
-          <span className="font-medium text-zinc-200 text-sm">Kunden-QR-Code</span>
+          <QrCode size={16} style={{ color: V?.icon ?? "#a1a1aa" }} />
+          <span className="font-medium text-sm" style={{ color: V?.text ?? "#e4e4e7" }}>Kunden-QR-Code</span>
         </div>
         <div className="flex justify-center">
           <QRImage value={`${typeof window !== "undefined" ? window.location.origin : ""}/join/${shopSlug}`} size={160} />
         </div>
-        <p className="text-center text-xs text-zinc-500">
+        <p className="text-center text-xs" style={{ color: V?.textDim ?? "#71717a" }}>
           Neue Kunden können diesen Code scannen um sich zu registrieren
         </p>
         <button
           onClick={() => printQR(shop.name, `${window.location.origin}/join/${shopSlug}`)}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-300 text-sm transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm transition-colors"
+          style={V ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C8A86A" } : { background: "#27272a", border: "1px solid #3f3f46", color: "#d4d4d8" }}
         >
-          <Printer size={15} className="text-amber-400" />
+          <Printer size={15} style={{ color: V?.icon ?? "#fbbf24" }} />
           Drucken / Druckvorschau
         </button>
       </motion.div>
 
-      {/* Treue Bonus */}
+      {/* Belohnungen (read-only) */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+        className="rounded-2xl overflow-hidden" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
+        <div className="px-5 py-4 flex items-center gap-2">
+          <Gift size={15} style={{ color: V?.icon ?? "#fbbf24" }} />
+          <span className="font-medium text-sm" style={{ color: V?.text ?? "#e4e4e7" }}>Belohnungen</span>
+        </div>
+        <div className="divide-y px-5 pb-4 space-y-2" style={{ borderColor: V?.divider }}>
+          {activeTiers.map((tier, i) => (
+            <div key={i} className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                  style={V ? { background: "#C49A2A22", border: "1px solid #7A5C12", color: "#E8D070" } : { background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24" }}>
+                  {tier.stamps}
+                </div>
+                <span className="text-sm" style={{ color: V?.textBody ?? "#d4d4d8" }}>{tier.text}</span>
+              </div>
+              <span className="text-[11px]" style={{ color: V?.textDim ?? "#71717a" }}>{tier.stamps} ✕</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Meilensteine (read-only) */}
+      {shop.milestonesEnabled && shop.milestones && shop.milestones.filter(m => m.enabled).length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+          className="rounded-2xl overflow-hidden" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
+          <div className="px-5 py-4 flex items-center gap-2">
+            <Award size={15} style={{ color: V?.icon ?? "#fbbf24" }} />
+            <span className="font-medium text-sm" style={{ color: V?.text ?? "#e4e4e7" }}>Treue-Meilensteine</span>
+          </div>
+          <div className="px-5 pb-4 space-y-2">
+            <p className="text-xs mb-3" style={{ color: V?.textDim ?? "#71717a" }}>
+              Basieren auf Gesamtstempeln — nie zurückgesetzt
+            </p>
+            {shop.milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps).map((m, i) => (
+              <div key={i} className="flex items-center justify-between py-2 border-t" style={{ borderColor: V?.divider ?? "#27272a" }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={V ? { background: "#C49A2A22", border: "1px solid #7A5C12", color: "#E8D070" } : { background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }}>
+                    {m.stamps}
+                  </div>
+                  <span className="text-sm" style={{ color: V?.textBody ?? "#d4d4d8" }}>{m.text}</span>
+                </div>
+                <span className="text-[11px]" style={{ color: V?.textDim ?? "#71717a" }}>ab {m.stamps}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Treue Bonus (Einlösungen) */}
       <AnimatePresence>
         {shop.bonusProgramEnabled && (
           <motion.div key="gifts" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            className="rounded-2xl overflow-hidden" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
             <button onClick={() => setShowGifts(v => !v)}
-              className="w-full flex items-center gap-2 px-5 py-4 hover:bg-zinc-800/30 transition-colors">
-              <Gift size={15} className="text-amber-400 shrink-0" />
-              <span className="font-medium text-zinc-200 text-sm flex-1 text-left">Treue Bonus</span>
+              className="w-full flex items-center gap-2 px-5 py-4 transition-colors text-left">
+              <Gift size={15} style={{ color: V?.icon ?? "#fbbf24" }} className="shrink-0" />
+              <span className="font-medium text-sm flex-1" style={{ color: V?.text ?? "#e4e4e7" }}>Treue Bonus (Einlösungen)</span>
               {redemptions && redemptions.length > 0 && (
-                <span className="text-xs text-zinc-600 mr-1">{redemptions.length}</span>
+                <span className="text-xs mr-1" style={{ color: V?.textDim ?? "#52525b" }}>{redemptions.length}</span>
               )}
-              <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showGifts ? "rotate-90" : ""}`} />
+              <ChevronRight size={13} style={{ color: V?.textDim ?? "#52525b" }} className={`transition-transform ${showGifts ? "rotate-90" : ""}`} />
             </button>
             <AnimatePresence>
               {showGifts && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <div className="divide-y divide-zinc-800/40 max-h-[320px] overflow-y-auto">
-                    {redemptions === undefined && <div className="px-5 py-6 text-center text-zinc-600 text-sm">Laden…</div>}
-                    {redemptions?.length === 0 && <div className="px-5 py-6 text-center text-zinc-600 text-sm">Noch keine Geschenke vergeben</div>}
+                  <div className="max-h-[320px] overflow-y-auto" style={{ borderTop: `1px solid ${V?.divider ?? "#27272a"}` }}>
+                    {redemptions === undefined && <div className="px-5 py-6 text-center text-sm" style={{ color: V?.textDim ?? "#52525b" }}>Laden…</div>}
+                    {redemptions?.length === 0 && <div className="px-5 py-6 text-center text-sm" style={{ color: V?.textDim ?? "#52525b" }}>Noch keine Einlösungen</div>}
                     {redemptions?.map((r) => {
                       const isOpen = openRedemptionId === r._id;
                       return (
-                        <div key={r._id}>
+                        <div key={r._id} style={{ borderBottom: `1px solid ${V?.divider ?? "#27272a"}` }}>
                           <button onClick={() => setOpenRedemptionId(isOpen ? null : r._id)}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 transition-colors text-left">
-                            <div className="w-8 h-8 rounded-full bg-amber-400/15 border border-amber-400/20 flex items-center justify-center shrink-0">
-                              <span className="text-xs font-bold text-amber-400">{r.customerName.charAt(0).toUpperCase()}</span>
+                            className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                              style={V ? { background: "#C49A2A22", border: "1px solid #7A5C12" } : { background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.2)" }}>
+                              <span className="text-xs font-bold" style={{ color: V?.icon ?? "#fbbf24" }}>{r.customerName.charAt(0).toUpperCase()}</span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-zinc-200 truncate">{r.customerName}</p>
-                              <p className="text-xs text-amber-400/80 truncate">{r.rewardText ?? shop.rewardText}</p>
+                              <p className="text-sm font-semibold truncate" style={{ color: V?.text ?? "#e4e4e7" }}>{r.customerName}</p>
+                              <p className="text-xs truncate" style={{ color: V?.icon ?? "#fbbf24" }}>{r.rewardText ?? shop.rewardText}</p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <p className="text-[11px] text-zinc-600">
+                              <p className="text-[11px]" style={{ color: V?.textDim ?? "#52525b" }}>
                                 {new Date(r.timestamp).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
                               </p>
-                              <ChevronRight size={13} className={`text-zinc-700 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                              <ChevronRight size={13} style={{ color: V?.textDim ?? "#3f3f46" }} className={`transition-transform ${isOpen ? "rotate-90" : ""}`} />
                             </div>
                           </button>
                           <AnimatePresence>
                             {isOpen && (
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                <div className="mx-4 mb-3 bg-zinc-800/70 rounded-xl p-3 space-y-1.5">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-zinc-500">Belohnung</span>
-                                    <span className="text-xs font-semibold text-amber-400">{r.rewardText ?? shop.rewardText}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-zinc-500">Datum</span>
-                                    <span className="text-xs text-zinc-300">
-                                      {new Date(r.timestamp).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-zinc-500">Uhrzeit</span>
-                                    <span className="text-xs text-zinc-300">
-                                      {new Date(r.timestamp).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
-                                    </span>
-                                  </div>
+                                <div className="mx-4 mb-3 rounded-xl p-3 space-y-1.5"
+                                  style={V ? { background: "#1C0E0688" } : { background: "#27272a" }}>
+                                  {[
+                                    { label: "Belohnung", value: r.rewardText ?? shop.rewardText, accent: true },
+                                    { label: "Datum", value: new Date(r.timestamp).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }), accent: false },
+                                    { label: "Uhrzeit", value: new Date(r.timestamp).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }), accent: false },
+                                  ].map(({ label, value, accent }) => (
+                                    <div key={label} className="flex justify-between items-center">
+                                      <span className="text-xs" style={{ color: V?.textDim ?? "#71717a" }}>{label}</span>
+                                      <span className="text-xs font-semibold" style={{ color: accent ? (V?.icon ?? "#fbbf24") : (V?.textBody ?? "#d4d4d8") }}>{value}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               </motion.div>
                             )}
@@ -577,7 +636,7 @@ export default function ScanPage() {
                   </div>
                   {redemptions && redemptions.length >= 10 && (
                     <button onClick={() => setShowAllRedemptions(v => !v)}
-                      className="w-full py-3 text-xs text-zinc-500 hover:text-amber-400 transition-colors border-t border-zinc-800/60">
+                      className="w-full py-3 text-xs transition-colors" style={{ color: V?.textDim ?? "#71717a", borderTop: `1px solid ${V?.divider ?? "#27272a"}` }}>
                       {showAllRedemptions ? "Weniger anzeigen" : "Alle anzeigen"}
                     </button>
                   )}
@@ -590,116 +649,77 @@ export default function ScanPage() {
 
       {/* Customer List */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-        className="card-3d bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        className="rounded-2xl overflow-hidden" style={V?.card ?? { background: "#18181b", border: "1px solid #27272a" }}>
         <button onClick={() => setShowCustomers(v => !v)}
-          className="w-full flex items-center gap-2 px-5 py-4 hover:bg-zinc-800/30 transition-colors">
-          <Users size={15} className="text-zinc-400 shrink-0" />
-          <span className="font-medium text-zinc-200 text-sm">Kunden</span>
-          {showLeads && (
-            <span className="flex items-center gap-1 text-[10px] text-amber-400">
-              <Eye size={10} /> Leads
-            </span>
-          )}
+          className="w-full flex items-center gap-2 px-5 py-4 transition-colors">
+          <Users size={15} style={{ color: V?.textDim ?? "#71717a" }} className="shrink-0" />
+          <span className="font-medium text-sm" style={{ color: V?.text ?? "#e4e4e7" }}>Kunden</span>
           <div className="ml-auto flex items-center gap-2">
             {readyCount > 0 && (
-              <span className="flex items-center gap-1 text-[10px] bg-amber-400/10 border border-amber-400/20 text-amber-400 px-2 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold"
+                style={V ? { background: "#C49A2A22", border: "1px solid #7A5C12", color: "#E8D070" } : { background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }}>
                 <Gift size={9} /> {readyCount} bereit
               </span>
             )}
-            <span className="text-xs text-zinc-600">{customers?.length ?? "–"}</span>
-            <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showCustomers ? "rotate-90" : ""}`} />
+            <span className="text-xs" style={{ color: V?.textDim ?? "#52525b" }}>{customers?.length ?? "–"}</span>
+            <ChevronRight size={13} style={{ color: V?.textDim ?? "#52525b" }} className={`transition-transform ${showCustomers ? "rotate-90" : ""}`} />
           </div>
         </button>
 
         <AnimatePresence>
           {showCustomers && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="px-5 pt-1 pb-3 border-b border-zinc-800">
+              <div className="px-5 pt-1 pb-3" style={{ borderBottom: `1px solid ${V?.divider ?? "#27272a"}` }}>
                 <div className="relative">
-                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: V?.textDim ?? "#52525b" }} />
                   <input
                     value={search} onChange={e => setSearch(e.target.value)}
                     placeholder="Suchen…"
-                    className="w-full pl-8 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40"
+                    className="w-full pl-8 pr-3 py-2 rounded-xl text-sm placeholder-zinc-600 focus:outline-none"
+                    style={V?.input ?? { background: "#27272a", border: "1px solid #3f3f46", color: "#d4d4d8" }}
                   />
                   {search && (
-                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400">
+                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: V?.textDim ?? "#52525b" }}>
                       <X size={13} />
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center px-4 py-2 border-b border-zinc-800/60">
+              <div className="flex items-center px-4 py-2" style={{ borderBottom: `1px solid ${V?.divider ?? "#27272a"}` }}>
                 <div className="w-7 shrink-0 mr-3" />
-                <span className="flex-1 text-[10px] text-zinc-600 uppercase tracking-wider">Kunde</span>
-                <span className="text-[10px] text-zinc-600 uppercase tracking-wider w-10 text-right mr-1">Stand</span>
-                {showLeads && <div className="w-4" />}
+                <span className="flex-1 text-[10px] uppercase tracking-wider" style={{ color: V?.textDim ?? "#52525b" }}>Kunde</span>
+                <span className="text-[10px] uppercase tracking-wider w-10 text-right mr-1" style={{ color: V?.textDim ?? "#52525b" }}>Stand</span>
               </div>
 
-              <div className="divide-y divide-zinc-800/40">
-                {customers === undefined && <div className="px-5 py-6 text-center text-zinc-600 text-sm">Laden...</div>}
-                {customers?.length === 0 && <div className="px-5 py-6 text-center text-zinc-600 text-sm">Noch keine Kunden</div>}
+              <div>
+                {customers === undefined && <div className="px-5 py-6 text-center text-sm" style={{ color: V?.textDim ?? "#52525b" }}>Laden...</div>}
+                {customers?.length === 0 && <div className="px-5 py-6 text-center text-sm" style={{ color: V?.textDim ?? "#52525b" }}>Noch keine Kunden</div>}
                 {customers !== undefined && filteredCustomers.length === 0 && search && (
-                  <div className="px-5 py-6 text-center text-zinc-600 text-sm">Keine Treffer für „{search}"</div>
+                  <div className="px-5 py-6 text-center text-sm" style={{ color: V?.textDim ?? "#52525b" }}>Keine Treffer für „{search}"</div>
                 )}
                 {filteredCustomers.map(({ customer, membership }, i) => {
                   if (!customer) return null;
-                  const isSelected = selectedCustomerId === customer._id;
                   const isReady = membership.currentStamps >= lowestTierStamps;
                   return (
-                    <motion.div key={membership._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i * 0.02, 0.2) }}>
-                      <button
-                        onClick={() => showLeads ? setSelectedCustomerId(isSelected ? null : customer._id) : undefined}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${showLeads ? "hover:bg-zinc-800/50 cursor-pointer" : "cursor-default"}`}
-                      >
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                          isReady ? "bg-amber-400 text-zinc-900" : "bg-zinc-800 text-amber-400 border border-zinc-700"
-                        }`}>
-                          {customer.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="flex-1 text-sm text-zinc-200 truncate">{customer.name}</span>
-                        {isReady && (
-                          <span className="shrink-0 text-[9px] bg-amber-400/15 text-amber-400 border border-amber-400/20 px-1.5 py-0.5 rounded-full font-bold">BEREIT</span>
-                        )}
-                        <span className="text-xs text-zinc-500 shrink-0 w-10 text-right">
-                          {membership.currentStamps}/{lowestTierStamps}
+                    <motion.div key={membership._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i * 0.02, 0.2) }}
+                      className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: `1px solid ${V?.divider ?? "#27272a22"}` }}>
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                        style={isReady
+                          ? { background: V?.icon ?? "#fbbf24", color: "#18181b" }
+                          : V ? { background: "#1C0E06", border: "1px solid #7A5C1244", color: "#C49A2A" } : { background: "#27272a", border: "1px solid #3f3f46", color: "#fbbf24" }}>
+                        {customer.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="flex-1 text-sm truncate" style={{ color: V?.textBody ?? "#d4d4d8" }}>{customer.name}</span>
+                      {isReady && (
+                        <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                          style={V ? { background: "#C49A2A22", border: "1px solid #7A5C12", color: "#E8D070" } : { background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }}>
+                          BEREIT
                         </span>
-                        {showLeads && (
-                          <ChevronRight size={13} className={`text-zinc-700 shrink-0 transition-transform ${isSelected ? "rotate-90" : ""}`} />
-                        )}
-                      </button>
-                      <AnimatePresence>
-                        {showLeads && isSelected && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-                            <div className="mx-4 mb-3 bg-zinc-800/70 rounded-xl p-4 space-y-3">
-                              <div className="flex items-center gap-2">
-                                <Phone size={13} className="text-amber-400" />
-                                <a href={`tel:${customer.phone}`} className="text-sm text-zinc-200 hover:text-amber-400 transition-colors">
-                                  {customer.phone}
-                                </a>
-                              </div>
-                              <div className="grid grid-cols-3 gap-2 text-center">
-                                {[
-                                  { label: "Aktuell", value: membership.currentStamps },
-                                  { label: "Gesamt", value: membership.totalStampsEver },
-                                  { label: "Belohnt", value: membership.rewardsRedeemed },
-                                ].map(({ label, value }) => (
-                                  <div key={label} className="bg-zinc-700/50 rounded-xl py-2.5">
-                                    <p className="text-base font-bold text-zinc-100">{value}</p>
-                                    <p className="text-[9px] text-zinc-500 mt-0.5 uppercase tracking-wide">{label}</p>
-                                  </div>
-                                ))}
-                              </div>
-                              {membership.lastStampAt && (
-                                <p className="text-[11px] text-zinc-600">
-                                  Letzter Stempel: {new Date(membership.lastStampAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                                </p>
-                              )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                      )}
+                      <span className="text-xs shrink-0 w-10 text-right" style={{ color: V?.textDim ?? "#71717a" }}>
+                        {membership.currentStamps}/{lowestTierStamps}
+                      </span>
                     </motion.div>
                   );
                 })}
@@ -707,7 +727,7 @@ export default function ScanPage() {
 
               {customers && customers.length >= 10 && (
                 <button onClick={() => setShowAllCustomers(v => !v)}
-                  className="w-full py-3 text-xs text-zinc-500 hover:text-amber-400 transition-colors border-t border-zinc-800/60">
+                  className="w-full py-3 text-xs transition-colors" style={{ color: V?.textDim ?? "#71717a", borderTop: `1px solid ${V?.divider ?? "#27272a"}` }}>
                   {showAllCustomers ? "Weniger anzeigen" : "Alle anzeigen"}
                 </button>
               )}
