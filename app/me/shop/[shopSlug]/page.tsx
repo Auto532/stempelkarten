@@ -89,24 +89,31 @@ export default function MeShopPage() {
       </AnimatePresence>
 
       {/* Zurück-Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 mb-7"
-      >
-        <button
-          onClick={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:border-zinc-700 transition-colors shrink-0"
-        >
-          <ArrowLeft size={16} className="text-zinc-400" />
-        </button>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-600">
-            Stempelkarte
-          </p>
-          <h1 className="text-base font-bold text-zinc-100 leading-tight">{shop.name}</h1>
-        </div>
-      </motion.div>
+      {(() => {
+        const showBack = showQR || (data.memberships.length > 1);
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 mb-7"
+          >
+            {showBack && (
+              <button
+                onClick={() => router.push("/me")}
+                className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:border-zinc-700 transition-colors shrink-0"
+              >
+                <ArrowLeft size={16} className="text-zinc-400" />
+              </button>
+            )}
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-600">
+                Stempelkarte
+              </p>
+              <h1 className="text-base font-bold text-zinc-100 leading-tight">{shop.name}</h1>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* QR oder Karte */}
       <div className="flex-1 flex flex-col">
