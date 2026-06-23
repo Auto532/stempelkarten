@@ -339,6 +339,7 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
             <label className="text-xs text-zinc-500 block mb-1.5">Stempel bis Belohnung</label>
             <input type="number" min={1} max={50} value={stampsRequired}
               onChange={e => setStampsRequired(Number(e.target.value))}
+              onFocus={e => e.target.select()}
               className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 focus:outline-none focus:border-amber-400/50 text-sm" />
           </div>
           <div>
@@ -354,6 +355,7 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500">€</span>
                 <input type="number" min={1} max={9999} value={stampValue}
                   onChange={e => setStampValue(e.target.value === "" ? "" : Number(e.target.value))}
+                  onFocus={e => e.target.select()}
                   placeholder="z.B. 10"
                   className="w-full pl-7 pr-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/50 text-sm" />
               </div>
@@ -385,6 +387,7 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
                   <div className="flex gap-2 items-center">
                     <input type="number" min={1} value={tier.stamps}
                       onChange={e => setTiers(tiers.map((t, j) => j === i ? { ...t, stamps: Number(e.target.value) } : t))}
+                      onFocus={e => e.target.select()}
                       className="w-16 px-2 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-xs focus:outline-none text-center" />
                     <span className="text-xs text-zinc-500">Stempel</span>
                   </div>
@@ -418,6 +421,7 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
                   <div className="flex gap-2 items-center">
                     <input type="number" min={1} value={m.stamps}
                       onChange={e => setMilestones(milestones.map((ms, j) => j === i ? { ...ms, stamps: Number(e.target.value) } : ms))}
+                      onFocus={e => e.target.select()}
                       className="w-16 px-2 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-xs focus:outline-none text-center" />
                     <span className="text-xs text-zinc-500">Stempel gesamt</span>
                   </div>
@@ -640,7 +644,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
       ))}
       <div>
         <label className="block text-xs text-zinc-500 mb-1.5">Stempel bis Belohnung</label>
-        <input type="number" min={1} max={50} value={stampsRequired} onChange={e => setStampsRequired(Number(e.target.value))} required
+        <input type="number" min={1} max={50} value={stampsRequired} onChange={e => setStampsRequired(Number(e.target.value))} onFocus={e => e.target.select()} required
           className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 focus:outline-none focus:border-amber-400/50" />
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}

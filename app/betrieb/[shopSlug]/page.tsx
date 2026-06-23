@@ -397,6 +397,7 @@ export default function BetriebDashboard() {
                 </label>
                 <input type="number" min={1} max={50} value={stampsRequired}
                   onChange={e => setStampsRequired(Number(e.target.value))}
+                  onFocus={e => e.target.select()}
                   className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none"
                   style={inp} />
               </div>
@@ -418,6 +419,7 @@ export default function BetriebDashboard() {
                     <input
                       type="number" min={1} max={9999} value={stampValue}
                       onChange={e => setStampValue(e.target.value === "" ? "" : Number(e.target.value))}
+                      onFocus={e => e.target.select()}
                       placeholder="z.B. 10"
                       className="w-full pl-8 pr-4 py-2.5 rounded-xl text-sm focus:outline-none"
                       style={inp}
@@ -471,6 +473,7 @@ export default function BetriebDashboard() {
                           <div className="flex gap-2">
                             <input type="number" min={1} max={100} value={tier.stamps}
                               onChange={e => setTiers(p => p.map((t, idx) => idx === i ? { ...t, stamps: Number(e.target.value) } : t))}
+                              onFocus={e => e.target.select()}
                               className="w-16 px-2 py-1.5 rounded-lg text-sm text-center focus:outline-none" style={inp} />
                             <input value={tier.text}
                               onChange={e => setTiers(p => p.map((t, idx) => idx === i ? { ...t, text: e.target.value } : t))}
@@ -524,6 +527,7 @@ export default function BetriebDashboard() {
                       <div className="flex gap-2">
                         <input type="number" min={1} value={m.stamps}
                           onChange={e => setMilestones(p => p.map((t, idx) => idx === i ? { ...t, stamps: Number(e.target.value) } : t))}
+                          onFocus={e => e.target.select()}
                           className="w-16 px-2 py-1.5 rounded-lg text-sm text-center focus:outline-none" style={inp} />
                         <input value={m.text}
                           onChange={e => setMilestones(p => p.map((t, idx) => idx === i ? { ...t, text: e.target.value } : t))}

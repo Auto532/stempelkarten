@@ -42,6 +42,80 @@ const COLOR_PRESETS = [
   { name: "Lime",    value: "#84cc16" },
 ];
 
+// ─── Level System ────────────────────────────────────────────────────────────
+
+const LEVELS = [
+  { min: 0,   max: 9,        label: "Neuling"     },
+  { min: 10,  max: 24,       label: "Stammgast"   },
+  { min: 25,  max: 49,       label: "Treue-Kunde" },
+  { min: 50,  max: 99,       label: "Loyaler"     },
+  { min: 100, max: 199,      label: "VIP"         },
+  { min: 200, max: Infinity, label: "Legende"     },
+];
+
+function LevelCard({ totalStamps, accent }: { totalStamps: number; accent: string }) {
+  const idx = LEVELS.findIndex(l => totalStamps <= l.max);
+  const level = LEVELS[idx];
+  const nextLevel = LEVELS[idx + 1] ?? null;
+  const progress = nextLevel
+    ? (totalStamps - level.min) / (nextLevel.min - level.min)
+    : 1;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 }}
+      className="rounded-2xl p-4 mb-6 flex items-center gap-4"
+      style={{
+        background: hexToRgba(accent, 0.06),
+        border: `1px solid ${hexToRgba(accent, 0.2)}`,
+      }}
+    >
+      {/* Level badge */}
+      <div
+        className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0"
+        style={{
+          background: hexToRgba(accent, 0.14),
+          border: `1.5px solid ${hexToRgba(accent, 0.35)}`,
+        }}
+      >
+        <span className="text-[8px] font-bold uppercase tracking-wider leading-none mb-0.5" style={{ color: hexToRgba(accent, 0.6) }}>
+          LVL
+        </span>
+        <span className="text-2xl font-black leading-none" style={{ color: accent }}>
+          {idx + 1}
+        </span>
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-2 mb-1.5">
+          <span className="text-sm font-bold text-zinc-100">{level.label}</span>
+          <span className="text-[10px] font-bold tabular-nums shrink-0" style={{ color: hexToRgba(accent, 0.55) }}>
+            {totalStamps} Stempel
+          </span>
+        </div>
+        <div className="h-1.5 rounded-full overflow-hidden mb-1.5" style={{ background: hexToRgba(accent, 0.1) }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${progress * 100}%` }}
+            transition={{ duration: 0.9, delay: 0.25, ease: "easeOut" }}
+            className="h-full rounded-full"
+            style={{ background: accent }}
+          />
+        </div>
+        <p className="text-[10px]" style={{ color: hexToRgba(accent, 0.45) }}>
+          {nextLevel
+            ? `Noch ${nextLevel.min - totalStamps} Stempel bis „${nextLevel.label}"`
+            : "Höchstes Level erreicht"
+          }
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Background presets ───────────────────────────────────────────────────────
 
 const BG_PRESETS = [
@@ -532,6 +606,7 @@ export default function MePage() {
   }
 
   const { customer } = data;
+  const totalStamps = allMemberships.reduce((s, e) => s + e.membership.totalStampsEver, 0);
 
   if (allMemberships.length === 0) {
     return (
@@ -592,6 +667,9 @@ export default function MePage() {
           <Settings size={16} className="text-zinc-500" />
         </motion.button>
       </motion.div>
+
+      {/* Level */}
+      <LevelCard totalStamps={totalStamps} accent={personalAccent} />
 
       {/* Shop list */}
       <div className="space-y-3">
