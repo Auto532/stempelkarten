@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { BeatesGrillBackground, BeatesGrillLoyaltyCard, BeatesGrillRewardBanner, BeatesGrillMilestonesSection } from "./beatesGrill";
+import { AsiaTasteBackground, AsiaTasteLoyaltyCard, AsiaTasteRewardBanner, AsiaTasteMilestonesSection } from "./asiaTaste";
 import type { ComponentType } from "react";
 
 type Star = { id: number; x: number; y: number; size: number; delay: number; dur: number };
@@ -106,6 +107,28 @@ export const DEFAULT_COLORS: ThemeColors = {
 };
 
 const THEMES: Record<string, ThemeConfig> = {
+  "asia-taste": {
+    colors: {
+      accent:      "#F0844F",
+      accentDim:   "#D2603A",
+      accentFaint: "#4a2518",
+      text:        "#F5ECD6",
+      textBody:    "#F4D9AE",
+      cardBg:      "#16211a",
+      dark:        "#101813",
+      divider:     "#6FB08320",
+      gradient:    "linear-gradient(135deg, #F0844F, #6FB083)",
+      card:    { background: "#16211a", border: "1px solid #6FB08326" },
+      sub:     { background: "#101813", border: "1px solid #D2603A2e" },
+      input:   { background: "#101813", border: "1px solid #6FB08340", color: "#F5ECD6" },
+      badge:   { background: "#6FB08318", border: "1px solid #6FB08330", color: "#6FB083" },
+      subCard: { background: "#16211a88", borderRadius: "0.75rem", padding: "0.75rem" },
+    },
+    Background: AsiaTasteBackground,
+    Card:       AsiaTasteLoyaltyCard,
+    Banner:     AsiaTasteRewardBanner,
+    Milestones: AsiaTasteMilestonesSection,
+  },
   "beates-grill": {
     colors: {
       accent:      "#E8A020",

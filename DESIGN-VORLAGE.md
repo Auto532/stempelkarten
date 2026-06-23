@@ -1,160 +1,120 @@
-# Design-Vorlage — Neues Custom-Theme (Stand: 2026-06-22)
+# Design-Vorlage — Neues Theme erstellen
 
-Sag Claude in einer neuen Session:
-> „Lies DESIGN-VORLAGE.md und erstelle ein neues Theme für [Shop-Name]. Design: [Beschreibung / Bild]"
+So rufst du eine Design-Session auf:
 
----
+> „Lies DESIGN-VORLAGE.md und erstelle ein neues Theme `<key>` für [Shop-Name].
+> Design: [Bild / Screenshot / Beschreibung]. Hauptfarbe: [#Hex optional]."
 
-## 1. Was du Claude mitgibst
+## 0. Was ein Theme darf — und was nicht
 
-**Pflicht:**
-- Shop-Name + Slug (muss bereits in der DB existieren)
-- Design-Input: Bild / Screenshot / Moodboard **oder** Kurzbeschreibung (Stil, Farben)
+Ein Theme **stylt nur Bestehendes um**: Hintergrund, Kartenfläche, Stempel-Look,
+Belohnungs-Banner, Meilensteine. **Keine neuen Bereiche, keine neuen Felder.**
+Struktur bleibt, nur die Optik wechselt. (Gleicher Körper, anderes Outfit — die
+Stempelkarte ist der Körper.)
 
-**Optional:**
-- Hauptfarbe als Hex (z. B. `#0066FF`) — sonst leitet Claude sie aus dem Design ab
-- Basis-Theme als Referenz: „wie vintage, aber grün"
+## 1. So läuft es (Registry)
 
----
+- `app/me/themes/registry.tsx` → `THEMES`-Record + `getShopTheme(shop)`.
+- Jedes Theme = eine Datei `app/me/themes/<key>.tsx` mit 4 Exports.
+- Seiten: `const theme = getShopTheme(shop)` → `theme ? <theme.Card…/> : <Default…/>`.
+- **Referenz: `app/me/themes/beatesGrill.tsx`** (NICHT vintage — existiert nicht).
+- Keine `is[Theme]`-Booleans, keine 7 Seiten einzeln.
 
-## 2. Schritt-für-Schritt was Claude ändert
+## 2. Drei Schritte
 
-### Schritt 1 — Shop in DB updaten
+### Schritt 1 — Theme-Datei `app/me/themes/<key>.tsx`
 
-In `convex/seed.ts` oder via Admin-App:
+`beatesGrill.tsx` als Vorlage. Oben Palette als Consts (dort `A/AD/AF/T/TB/BG/C/D`) —
+**hier lebt die sichtbare Optik.** Dann vier Exports, Props aus `./registry`:
+
 ```ts
-theme: "modern",          // Name des neuen Themes (z. B. "modern", "neon", "clean")
-accentColor: "#0066FF",   // Hauptfarbe
+import type { ThemeCardProps, ThemeBannerProps, ThemeMilestonesProps } from "./registry";
+
+export function <Key>Background() { /* fixed inset-0 z-[-1] pointer-events-none */ }
+export function <Key>LoyaltyCard(p: ThemeCardProps) { /* Raster + Fortschritt + optional QR */ }
+export function <Key>RewardBanner(p: ThemeBannerProps) { /* Belohnungs-Tiers */ }
+export function <Key>MilestonesSection(p: ThemeMilestonesProps) { /* nur wenn milestonesEnabled */ }
+```
+
+Props (exakt aus `registry.tsx`):
+- ThemeCardProps: `shopName, stampsRequired, currentStamps, animateIndex, onShowQR?, qrToken, hideQR?, rewardTiers?, accentColor?`
+- ThemeBannerProps: `rewardText, stampsRequired, rewardTiers?`
+- ThemeMilestonesProps: `milestones, totalStampsEver`
+
+Karten-Logik **aus beatesGrill übernehmen, nicht neu erfinden:**
+- aktive Tiers = `rewardTiers.filter(t => t.enabled)` sortiert, sonst `[{ stamps: stampsRequired, text: rewardText }]`
+- `maxStamps` = höchstes aktives Tier
+- Slot `i` gefüllt wenn `i < currentStamps`; Tier-Grenzen markieren
+
+### Schritt 2 — In `registry.tsx` registrieren
+
+```ts
+import { <Key>Background, <Key>LoyaltyCard, <Key>RewardBanner, <Key>MilestonesSection } from "./<key>";
+
+const THEMES: Record<string, ThemeConfig> = {
+  // … bestehende
+  "<key>": {
+    colors: { /* Palette spiegeln — Hinweis unten */ },
+    Background: <Key>Background,
+    Card:       <Key>LoyaltyCard,
+    Banner:     <Key>RewardBanner,
+    Milestones: <Key>MilestonesSection,
+  },
+};
+```
+
+> Hinweis `colors`: Pflichtfeld für den Typ `ThemeConfig`, wird aber aktuell **nicht
+> gerendert** (kein Code liest `theme.colors`). Optik kommt aus den Consts in der
+> Theme-Datei. Trotzdem passend ausfüllen → bereit für später.
+
+### Schritt 3 — Shop auf das Theme stellen
+
+Admin-App oder `convex/seed.ts`:
+
+```ts
+theme: "<key>",
+accentColor: "#……",
 customDesignEnabled: true,
 ```
 
-Danach: `npx convex deploy --yes`
+Bei seed: danach `npx convex deploy --yes`.
 
-### Schritt 2 — Theme-Datei erstellen
+## 3. NICHT mehr nötig
 
-`app/me/themes/[theme].tsx` — Vorlage: `app/me/themes/vintage.tsx`
+- ❌ `is[Theme]`-Booleans · ❌ 7 Seiten einzeln · ❌ „3 Call-Sites" · ❌ `vintage.tsx`
 
-**Muss exportieren:**
-```ts
-export function [Theme]Background() { ... }
-// → fixed inset-0 z-[-1] pointer-events-none (Hintergrundbild/-effekt)
+## 4. Automatisch
 
-export function [Theme]LoyaltyCard({
-  shopName, stampsRequired, currentStamps, animateIndex,
-  onShowQR, qrToken, hideQR,
-  rewardTiers,   // Array<{stamps, text, enabled}> | undefined
-  accentColor,   // Hex-String
-}) { ... }
-// → totalSlots = max(rewardTiers.stamps) wenn Tiers aktiv, sonst stampsRequired
-// → Tier-Grenzen mit Trophy-Icon markieren
+- `getShopTheme` → `null` wenn Toggle aus → Default (Sternenhimmel + generische `LoyaltyCard`).
+- No-Flash über `app/layout.tsx` + `globals.css`.
 
-export function [Theme]RewardBanner({
-  rewardText, stampsRequired, rewardTiers, accentColor,
-}) { ... }
+## 5. Theme-Abdeckung (wichtig fürs Testen)
 
-export function [Theme]MilestonesSection({   // nur wenn milestonesEnabled
-  milestones, totalStampsEver,
-}) { ... }
-```
-
-### Schritt 3 — 7 Seiten updaten
-
-In **jeder** Seite (vor allen Early Returns, nach den useQuery-Hooks):
-
-```ts
-import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
-useShopThemeSync(shop);
-
-const is[Theme] = !!shop.customDesignEnabled && shop.theme === "[theme]";
-```
-
-**Seiten:**
-
-| Datei | Was sich ändert |
+| Seite | Theme? |
 |---|---|
-| `app/me/shop/[shopSlug]/page.tsx` | Background, LoyaltyCard, RewardBanner |
-| `app/stamp/[qrToken]/page.tsx` | Background, Card-Preview, rewardTiers-Prop |
-| `app/betrieb/[shopSlug]/scan/page.tsx` | Background, Dashboard-Karten, Scanner |
-| `app/betrieb/[shopSlug]/page.tsx` | Background, Inhaber-Dashboard |
-| `app/join/[shopSlug]/page.tsx` | Background, Inputs, Buttons, Texte |
-| `app/me/impressum/[shopSlug]/page.tsx` | Background, Textfarben |
-| `app/me/datenschutz/[shopSlug]/page.tsx` | Background, Textfarben |
+| `/me/shop/[slug]` (Kunde Detail) | ✅ |
+| `/stamp/[qrToken]` | ✅ |
+| `/betrieb/[slug]/scan` (Mitarbeiter) | ✅ |
+| `/me/impressum/[slug]`, `/me/datenschutz/[slug]` | ✅ |
+| `/join/[slug]` (Registrierung) | ❌ noch nicht |
+| `/betrieb/[slug]` (Inhaber-Dashboard) | ❌ noch nicht |
+| `/me` (Wallet-Übersicht) | ➖ bewusst Default (persönlich) |
 
-**Wrapper-Pattern (alle 7 Seiten):**
-```tsx
-<div className={`min-h-screen ... ${is[Theme] ? "relative z-[2]" : ""}`}>
-  {is[Theme] && <[Theme]Background />}
-  ...
-</div>
-```
+## 6. Stempel-Icons
 
-**rewardTiers-Prop an LoyaltyCard (3 Call-Sites):**
-```tsx
-// app/me/shop/[shopSlug]/page.tsx
-<[Theme]LoyaltyCard ... rewardTiers={shop.rewardTiers} accentColor={shop.accentColor} />
+`scissors · coffee · pizza · dumbbell · flower · shopping · car · utensils · book · flame · star · bike · shirt · stamp`
 
-// app/stamp/[qrToken]/page.tsx
-<[Theme]LoyaltyCard ... rewardTiers={shop.rewardTiers as ...} accentColor={shop.accentColor} />
+## 7. Bestehende Themes
 
-// app/betrieb/[shopSlug]/scan/page.tsx
-<[Theme]LoyaltyCard ... rewardTiers={shop.rewardTiers} accentColor={shop.accentColor} />
-```
+| Key | Stil | Datei |
+|---|---|---|
+| `beates-grill` | Grill, Glüh-Münzen, Flamme | `app/me/themes/beatesGrill.tsx` |
 
-### Schritt 4 — Deploy + Push
+## 8. Checkliste
 
-```bash
-git add .
-git commit -m "feat: Theme [name] für [Shop]"
-git push origin master
-# Convex nur wenn convex/ geändert:
-npx convex deploy --yes
-```
-
----
-
-## 3. Was automatisch funktioniert (kein Anpassen nötig)
-
-- **No-Flash**: `app/layout.tsx` inline-script + `globals.css` → StarField versteckt sich sofort
-- **useShopThemeSync**: generischer Hook, kein Anpassen
-- **Toggle**: Admin-App → "Eigenes Design" EIN/AUS → sofort auf allen Seiten
-
----
-
-## 4. Bestehende Themes
-
-| Theme | Stil | accentColor default | Datei |
-|---|---|---|---|
-| `vintage` | Leder, Gold, Bronze-Münzen | `#C49A2A` | `app/me/themes/vintage.tsx` |
-
----
-
-## 5. Verfügbare Stempel-Icons
-
-`scissors` · `coffee` · `pizza` · `dumbbell` · `flower` · `shopping` · `car` · `utensils` · `book` · `flame` · `star` · `bike` · `shirt` · `stamp`
-
----
-
-## 6. Checkliste für Claude
-
-**Backend:**
-- [ ] `theme` + `accentColor` in DB setzen
-- [ ] `npx convex deploy --yes`
-
-**Frontend:**
-- [ ] `app/me/themes/[theme].tsx` erstellen (Background, LoyaltyCard, RewardBanner, MilestonesSection)
-- [ ] `useShopThemeSync` + `is[Theme]` in alle 7 Seiten
-- [ ] Wrapper `relative z-[2]` + Background in alle 7 Seiten
-- [ ] `rewardTiers` + `accentColor` an LoyaltyCard in 3 Call-Sites
-- [ ] Styling (Inputs, Buttons, Texte) in alle 7 Seiten
-
-**Deploy:**
+- [ ] `app/me/themes/<key>.tsx` — Consts oben, 4 Exports, Props aus registry, Logik aus beatesGrill
+- [ ] `registry.tsx` — Import + `THEMES`-Eintrag (inkl. `colors`-Pflichtfeld)
+- [ ] Shop: `theme` + `accentColor` + `customDesignEnabled`
+- [ ] seed → `npx convex deploy --yes`
+- [ ] Toggle an → Theme auf `/me/shop` + `/stamp` + `/scan`; Toggle aus → Default, kein Leak
 - [ ] `git push origin master`
-
-**Test:**
-- [ ] Toggle EIN → Theme auf allen Seiten, kein Flash beim Laden
-- [ ] Toggle AUS → Default (Sternenhimmel), kein Design-Leak
-- [ ] Bonus-Toggle AUS → nur Basis-Tier auf Karte
-- [ ] `/join/[slug]` → Registrierung im Theme
-- [ ] `/me/shop/[slug]` → Stempelkarte korrekt
-- [ ] `/betrieb/[slug]/scan` → Scanner + Dashboard im Theme
-- [ ] `/betrieb/[slug]` → Inhaber-App im Theme
