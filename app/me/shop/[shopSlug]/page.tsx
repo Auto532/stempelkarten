@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
-import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection } from "../../components";
+import { ArrowLeft, Gift, Check } from "lucide-react";
+import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection, getActiveTiers } from "../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
@@ -18,6 +18,11 @@ export default function MeShopPage() {
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showRedeemConfirm, setShowRedeemConfirm] = useState(false);
+  const [showRedeemSuccess, setShowRedeemSuccess] = useState(false);
+  const [redeemedText, setRedeemedText] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
+  const customerRedeem = useMutation(api.memberships.customerRedeemReward);
 
   useEffect(() => {
     if (searchParams.get("qr") === "1") setShowQR(true);
@@ -85,6 +90,28 @@ export default function MeShopPage() {
   const theme = getShopTheme(shop);
   const c = theme?.colors ?? DEFAULT_COLORS;
 
+  const activeTiers = getActiveTiers({
+    stampsRequired: shop.stampsRequired,
+    rewardText: shop.rewardText,
+    rewardTiers: shop.bonusProgramEnabled ? shop.rewardTiers : undefined,
+  });
+  const availableReward = activeTiers.find(t => membership.currentStamps >= t.stamps) ?? null;
+
+  const handleRedeem = async () => {
+    if (!qrToken) return;
+    setRedeeming(true);
+    try {
+      const result = await customerRedeem({ qrToken, membershipId: membership._id });
+      setRedeemedText(result?.rewardText ?? availableReward?.text ?? "");
+      setShowRedeemConfirm(false);
+      setShowRedeemSuccess(true);
+    } catch {
+      // server validation handles edge cases
+    } finally {
+      setRedeeming(false);
+    }
+  };
+
   return (
     <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col relative ${theme ? "z-[2]" : ""}`}>
 
@@ -92,6 +119,103 @@ export default function MeShopPage() {
 
       <AnimatePresence>
         {showStampOverlay && <StampOverlay onDone={() => setShowStampOverlay(false)} />}
+      </AnimatePresence>
+
+      {/* Erfolgs-Overlay: Belohnung eingelöst */}
+      <AnimatePresence>
+        {showRedeemSuccess && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/96 backdrop-blur-md px-6"
+          >
+            <motion.div
+              initial={{ scale: 0.3, rotate: -8 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6"
+              style={{ background: `${c.accent}18`, border: `2px solid ${c.accent}40` }}
+            >
+              <Gift size={48} style={{ color: c.accent }} />
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              className="text-center"
+            >
+              <p className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: `${c.accent}99` }}>
+                Belohnung eingelöst
+              </p>
+              <h2 className="text-2xl font-black text-white leading-tight mb-1">{redeemedText}</h2>
+              <p className="text-zinc-500 text-sm">bei {shop.name}</p>
+            </motion.div>
+
+            <div className="w-16 h-px bg-zinc-800 my-8" />
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+              className="text-center mb-10"
+            >
+              <div className="flex items-center gap-2 justify-center mb-2">
+                <div className="w-2 h-2 rounded-full bg-green-400" />
+                <span className="text-green-400 text-xs font-semibold">Aktiv</span>
+              </div>
+              <p className="text-zinc-500 text-sm">Zeig diesen Bildschirm dem Mitarbeiter im Laden</p>
+            </motion.div>
+
+            <motion.button
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+              onClick={() => setShowRedeemSuccess(false)}
+              className="w-full max-w-xs py-4 rounded-2xl text-base font-bold text-zinc-900"
+              style={{ background: c.accent }}
+            >
+              Fertig
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bestätigungs-Sheet */}
+      <AnimatePresence>
+        {showRedeemConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 flex flex-col justify-end"
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemConfirm(false)} />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="relative bg-zinc-900 rounded-t-3xl px-5 pt-5 pb-10 max-w-sm w-full mx-auto"
+              style={{ border: "1px solid #27272a", borderBottom: "none" }}
+            >
+              <div className="w-10 h-1 bg-zinc-700 rounded-full mx-auto mb-5" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: `${c.accent}15`, border: `1px solid ${c.accent}30` }}>
+                  <Gift size={22} style={{ color: c.accent }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-0.5">Belohnung einlösen</p>
+                  <p className="text-base font-bold text-zinc-100 truncate">{availableReward?.text}</p>
+                </div>
+              </div>
+              <p className="text-zinc-500 text-sm mb-6">
+                Deine Stempel werden abgezogen. Zeig den nächsten Bildschirm dem Mitarbeiter — der gibt dir dann deine Belohnung.
+              </p>
+              <button
+                onClick={handleRedeem}
+                disabled={redeeming}
+                className="w-full py-3.5 rounded-2xl text-base font-bold text-zinc-900 mb-2 disabled:opacity-60"
+                style={{ background: c.accent }}
+              >
+                {redeeming ? "Einlösen…" : "Jetzt einlösen"}
+              </button>
+              <button onClick={() => setShowRedeemConfirm(false)} className="w-full py-2.5 text-sm text-zinc-500">
+                Abbrechen
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Zurück-Header */}
@@ -157,6 +281,21 @@ export default function MeShopPage() {
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-4"
             >
+              {availableReward && (
+                <motion.button
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowRedeemConfirm(true)}
+                  className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 text-base font-bold text-zinc-900"
+                  style={{ background: c.accent }}
+                >
+                  <Gift size={18} />
+                  Belohnung einlösen
+                </motion.button>
+              )}
+
               {theme ? (
                 <>
                   <theme.Card

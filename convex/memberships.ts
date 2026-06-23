@@ -111,6 +111,48 @@ export const redeemReward = mutation({
   },
 });
 
+export const customerRedeemReward = mutation({
+  args: { qrToken: v.string(), membershipId: v.id("memberships") },
+  handler: async (ctx, { qrToken, membershipId }) => {
+    const customer = await ctx.db
+      .query("customers")
+      .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
+      .unique();
+    if (!customer) throw new Error("Kunde nicht gefunden");
+
+    const membership = await ctx.db.get(membershipId);
+    if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
+    if (membership.customerId !== customer._id) throw new Error("Nicht berechtigt");
+
+    const shop = await ctx.db.get(membership.shopId);
+    if (!shop) throw new Error("Shop nicht gefunden");
+
+    const activeTiers = (shop.rewardTiers ?? [])
+      .filter((t) => t.enabled)
+      .sort((a, b) => a.stamps - b.stamps);
+
+    const baseTier = { stamps: shop.stampsRequired, text: shop.rewardText };
+    const tiers = activeTiers.length > 0 ? activeTiers : [baseTier];
+    const eligible = tiers.find((t) => membership.currentStamps >= t.stamps);
+    if (!eligible) throw new Error("Keine Belohnung verfügbar");
+
+    const carryOver = Math.max(0, membership.currentStamps - eligible.stamps);
+    await ctx.db.patch(membershipId, {
+      currentStamps: carryOver,
+      rewardsRedeemed: membership.rewardsRedeemed + 1,
+    });
+    await ctx.db.insert("stampEvents", {
+      membershipId,
+      shopId: membership.shopId,
+      type: "redeem",
+      rewardText: eligible.text,
+      timestamp: Date.now(),
+    });
+
+    return { rewardText: eligible.text };
+  },
+});
+
 export const getRedemptionsForShop = query({
   args: { shopId: v.id("shops"), adminToken: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminToken, limit }) => {
