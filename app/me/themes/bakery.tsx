@@ -4,14 +4,14 @@ import { motion } from "framer-motion";
 import { Gift, Award, QrCode } from "lucide-react";
 import type { ThemeCardProps, ThemeBannerProps, ThemeMilestonesProps } from "./registry";
 
-const A   = "#c96a00";  // kräftigeres Bäcker-Gold
-const AD  = "#7c2d12";  // dunkles Rotbraun für Sekundärtext
-const AF  = "#451a03";  // sehr dunkles Braun für Hints
-const T   = "#1c0800";  // fast schwarz-braun für Haupttext
-const TB  = "#451a03";  // dunkles Braun für sekundäre Labels
-const BG  = "#fef3c7";
-const C   = "#fffef8";  // reines Weiß leicht warm für Karte (hebt sich von BG ab)
-const C2  = "#fff8e6";
+const A   = "#b45309";  // satteres Amber
+const AD  = "#7c2d12";  // dunkles Rotbraun
+const AF  = "#3b0d00";  // sehr dunkles Braun
+const T   = "#1a0700";  // fast Schwarz für maximalen Kontrast
+const TB  = "#3b0d00";  // dunkelbraun sekundär
+const BG  = "#f0c040";  // satt goldgelb — klar sichtbarer Hintergrund
+const C   = "#fffdf0";  // warmes Weiß — Card hebt sich klar ab
+const C2  = "#fef9d0";
 
 function BroetchenIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
@@ -25,7 +25,7 @@ function BroetchenIcon({ className, style }: { className?: string; style?: React
 export function BakeryBackground() {
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-[-1]">
-      <div className="absolute inset-0" style={{ background: `linear-gradient(175deg, ${BG} 0%, #fde68a 55%, ${BG} 100%)` }} />
+      <div className="absolute inset-0" style={{ background: `linear-gradient(175deg, #e8b030 0%, ${BG} 45%, #d4960a 100%)` }} />
 
       {[0, 1, 2].map((i) => (
         <motion.div key={i}
@@ -77,8 +77,8 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
       <div className="relative p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: TB }}>Stempelkarte</p>
-            <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: AD }}>Stempelkarte</p>
+            <h2 className="text-xl font-black leading-tight" style={{ color: T }}>{shopName}</h2>
           </div>
           {!hideQR && onShowQR && (
             <button onClick={onShowQR} className="w-9 h-9 rounded-xl flex items-center justify-center"
