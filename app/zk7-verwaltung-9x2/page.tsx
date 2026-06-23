@@ -760,6 +760,104 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
   );
 }
 
+// ─── StempelTab ───────────────────────────────────────────────────────────────
+
+function StempelTab({ shops, adminSecret }: { shops: Doc<"shops">[] | undefined; adminSecret: string }) {
+  const adminStamp = useMutation(api.memberships.adminStampForCustomer);
+  const [selectedShopId, setSelectedShopId] = useState<Id<"shops"> | null>(null);
+  const [qrToken, setQrToken] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("adminTestQrToken") ?? "" : ""
+  );
+  const [stamping, setStamping] = useState(false);
+  const [result, setResult] = useState<{ rewardReached: boolean; currentStamps: number; stampsRequired: number; customerName: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const saveQrToken = (token: string) => {
+    setQrToken(token);
+    if (token) localStorage.setItem("adminTestQrToken", token);
+    else localStorage.removeItem("adminTestQrToken");
+  };
+
+  const handleStamp = async () => {
+    if (!selectedShopId || !qrToken.trim()) return;
+    setStamping(true); setError(null); setResult(null);
+    try {
+      const raw = qrToken.trim();
+      const token = raw.includes("/stamp/") ? raw.split("/stamp/")[1].split("?")[0] : raw;
+      const res = await adminStamp({ adminSecret, shopId: selectedShopId, qrToken: token });
+      setResult(res);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Fehler");
+    } finally { setStamping(false); }
+  };
+
+  return (
+    <motion.div key="stempel" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+        <p className="text-sm font-semibold text-zinc-200">Shop</p>
+        {!shops || shops.length === 0 ? (
+          <p className="text-xs text-zinc-600">Noch keine Shops vorhanden.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {shops.map(shop => (
+              <button key={shop._id}
+                onClick={() => { setSelectedShopId(shop._id); setResult(null); setError(null); }}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                style={selectedShopId === shop._id
+                  ? { background: "#fbbf2433", border: "1px solid #fbbf2488", color: "#fbbf24" }
+                  : { background: "#27272a", border: "1px solid #3f3f46", color: "#71717a" }
+                }
+              >
+                {shop.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-zinc-200">QR-Token</p>
+          <span className="text-[10px] text-zinc-600">wird gespeichert</span>
+        </div>
+        <input
+          value={qrToken}
+          onChange={e => saveQrToken(e.target.value)}
+          placeholder="Token oder /stamp/... URL einfügen"
+          className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-200 text-xs font-mono placeholder-zinc-600 focus:outline-none focus:border-amber-400/50"
+        />
+        <p className="text-[10px] text-zinc-600">/me öffnen → QR anzeigen → URL scannen → /stamp/<span className="text-zinc-400">TOKEN</span></p>
+      </div>
+
+      <button onClick={handleStamp} disabled={!selectedShopId || !qrToken.trim() || stamping}
+        className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-colors disabled:opacity-40 bg-amber-400 text-zinc-900 hover:bg-amber-300">
+        {stamping ? "Stempelt..." : "Stempel geben"}
+      </button>
+
+      {error && (
+        <div className="bg-red-950/40 border border-red-900/50 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>
+      )}
+
+      <AnimatePresence>
+        {result && (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+            className="bg-zinc-900 border border-green-900/40 rounded-2xl p-4 space-y-1">
+            <div className="flex items-center gap-2">
+              <Check size={15} className="text-green-400" />
+              <p className="text-sm font-semibold text-zinc-100">
+                {result.rewardReached ? "Belohnung erreicht! 🎉" : "Gestempelt!"}
+              </p>
+            </div>
+            <p className="text-xs text-zinc-500 pl-5">
+              {result.customerName} · {result.currentStamps}/{result.stampsRequired} Stempel
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 // ─── SettingsTab ──────────────────────────────────────────────────────────────
 
 function SettingsTab() {
@@ -869,11 +967,12 @@ function SettingsTab() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "shops" | "settings";
+type Tab = "overview" | "shops" | "stempel" | "settings";
 
 const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "overview",  label: "Übersicht",    icon: BarChart2 },
   { id: "shops",     label: "Shops",        icon: Store     },
+  { id: "stempel",   label: "Stempel",      icon: Stamp     },
   { id: "settings",  label: "Einstellungen", icon: Settings  },
 ];
 
@@ -976,6 +1075,7 @@ export default function SuperAdminPage() {
             className="font-semibold text-zinc-100 text-base">
             {activeTab === "overview" && "Übersicht"}
             {activeTab === "shops"    && "Shops"}
+            {activeTab === "stempel"  && "Stempel"}
             {activeTab === "settings" && "Einstellungen"}
           </motion.span>
         </AnimatePresence>
@@ -986,6 +1086,7 @@ export default function SuperAdminPage() {
         <AnimatePresence mode="wait">
           {activeTab === "overview" && <OverviewTab key="overview" adminSecret={adminSecret} onGoToShops={() => setActiveTab("shops")} />}
           {activeTab === "shops"    && <ShopsTab    key="shops"    shops={allShops} adminSecret={adminSecret} onSelectShop={id => { setSelectedShopId(id); }} />}
+          {activeTab === "stempel"  && <StempelTab  key="stempel"  shops={allShops} adminSecret={adminSecret} />}
           {activeTab === "settings" && <SettingsTab key="settings" />}
         </AnimatePresence>
       </div>

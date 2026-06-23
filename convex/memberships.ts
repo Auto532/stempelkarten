@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireShopRole } from "./auth";
+import { requireShopRole, requireAdmin } from "./auth";
 
 export const getForCustomerAndShop = query({
   args: { qrToken: v.string(), shopId: v.id("shops") },
@@ -152,6 +152,69 @@ export const customerRedeemReward = mutation({
     });
 
     return { rewardText: eligible.text };
+  },
+});
+
+export const adminStampForCustomer = mutation({
+  args: { adminSecret: v.string(), shopId: v.id("shops"), qrToken: v.string() },
+  handler: async (ctx, { adminSecret, shopId, qrToken }) => {
+    requireAdmin({ secret: adminSecret });
+
+    let customer = await ctx.db
+      .query("customers")
+      .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
+      .unique();
+
+    if (!customer) {
+      const id = await ctx.db.insert("customers", {
+        name: "Test-Kunde",
+        phone: "",
+        qrToken,
+        createdAt: Date.now(),
+      });
+      customer = await ctx.db.get(id);
+    }
+    if (!customer) throw new Error("Kunde konnte nicht erstellt werden");
+
+    const shop = await ctx.db.get(shopId);
+    if (!shop) throw new Error("Shop nicht gefunden");
+
+    let membership = await ctx.db
+      .query("memberships")
+      .withIndex("by_customer_and_shop", (q) =>
+        q.eq("customerId", customer._id).eq("shopId", shopId)
+      )
+      .unique();
+
+    if (!membership) {
+      const mId = await ctx.db.insert("memberships", {
+        customerId: customer._id,
+        shopId,
+        currentStamps: 0,
+        totalStampsEver: 0,
+        rewardsRedeemed: 0,
+      });
+      membership = await ctx.db.get(mId);
+    }
+    if (!membership) throw new Error("Mitgliedschaft konnte nicht erstellt werden");
+
+    const newStamps = membership.currentStamps + 1;
+    const rewardReached = newStamps >= shop.stampsRequired;
+
+    await ctx.db.patch(membership._id, {
+      currentStamps: newStamps,
+      totalStampsEver: membership.totalStampsEver + 1,
+      lastStampAt: Date.now(),
+    });
+
+    await ctx.db.insert("stampEvents", {
+      membershipId: membership._id,
+      shopId,
+      type: "stamp",
+      timestamp: Date.now(),
+    });
+
+    return { rewardReached, stampsRequired: shop.stampsRequired, currentStamps: newStamps, customerName: customer.name };
   },
 });
 
