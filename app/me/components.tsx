@@ -159,21 +159,23 @@ export function QRCard({ qrToken, customerName }: { qrToken: string; customerNam
       transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
       className="relative mx-auto w-full max-w-xs"
     >
-      <div className="absolute inset-0 bg-amber-400/20 blur-2xl rounded-3xl scale-95" />
-      <div className="relative bg-zinc-50 rounded-3xl p-6 shadow-2xl">
+      <div className="absolute inset-0 bg-white/5 blur-3xl rounded-3xl scale-95" />
+      <div className="relative bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest">Stempelkarte</p>
-            <p className="text-zinc-900 font-bold text-lg leading-tight mt-0.5">{customerName}</p>
+            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-widest">Stempelkarte</p>
+            <p className="text-zinc-100 font-bold text-lg leading-tight mt-0.5">{customerName}</p>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-amber-400 flex items-center justify-center">
-            <Gift size={18} className="text-zinc-900" />
+          <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+            <Gift size={18} className="text-zinc-400" />
           </div>
         </div>
         <div className="flex justify-center">
-          <canvas ref={canvasRef} className="rounded-xl" />
+          <div className="bg-white rounded-2xl p-3">
+            <canvas ref={canvasRef} className="block rounded-lg" />
+          </div>
         </div>
-        <p className="text-center text-[11px] text-zinc-400 mt-4 font-medium">
+        <p className="text-center text-[11px] text-zinc-500 mt-4 font-medium">
           Im Laden vorzeigen zum Stempel sammeln
         </p>
       </div>
