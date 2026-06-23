@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { BeatesGrillBackground, BeatesGrillLoyaltyCard, BeatesGrillRewardBanner, BeatesGrillMilestonesSection } from "./beatesGrill";
 import { AsiaTasteBackground, AsiaTasteLoyaltyCard, AsiaTasteRewardBanner, AsiaTasteMilestonesSection } from "./asiaTaste";
+import { BakeryBackground, BakeryLoyaltyCard, BakeryRewardBanner, BakeryMilestonesSection } from "./bakery";
 import type { ComponentType } from "react";
 
 type Star = { id: number; x: number; y: number; size: number; delay: number; dur: number };
@@ -107,6 +108,28 @@ export const DEFAULT_COLORS: ThemeColors = {
 };
 
 const THEMES: Record<string, ThemeConfig> = {
+  "bakery": {
+    colors: {
+      accent:      "#d97706",
+      accentDim:   "#b45309",
+      accentFaint: "#fef3c7",
+      text:        "#451a03",
+      textBody:    "#78350f",
+      cardBg:      "#fffbeb",
+      dark:        "#fef3c7",
+      divider:     "#fcd34d40",
+      gradient:    "linear-gradient(135deg, #d97706, #b45309)",
+      card:    { background: "#fffbeb", border: "1px solid #d9770650" },
+      sub:     { background: "#fef9ee", border: "1px solid #fde68a" },
+      input:   { background: "#fef9ee", border: "1px solid #fcd34d", color: "#451a03" },
+      badge:   { background: "#d9770618", border: "1px solid #d97706", color: "#b45309" },
+      subCard: { background: "#fffbeb88", borderRadius: "0.75rem", padding: "0.75rem" },
+    },
+    Background: BakeryBackground,
+    Card:       BakeryLoyaltyCard,
+    Banner:     BakeryRewardBanner,
+    Milestones: BakeryMilestonesSection,
+  },
   "asia-taste": {
     colors: {
       accent:      "#F0844F",

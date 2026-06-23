@@ -234,6 +234,7 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
                       {[
                         { id: "beates-grill", label: "Beate's Grill", color: "#E8A020" },
                         { id: "asia-taste", label: "Asia Taste", color: "#D2603A" },
+                        { id: "bakery", label: "Bäckerei", color: "#d97706" },
                       ].map(({ id, label, color }) => (
                         <button
                           key={id}
