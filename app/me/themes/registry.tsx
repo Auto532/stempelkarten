@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { BeatesGrillBackground, BeatesGrillLoyaltyCard, BeatesGrillRewardBanner, BeatesGrillMilestonesSection } from "./beatesGrill";
 import { AsiaTasteBackground, AsiaTasteLoyaltyCard, AsiaTasteRewardBanner, AsiaTasteMilestonesSection } from "./asiaTaste";
 import { BakeryLoyaltyCard, BakeryRewardBanner, BakeryMilestonesSection } from "./bakery";
-import { BarberBackground, BarberLoyaltyCard, BarberRewardBanner, BarberMilestonesSection } from "./barber";
+import { BarberLoyaltyCard, BarberRewardBanner, BarberMilestonesSection } from "./barber";
 import type { ComponentType } from "react";
 
 type Star = { id: number; x: number; y: number; size: number; delay: number; dur: number };
@@ -191,7 +191,7 @@ const THEMES: Record<string, ThemeConfig> = {
       badge:   { background: "#cca35218", border: "1px solid #cca35240", color: "#e8d08d" },
       subCard: { background: "#0f0f1188", borderRadius: "0.75rem", padding: "0.75rem" },
     },
-    Background: BarberBackground,
+    Background: makePhotoBackground('/Hintergrund_barbershop.png'),
     Card:       BarberLoyaltyCard,
     Banner:     BarberRewardBanner,
     Milestones: BarberMilestonesSection,
