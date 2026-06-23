@@ -45,12 +45,12 @@ const COLOR_PRESETS = [
 // ─── Background presets ───────────────────────────────────────────────────────
 
 const BG_PRESETS = [
-  { id: "default", label: "Sterne",  style: null },
-  { id: "navy",    label: "Blau",    style: "linear-gradient(180deg, #060e1c 0%, #0b1a2e 100%)" },
-  { id: "forest",  label: "Grün",    style: "linear-gradient(180deg, #05110a 0%, #091b0e 100%)" },
-  { id: "plum",    label: "Lila",    style: "linear-gradient(180deg, #0b0714 0%, #140a24 100%)" },
-  { id: "ember",   label: "Braun",   style: "linear-gradient(180deg, #120900 0%, #1e1005 100%)" },
-  { id: "slate",   label: "Grau",    style: "linear-gradient(180deg, #0c0c0e 0%, #17171a 100%)" },
+  { id: "none",   label: "Keine",  style: null },
+  { id: "navy",   label: "Blau",   style: "linear-gradient(180deg, #060e1c 0%, #0b1a2e 100%)" },
+  { id: "forest", label: "Grün",   style: "linear-gradient(180deg, #05110a 0%, #091b0e 100%)" },
+  { id: "plum",   label: "Lila",   style: "linear-gradient(180deg, #0b0714 0%, #140a24 100%)" },
+  { id: "ember",  label: "Braun",  style: "linear-gradient(180deg, #120900 0%, #1e1005 100%)" },
+  { id: "slate",  label: "Grau",   style: "linear-gradient(180deg, #0c0c0e 0%, #17171a 100%)" },
 ];
 
 // ─── ShopCard ─────────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 
 function SettingsPanel({
-  customerName, qrToken, accent, onAccentChange, bgId, onBgChange, onClose,
+  customerName, qrToken, accent, onAccentChange, bgId, onBgChange, starsOn, onStarsChange, onClose,
 }: {
   customerName: string;
   qrToken: string;
@@ -240,6 +240,8 @@ function SettingsPanel({
   onAccentChange: (c: string) => void;
   bgId: string;
   onBgChange: (id: string) => void;
+  starsOn: boolean;
+  onStarsChange: (on: boolean) => void;
   onClose: () => void;
 }) {
   const updateName = useMutation(api.customers.updateName);
@@ -352,7 +354,26 @@ function SettingsPanel({
           </div>
         </div>
 
-        {/* Background */}
+        {/* Stars toggle */}
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Sterne</p>
+            <p className="text-[10px] text-zinc-600 mt-0.5">{starsOn ? "Sichtbar" : "Ausgeblendet"}</p>
+          </div>
+          <button
+            onClick={() => onStarsChange(!starsOn)}
+            className="relative rounded-full transition-colors flex items-center px-0.5 shrink-0"
+            style={{ minWidth: "2.5rem", height: "1.375rem", background: starsOn ? accent : "#3f3f46" }}
+          >
+            <motion.div
+              animate={{ x: starsOn ? 18 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="w-4 h-4 rounded-full bg-white shadow-sm"
+            />
+          </button>
+        </div>
+
+        {/* Background color */}
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
             Hintergrund
@@ -360,11 +381,10 @@ function SettingsPanel({
           <div className="grid grid-cols-6 gap-2">
             {BG_PRESETS.map(({ id, label, style }) => (
               <button key={id} onClick={() => onBgChange(id)}
-                className="flex flex-col items-center gap-1.5"
-              >
+                className="flex flex-col items-center gap-1.5">
                 <div className="w-full aspect-square rounded-xl border-2 flex items-center justify-center transition-all"
                   style={{
-                    background: style ?? "radial-gradient(ellipse at 50% 60%, #1A1060 0%, #05070F 70%)",
+                    background: style ?? "#09090b",
                     borderColor: bgId === id ? "white" : "transparent",
                     boxShadow: bgId === id ? "0 0 10px rgba(255,255,255,0.2)" : undefined,
                   }}>
@@ -389,7 +409,8 @@ export default function MePage() {
   const [showStampOverlay, setShowStampOverlay] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [personalAccent, setPersonalAccent] = useState("#fbbf24");
-  const [bgId, setBgId] = useState("default");
+  const [bgId, setBgId] = useState("none");
+  const [starsOn, setStarsOn] = useState(true);
   const prevStampsRef = useRef<Record<string, number>>({});
   const isFirstLoad = useRef(true);
   const didRedirect = useRef(false);
@@ -400,7 +421,10 @@ export default function MePage() {
     const stored = localStorage.getItem("meAccentColor");
     if (stored) setPersonalAccent(stored);
     const storedBg = localStorage.getItem("meBgId");
-    if (storedBg) setBgId(storedBg);
+    // migrate old "default" value to "none"
+    setBgId(storedBg === "default" || !storedBg ? "none" : storedBg);
+    const storedStars = localStorage.getItem("meStarsOn");
+    if (storedStars !== null) setStarsOn(storedStars !== "false");
   }, []);
 
   const handleAccentChange = useCallback((color: string) => {
@@ -415,11 +439,23 @@ export default function MePage() {
     document.body.style.background = preset?.style ?? "";
   }, []);
 
+  const handleStarsChange = useCallback((on: boolean) => {
+    setStarsOn(on);
+    localStorage.setItem("meStarsOn", on ? "true" : "false");
+  }, []);
+
   useEffect(() => {
     const preset = BG_PRESETS.find(p => p.id === bgId);
     document.body.style.background = preset?.style ?? "";
     return () => { document.body.style.background = ""; };
   }, [bgId]);
+
+  useEffect(() => {
+    const sf = document.getElementById("star-field");
+    if (!sf) return;
+    sf.style.display = starsOn ? "" : "none";
+    return () => { sf.style.display = ""; };
+  }, [starsOn]);
 
   const data = useQuery(
     api.customers.getMembershipsForCustomer,
@@ -531,6 +567,8 @@ export default function MePage() {
             onAccentChange={handleAccentChange}
             bgId={bgId}
             onBgChange={handleBgChange}
+            starsOn={starsOn}
+            onStarsChange={handleStarsChange}
             onClose={() => setShowSettings(false)}
           />
         )}

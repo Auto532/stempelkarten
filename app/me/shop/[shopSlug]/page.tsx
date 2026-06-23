@@ -30,6 +30,11 @@ export default function MeShopPage() {
   useEffect(() => {
     setMounted(true);
     setQrToken(localStorage.getItem("qrToken"));
+    const storedStars = localStorage.getItem("meStarsOn");
+    const starsOn = storedStars !== "false";
+    const sf = document.getElementById("star-field");
+    if (sf) sf.style.display = starsOn ? "" : "none";
+    return () => { if (sf) sf.style.display = ""; };
   }, []);
 
   const data = useQuery(
