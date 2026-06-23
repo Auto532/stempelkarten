@@ -4,14 +4,14 @@ import { motion } from "framer-motion";
 import { Gift, Award, QrCode } from "lucide-react";
 import type { ThemeCardProps, ThemeBannerProps, ThemeMilestonesProps } from "./registry";
 
-const A   = "#d97706";
-const AD  = "#b45309";
-const AF  = "#92400e";
-const T   = "#451a03";
-const TB  = "#78350f";
+const A   = "#c96a00";  // kräftigeres Bäcker-Gold
+const AD  = "#7c2d12";  // dunkles Rotbraun für Sekundärtext
+const AF  = "#451a03";  // sehr dunkles Braun für Hints
+const T   = "#1c0800";  // fast schwarz-braun für Haupttext
+const TB  = "#451a03";  // dunkles Braun für sekundäre Labels
 const BG  = "#fef3c7";
-const C   = "#fffbeb";
-const C2  = "#fef9ee";
+const C   = "#fffef8";  // reines Weiß leicht warm für Karte (hebt sich von BG ab)
+const C2  = "#fff8e6";
 
 function BroetchenIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
@@ -71,13 +71,13 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
 
   return (
     <div className="relative rounded-3xl overflow-hidden"
-      style={{ background: C, border: `1px solid ${accent}50`, boxShadow: `0 8px 32px ${accent}22` }}>
+      style={{ background: C, border: `2px solid ${accent}70`, boxShadow: `0 8px 32px ${accent}30, 0 2px 8px rgba(0,0,0,0.08)` }}>
       <div className="absolute inset-0 pointer-events-none"
-        style={{ background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${accent}14, transparent)` }} />
+        style={{ background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${accent}18, transparent)` }} />
       <div className="relative p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: AD }}>Stempelkarte</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: TB }}>Stempelkarte</p>
             <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
           </div>
           {!hideQR && onShowQR && (
@@ -99,10 +99,10 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
                 transition={{ duration: 0.5 }}
                 className="w-8 h-8 rounded-full flex items-center justify-center"
                 style={filled
-                  ? { background: `linear-gradient(135deg, ${accent}, ${AD})`, boxShadow: `0 0 10px ${accent}40`, border: `1px solid ${accent}60` }
+                  ? { background: `linear-gradient(135deg, ${accent}, ${AD})`, boxShadow: `0 0 12px ${accent}50`, border: `2px solid ${accent}80` }
                   : isTier
-                  ? { border: `1px solid ${accent}50`, background: `${accent}12` }
-                  : { border: `1px dashed ${accent}40`, background: "rgba(255,255,255,0.5)" }}>
+                  ? { border: `2px solid ${accent}70`, background: `${accent}18` }
+                  : { border: `2px dashed ${accent}55`, background: "rgba(255,255,255,0.8)" }}>
                 {filled && <BroetchenIcon className="w-4 h-4" style={{ color: "white" }} />}
                 {!filled && isTier && <Gift size={11} style={{ color: AF }} />}
               </motion.div>
@@ -111,11 +111,11 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
         </div>
 
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span style={{ color: AD }}>{currentStamps} / {maxStamps} Stempel</span>
+          <div className="flex items-center justify-between text-xs font-semibold">
+            <span style={{ color: TB }}>{currentStamps} / {maxStamps} Stempel</span>
             <span style={{ color: accent }}>{Math.round(Math.min(currentStamps / maxStamps, 1) * 100)}%</span>
           </div>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: `${accent}20` }}>
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: `${accent}30` }}>
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(currentStamps / maxStamps * 100, 100)}%` }}
@@ -134,15 +134,15 @@ export function BakeryRewardBanner({ rewardText, stampsRequired, rewardTiers }: 
   const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
   if (activeTiers.length > 0) {
     return (
-      <div className="rounded-2xl px-4 py-3 space-y-2.5" style={{ background: C, border: `1px solid ${A}30` }}>
-        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: AD }}>Belohnungen</p>
+      <div className="rounded-2xl px-4 py-3 space-y-2.5" style={{ background: C, border: `2px solid ${A}55`, boxShadow: `0 2px 8px rgba(0,0,0,0.06)` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: TB }}>Belohnungen</p>
         {activeTiers.map((tier, i) => (
           <div key={i} className="flex items-center gap-3">
             <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold"
               style={{ background: `linear-gradient(135deg, ${A}, ${AD})`, color: "white" }}>{i + 1}</div>
             <div>
-              <p className="text-[10px]" style={{ color: AD }}>nach {tier.stamps} Stempeln</p>
-              <p className="text-sm font-semibold" style={{ color: T }}>{tier.text}</p>
+              <p className="text-[10px] font-semibold" style={{ color: AD }}>nach {tier.stamps} Stempeln</p>
+              <p className="text-sm font-bold" style={{ color: T }}>{tier.text}</p>
             </div>
           </div>
         ))}
@@ -150,14 +150,14 @@ export function BakeryRewardBanner({ rewardText, stampsRequired, rewardTiers }: 
     );
   }
   return (
-    <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: C, border: `1px solid ${A}30` }}>
+    <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: C, border: `2px solid ${A}55`, boxShadow: `0 2px 8px rgba(0,0,0,0.06)` }}>
       <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-        style={{ background: `${A}18`, border: `1px solid ${A}40` }}>
+        style={{ background: `${A}25`, border: `2px solid ${A}60` }}>
         <Gift size={16} style={{ color: A }} />
       </div>
       <div>
-        <p className="text-[10px]" style={{ color: AD }}>nach {stampsRequired} Stempeln</p>
-        <p className="text-sm font-semibold" style={{ color: T }}>{rewardText}</p>
+        <p className="text-[10px] font-semibold" style={{ color: AD }}>nach {stampsRequired} Stempeln</p>
+        <p className="text-sm font-bold" style={{ color: T }}>{rewardText}</p>
       </div>
     </div>
   );
@@ -167,8 +167,8 @@ export function BakeryMilestonesSection({ milestones, totalStampsEver }: ThemeMi
   const active = milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);
   if (active.length === 0) return null;
   return (
-    <div className="rounded-2xl px-4 py-4" style={{ background: C, border: `1px solid ${A}30` }}>
-      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: AD }}>Meilensteine</p>
+    <div className="rounded-2xl px-4 py-4" style={{ background: C, border: `2px solid ${A}55`, boxShadow: `0 2px 8px rgba(0,0,0,0.06)` }}>
+      <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: TB }}>Meilensteine</p>
       <div className="space-y-3">
         {active.map((m, i) => {
           const reached = totalStampsEver >= m.stamps;
@@ -177,14 +177,14 @@ export function BakeryMilestonesSection({ milestones, totalStampsEver }: ThemeMi
               <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
                 style={reached
                   ? { background: `linear-gradient(135deg, ${A}, ${AD})` }
-                  : { background: C2, border: `1px solid ${A}40` }}>
-                {reached ? <Award size={13} style={{ color: "white" }} /> : <span className="text-[10px] font-bold" style={{ color: AD }}>{m.stamps}</span>}
+                  : { background: C2, border: `2px solid ${A}60` }}>
+                {reached ? <Award size={13} style={{ color: "white" }} /> : <span className="text-[10px] font-bold" style={{ color: AF }}>{m.stamps}</span>}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm" style={{ color: reached ? T : TB }}>{m.text}</p>
-                {!reached && <p className="text-[10px]" style={{ color: AF }}>noch {m.stamps - totalStampsEver} Stempel</p>}
+                <p className="text-sm font-semibold" style={{ color: reached ? T : TB }}>{m.text}</p>
+                {!reached && <p className="text-[10px] font-medium" style={{ color: AD }}>noch {m.stamps - totalStampsEver} Stempel</p>}
               </div>
-              {reached && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${A}18`, color: A, border: `1px solid ${A}40` }}>✓</span>}
+              {reached && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${A}25`, color: AF, border: `1px solid ${A}60` }}>✓</span>}
             </div>
           );
         })}
