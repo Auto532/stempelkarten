@@ -32,14 +32,25 @@ function containsProfanity(text: string): boolean {
 // ─── Color presets ────────────────────────────────────────────────────────────
 
 const COLOR_PRESETS = [
-  { name: "Gold",     value: "#fbbf24" },
-  { name: "Sky",      value: "#38bdf8" },
-  { name: "Violet",   value: "#a855f7" },
-  { name: "Emerald",  value: "#10b981" },
-  { name: "Rose",     value: "#f43f5e" },
-  { name: "Orange",   value: "#f97316" },
-  { name: "Cyan",     value: "#06b6d4" },
-  { name: "Lime",     value: "#84cc16" },
+  { name: "Gold",    value: "#fbbf24" },
+  { name: "Sky",     value: "#38bdf8" },
+  { name: "Violet",  value: "#a855f7" },
+  { name: "Emerald", value: "#10b981" },
+  { name: "Rose",    value: "#f43f5e" },
+  { name: "Orange",  value: "#f97316" },
+  { name: "Cyan",    value: "#06b6d4" },
+  { name: "Lime",    value: "#84cc16" },
+];
+
+// ─── Background presets ───────────────────────────────────────────────────────
+
+const BG_PRESETS = [
+  { id: "default", label: "Sterne",  style: null },
+  { id: "navy",    label: "Blau",    style: "linear-gradient(180deg, #060e1c 0%, #0b1a2e 100%)" },
+  { id: "forest",  label: "Grün",    style: "linear-gradient(180deg, #05110a 0%, #091b0e 100%)" },
+  { id: "plum",    label: "Lila",    style: "linear-gradient(180deg, #0b0714 0%, #140a24 100%)" },
+  { id: "ember",   label: "Braun",   style: "linear-gradient(180deg, #120900 0%, #1e1005 100%)" },
+  { id: "slate",   label: "Grau",    style: "linear-gradient(180deg, #0c0c0e 0%, #17171a 100%)" },
 ];
 
 // ─── ShopCard ─────────────────────────────────────────────────────────────────
@@ -246,12 +257,14 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 
 function SettingsPanel({
-  customerName, qrToken, accent, onAccentChange, onClose,
+  customerName, qrToken, accent, onAccentChange, bgId, onBgChange, onClose,
 }: {
   customerName: string;
   qrToken: string;
   accent: string;
   onAccentChange: (c: string) => void;
+  bgId: string;
+  onBgChange: (id: string) => void;
   onClose: () => void;
 }) {
   const updateName = useMutation(api.customers.updateName);
@@ -343,26 +356,46 @@ function SettingsPanel({
         </div>
 
         {/* Accent color */}
-        <div>
+        <div className="mb-5">
           <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
-            Deine Farbe <span className="normal-case font-normal text-zinc-600">(nur für deine Übersicht)</span>
+            Deine Farbe
           </label>
-          <div className="grid grid-cols-4 gap-2.5">
+          <div className="flex gap-2">
             {COLOR_PRESETS.map(({ name: colorName, value }) => (
               <button key={value} onClick={() => onAccentChange(value)}
-                className="flex flex-col items-center gap-1.5"
                 title={colorName}
+                className="flex-1 h-8 rounded-lg transition-all flex items-center justify-center"
+                style={{
+                  background: value,
+                  border: accent === value ? `2px solid white` : `2px solid transparent`,
+                  boxShadow: accent === value ? `0 0 10px ${hexToRgba(value, 0.5)}` : undefined,
+                  opacity: accent === value ? 1 : 0.55,
+                }}>
+                {accent === value && <Check size={12} className="text-zinc-900" strokeWidth={3} />}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Background */}
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+            Hintergrund
+          </label>
+          <div className="grid grid-cols-6 gap-2">
+            {BG_PRESETS.map(({ id, label, style }) => (
+              <button key={id} onClick={() => onBgChange(id)}
+                className="flex flex-col items-center gap-1.5"
               >
-                <div className="w-full aspect-square rounded-xl transition-all flex items-center justify-center"
+                <div className="w-full aspect-square rounded-xl border-2 flex items-center justify-center transition-all"
                   style={{
-                    background: value,
-                    border: accent === value ? `2.5px solid white` : `2px solid transparent`,
-                    boxShadow: accent === value ? `0 0 12px ${hexToRgba(value, 0.6)}` : undefined,
-                    opacity: accent === value ? 1 : 0.7,
+                    background: style ?? "radial-gradient(ellipse at 50% 60%, #1A1060 0%, #05070F 70%)",
+                    borderColor: bgId === id ? "white" : "transparent",
+                    boxShadow: bgId === id ? "0 0 10px rgba(255,255,255,0.2)" : undefined,
                   }}>
-                  {accent === value && <Check size={14} className="text-zinc-900" strokeWidth={3} />}
+                  {bgId === id && <Check size={12} className="text-white" strokeWidth={3} />}
                 </div>
-                <span className="text-[9px] text-zinc-500">{colorName}</span>
+                <span className="text-[9px] text-zinc-500">{label}</span>
               </button>
             ))}
           </div>
@@ -381,6 +414,7 @@ export default function MePage() {
   const [showStampOverlay, setShowStampOverlay] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [personalAccent, setPersonalAccent] = useState("#fbbf24");
+  const [bgId, setBgId] = useState("default");
   const prevStampsRef = useRef<Record<string, number>>({});
   const isFirstLoad = useRef(true);
   const didRedirect = useRef(false);
@@ -390,12 +424,27 @@ export default function MePage() {
     setQrToken(localStorage.getItem("qrToken"));
     const stored = localStorage.getItem("meAccentColor");
     if (stored) setPersonalAccent(stored);
+    const storedBg = localStorage.getItem("meBgId");
+    if (storedBg) setBgId(storedBg);
   }, []);
 
   const handleAccentChange = useCallback((color: string) => {
     setPersonalAccent(color);
     localStorage.setItem("meAccentColor", color);
   }, []);
+
+  const handleBgChange = useCallback((id: string) => {
+    setBgId(id);
+    localStorage.setItem("meBgId", id);
+    const preset = BG_PRESETS.find(p => p.id === id);
+    document.body.style.background = preset?.style ?? "";
+  }, []);
+
+  useEffect(() => {
+    const preset = BG_PRESETS.find(p => p.id === bgId);
+    document.body.style.background = preset?.style ?? "";
+    return () => { document.body.style.background = ""; };
+  }, [bgId]);
 
   const data = useQuery(
     api.customers.getMembershipsForCustomer,
@@ -505,6 +554,8 @@ export default function MePage() {
             qrToken={qrToken}
             accent={personalAccent}
             onAccentChange={handleAccentChange}
+            bgId={bgId}
+            onBgChange={handleBgChange}
             onClose={() => setShowSettings(false)}
           />
         )}

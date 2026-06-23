@@ -39,9 +39,9 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
             <h2 className="text-xl font-black leading-tight" style={{ color: T }}>{shopName}</h2>
           </div>
           {!hideQR && onShowQR && (
-            <button onClick={onShowQR} className="w-9 h-9 rounded-xl flex items-center justify-center"
+            <button onClick={onShowQR} className="w-14 h-14 rounded-xl flex items-center justify-center"
               style={{ background: C2, border: `1px solid ${accent}40` }}>
-              <QrCode size={16} style={{ color: accent }} />
+              <QrCode size={26} style={{ color: accent }} />
             </button>
           )}
         </div>

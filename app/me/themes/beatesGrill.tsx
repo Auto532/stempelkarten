@@ -88,9 +88,9 @@ export function BeatesGrillLoyaltyCard({ shopName, stampsRequired, currentStamps
             <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
           </div>
           {!hideQR && onShowQR && (
-            <button onClick={onShowQR} className="w-9 h-9 rounded-xl flex items-center justify-center"
+            <button onClick={onShowQR} className="w-14 h-14 rounded-xl flex items-center justify-center"
               style={{ background: C, border: `1px solid ${accent}28` }}>
-              <QrCode size={16} style={{ color: accent }} />
+              <QrCode size={26} style={{ color: accent }} />
             </button>
           )}
         </div>
