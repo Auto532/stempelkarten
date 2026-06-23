@@ -623,23 +623,29 @@ export default function MePage() {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between mb-7">
-        <div>
-          <p className="text-neutral-500 text-sm">Hallo,</p>
-          <h1 className="text-2xl font-bold mt-0.5 bg-clip-text text-transparent"
-            style={{ backgroundImage: `linear-gradient(90deg, ${personalAccent}, ${hexToRgba(personalAccent, 0.6)})` }}>
-            {customer.name}
-          </h1>
-        </div>
+      {/* App name */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.0 }}
+        className="flex items-center justify-between mb-8">
+        <p className="text-sm font-bold tracking-tight text-zinc-100">
+          Loyalty<span className="text-zinc-500">Card</span>
+        </p>
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setShowSettings(true)}
-          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mt-1"
+          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center"
         >
           <Settings size={16} className="text-zinc-500" />
         </motion.button>
+      </motion.div>
+
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+        className="mb-7">
+        <p className="text-neutral-500 text-sm">Hallo,</p>
+        <h1 className="text-2xl font-bold mt-0.5 bg-clip-text text-transparent"
+          style={{ backgroundImage: `linear-gradient(90deg, ${personalAccent}, ${hexToRgba(personalAccent, 0.6)})` }}>
+          {customer.name}
+        </h1>
       </motion.div>
 
       {/* Level */}
