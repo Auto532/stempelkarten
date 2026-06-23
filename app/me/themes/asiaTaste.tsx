@@ -153,9 +153,11 @@ export function AsiaTasteLoyaltyCard({ shopName, stampsRequired, currentStamps, 
             <h2 className="text-lg font-bold leading-tight" style={{ color: CREAM }}>{shopName}</h2>
           </div>
           {!hideQR && onShowQR && (
-            <button onClick={onShowQR} className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: PANEL2, border: `1px solid ${GREEN}40` }}>
-              <QrCode size={16} style={{ color: GREEN }} />
+            <button onClick={onShowQR}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl"
+              style={{ background: PANEL2, border: `1px solid ${GREEN}50` }}>
+              <QrCode size={18} style={{ color: GREEN }} />
+              <span className="text-[11px] font-semibold" style={{ color: GREEN }}>QR</span>
             </button>
           )}
         </div>
