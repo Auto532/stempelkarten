@@ -22,7 +22,7 @@ function BroetchenIcon({ className, style }: { className?: string; style?: React
 }
 
 
-export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor, stampValue }: ThemeCardProps) {
+export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor, stampValue, cardNumber }: ThemeCardProps) {
   const accent = accentColor ?? A;
   const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
   const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
@@ -35,7 +35,15 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
       <div className="relative p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: AD }}>Stempelkarte</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: AD }}>Stempelkarte</p>
+              {cardNumber !== undefined && (
+                <span className="text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-md"
+                  style={{ background: `${accent}18`, color: AD }}>
+                  #{String(cardNumber).padStart(3, "0")}
+                </span>
+              )}
+            </div>
             <h2 className="text-xl font-black leading-tight" style={{ color: T }}>{shopName}</h2>
           </div>
           {!hideQR && onShowQR && (

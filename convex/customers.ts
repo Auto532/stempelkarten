@@ -61,7 +61,13 @@ export const getMembershipsForCustomer = query({
         const shop = await ctx.db.get(m.shopId);
         if (!shop) return null;
         const { adminLoginToken: _omit, ...publicShop } = shop;
-        return { membership: m, shop: publicShop };
+        const earlier = await ctx.db
+          .query("memberships")
+          .withIndex("by_shop", (q) => q.eq("shopId", m.shopId))
+          .filter((q) => q.lt(q.field("_creationTime"), m._creationTime))
+          .collect();
+        const cardNumber = earlier.length + 1;
+        return { membership: m, shop: publicShop, cardNumber };
       })
     );
 

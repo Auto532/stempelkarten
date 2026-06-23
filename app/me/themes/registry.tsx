@@ -89,6 +89,7 @@ export interface ThemeCardProps {
   rewardTiers?: ThemeTier[];
   accentColor?: string;
   stampValue?: number | null;
+  cardNumber?: number;
 }
 
 export interface ThemeBannerProps {

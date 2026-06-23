@@ -45,6 +45,7 @@ export default function MeShopPage() {
   const entry = data?.memberships.find(m => m.shop?.slug === shopSlug);
   const membership = entry?.membership;
   const shop = entry?.shop;
+  const cardNumber = entry?.cardNumber;
   useShopThemeSync(shop);
 
   useEffect(() => {
@@ -168,6 +169,7 @@ export default function MeShopPage() {
                     rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
                     accentColor={shop.accentColor}
                     stampValue={shop.stampValue}
+                    cardNumber={cardNumber}
                   />
                   <theme.Banner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined} />
                   {shop.milestonesEnabled && shop.milestones && (
@@ -189,6 +191,7 @@ export default function MeShopPage() {
                     accentColor={shop.customDesignEnabled ? shop.accentColor : undefined}
                     stampIcon={shop.stampIcon}
                     stampValue={shop.stampValue}
+                    cardNumber={cardNumber}
                   />
                   {shop.milestonesEnabled && shop.milestones && (
                     <MilestonesSection

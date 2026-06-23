@@ -328,7 +328,7 @@ export function MilestonesSection({
 
 export function LoyaltyCard({
   shopName, rewardText, stampsRequired, currentStamps, rewardsRedeemed,
-  animateIndex, onShowQR, qrToken, rewardTiers, accentColor, stampIcon, hideQR, stampValue,
+  animateIndex, onShowQR, qrToken, rewardTiers, accentColor, stampIcon, hideQR, stampValue, cardNumber,
 }: {
   shopName: string;
   rewardText: string;
@@ -343,6 +343,7 @@ export function LoyaltyCard({
   stampIcon?: string | null;
   hideQR?: boolean;
   stampValue?: number | null;
+  cardNumber?: number;
 }) {
   const accent = accentColor ?? "#fbbf24";
   const StampIconComponent = getStampIcon(stampIcon);
@@ -367,9 +368,17 @@ export function LoyaltyCard({
       {/* Karten-Kopf */}
       <div className="px-6 pt-6 pb-3 flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-[9px] font-bold tracking-widest uppercase mb-1" style={{ color: accent }}>
-            Digitale Stempelkarte
-          </p>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-[9px] font-bold tracking-widest uppercase" style={{ color: accent }}>
+              Digitale Stempelkarte
+            </p>
+            {cardNumber !== undefined && (
+              <span className="text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-md"
+                style={{ background: hexToRgba(accent, 0.1), color: hexToRgba(accent, 0.5) }}>
+                #{String(cardNumber).padStart(3, "0")}
+              </span>
+            )}
+          </div>
           <h2 className="text-2xl font-bold text-neutral-100 leading-tight">{shopName}</h2>
           <p className="text-neutral-500 text-sm mt-1">{currentStamps} von {maxStamps} Stempel</p>
         </div>

@@ -625,14 +625,14 @@ export default function MePage() {
 
       {/* App name */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.0 }}
-        className="flex items-center justify-between mb-8">
-        <p className="text-sm font-bold tracking-tight text-zinc-100">
-          Loyalty<span className="text-zinc-500">Card</span>
+        className="relative flex items-center justify-center mb-8">
+        <p className="text-xl font-black tracking-tight text-zinc-100">
+          Loyalty<span className="text-zinc-600">Card</span>
         </p>
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setShowSettings(true)}
-          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center"
+          className="absolute right-0 w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center"
         >
           <Settings size={16} className="text-zinc-500" />
         </motion.button>
