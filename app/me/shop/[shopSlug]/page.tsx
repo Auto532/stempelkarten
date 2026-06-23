@@ -119,7 +119,14 @@ export default function MeShopPage() {
               transition={{ duration: 0.2 }}
               className="flex-1 flex flex-col items-center justify-center gap-5"
             >
-              <QRCard qrToken={qrToken} customerName={data.customer.name} />
+              <QRCard
+                qrToken={qrToken}
+                customerName={data.customer.name}
+                cardBg={theme?.colors.card.background}
+                cardBorder={theme?.colors.card.border}
+                textPrimary={theme?.colors.text}
+                textMuted={theme?.colors.accentDim}
+              />
               <button
                 onClick={() => setShowQR(false)}
                 className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"

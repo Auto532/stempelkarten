@@ -143,8 +143,20 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
 
 // ─── QRCard ───────────────────────────────────────────────────────────────────
 
-export function QRCard({ qrToken, customerName }: { qrToken: string; customerName: string }) {
+export function QRCard({ qrToken, customerName, cardBg, cardBorder, textPrimary, textMuted }: {
+  qrToken: string;
+  customerName: string;
+  cardBg?: string;
+  cardBorder?: string;
+  textPrimary?: string;
+  textMuted?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const bg     = cardBg     ?? "#18181b";
+  const border = cardBorder ?? "1px solid #27272a";
+  const tPrim  = textPrimary ?? "#f4f4f5";
+  const tMuted = textMuted   ?? "#71717a";
+
   useEffect(() => {
     if (canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
@@ -160,14 +172,14 @@ export function QRCard({ qrToken, customerName }: { qrToken: string; customerNam
       className="relative mx-auto w-full max-w-xs"
     >
       <div className="absolute inset-0 bg-white/5 blur-3xl rounded-3xl scale-95" />
-      <div className="relative bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl">
+      <div className="relative rounded-3xl p-6 shadow-2xl" style={{ background: bg, border }}>
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-widest">Stempelkarte</p>
-            <p className="text-zinc-100 font-bold text-lg leading-tight mt-0.5">{customerName}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: tMuted }}>Stempelkarte</p>
+            <p className="font-bold text-lg leading-tight mt-0.5" style={{ color: tPrim }}>{customerName}</p>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center">
-            <Gift size={18} className="text-zinc-400" />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: bg, border }}>
+            <Gift size={18} style={{ color: tMuted }} />
           </div>
         </div>
         <div className="flex justify-center">
@@ -175,7 +187,7 @@ export function QRCard({ qrToken, customerName }: { qrToken: string; customerNam
             <canvas ref={canvasRef} className="block rounded-lg" />
           </div>
         </div>
-        <p className="text-center text-[11px] text-zinc-500 mt-4 font-medium">
+        <p className="text-center text-[11px] mt-4 font-medium" style={{ color: tMuted }}>
           Im Laden vorzeigen zum Stempel sammeln
         </p>
       </div>
