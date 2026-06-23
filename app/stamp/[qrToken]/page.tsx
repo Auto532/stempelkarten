@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { Stamp, Gift, UserPlus, ArrowLeft, LogIn } from "lucide-react";
+import { Stamp, Gift, UserPlus, ArrowLeft, LogIn, ShieldCheck } from "lucide-react";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
+import type { Id } from "@/convex/_generated/dataModel";
 
 type Tier = { stamps: number; text: string; enabled: boolean };
 
@@ -31,17 +32,27 @@ export default function StampPage() {
   const [error, setError] = useState("");
   const [redeemedTierText, setRedeemedTierText] = useState<string | null>(null);
 
+  // Admin mode
+  const [adminMode, setAdminMode] = useState(false);
+  const [adminPin, setAdminPin] = useState("");
+  const [adminSelectedShopId, setAdminSelectedShopId] = useState<Id<"shops"> | null>(null);
+
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
     const slug = localStorage.getItem("adminShopSlug");
-    if (!token || !slug) {
+    const pin = localStorage.getItem("adminPin");
+    if (token && slug) {
+      setAdminToken(token);
+      setShopSlug(slug);
+      setAdminRole((localStorage.getItem("adminRole") as "inhaber" | "mitarbeiter") ?? "inhaber");
+      setReady(true);
+    } else if (pin) {
+      setAdminPin(pin);
+      setAdminMode(true);
+      setReady(true);
+    } else {
       router.replace("/me");
-      return;
     }
-    setAdminToken(token);
-    setShopSlug(slug);
-    setAdminRole((localStorage.getItem("adminRole") as "inhaber" | "mitarbeiter") ?? "inhaber");
-    setReady(true);
   }, [router]);
 
   const shop = useQuery(api.shops.getBySlug, shopSlug ? { slug: shopSlug } : "skip");
@@ -53,6 +64,20 @@ export default function StampPage() {
   const addStamp = useMutation(api.memberships.addStamp);
   const redeemReward = useMutation(api.memberships.redeemReward);
   const createMembership = useMutation(api.memberships.createMembershipForExistingCustomer);
+  const adminStamp = useMutation(api.memberships.adminStampForCustomer);
+
+  // Admin-mode queries
+  const allShops = useQuery(api.shops.listAllShops, adminMode && adminPin ? { adminSecret: adminPin } : "skip");
+  const adminSelectedShop = useQuery(api.shops.getBySlug,
+    adminMode && adminSelectedShopId && allShops
+      ? { slug: allShops.find(s => s._id === adminSelectedShopId)?.slug ?? "" }
+      : "skip"
+  );
+  const adminMembershipData = useQuery(api.memberships.getForCustomerAndShop,
+    adminMode && adminSelectedShop ? { qrToken, shopId: adminSelectedShop._id } : "skip"
+  );
+  const customerInfo = useQuery(api.customers.getByQrToken, adminMode ? { qrToken } : "skip");
+
   useShopThemeSync(shop);
 
   const handleStamp = async () => {
@@ -84,6 +109,101 @@ export default function StampPage() {
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
     finally { setLoading(false); }
   };
+
+  const handleAdminStamp = async () => {
+    if (!adminSelectedShopId) return;
+    setLoading(true); setError("");
+    try {
+      await adminStamp({ adminSecret: adminPin, shopId: adminSelectedShopId, qrToken });
+      setDone("stamped");
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    finally { setLoading(false); }
+  };
+
+  // ── Admin-Modus UI ────────────────────────────────────────────────────────
+  if (adminMode && ready) {
+    if (done === "stamped") {
+      const shopName = allShops?.find(s => s._id === adminSelectedShopId)?.name ?? "";
+      const newStamps = (adminMembershipData?.membership?.currentStamps ?? 0) + 1;
+      const stampsRequired = adminSelectedShop?.stampsRequired ?? 0;
+      return (
+        <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-6">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}>
+            <div className="w-24 h-24 rounded-full bg-green-500 flex items-center justify-center mx-auto">
+              <Stamp size={44} className="text-white" />
+            </div>
+          </motion.div>
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-100">Gestempelt!</h1>
+            <p className="text-zinc-400 mt-1">{customerInfo?.name ?? "Kunde"} · {shopName}</p>
+            <p className="text-zinc-500 text-sm mt-1">{newStamps} / {stampsRequired} Stempel</p>
+          </div>
+          <button onClick={() => { setDone(null); setAdminSelectedShopId(null); }}
+            className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+            <ArrowLeft size={15} /> Weiterer Stempel
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-zinc-950 px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col gap-5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center">
+            <ShieldCheck size={18} className="text-amber-400" />
+          </div>
+          <div>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Admin-Modus</p>
+            <h1 className="font-bold text-zinc-100 leading-tight">Stempel vergeben</h1>
+          </div>
+        </div>
+
+        {/* Kundeninfo */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-lg font-bold text-amber-400 shrink-0">
+            {customerInfo ? customerInfo.name.charAt(0).toUpperCase() : "?"}
+          </div>
+          <div>
+            <p className="font-bold text-zinc-100">{customerInfo?.name ?? "Laden..."}</p>
+            <p className="text-xs text-zinc-500">{customerInfo?.phone || "Kein Telefon"}</p>
+          </div>
+        </div>
+
+        {/* Shop-Auswahl */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+          <p className="text-sm font-semibold text-zinc-200">Shop auswählen</p>
+          {!allShops ? (
+            <p className="text-xs text-zinc-600">Laden...</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {allShops.map(s => (
+                <button key={s._id} onClick={() => setAdminSelectedShopId(s._id)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                  style={adminSelectedShopId === s._id
+                    ? { background: "#fbbf2433", border: "1px solid #fbbf2488", color: "#fbbf24" }
+                    : { background: "#27272a", border: "1px solid #3f3f46", color: "#71717a" }
+                  }>
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          )}
+          {adminSelectedShop && adminMembershipData?.membership && (
+            <p className="text-xs text-zinc-500">
+              Aktuell: {adminMembershipData.membership.currentStamps} / {adminSelectedShop.stampsRequired} Stempel
+            </p>
+          )}
+        </div>
+
+        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
+        <button onClick={handleAdminStamp} disabled={!adminSelectedShopId || loading}
+          className="w-full py-5 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-3 text-lg transition-colors">
+          {loading ? <Spinner /> : <><Stamp size={22} /> Stempel geben</>}
+        </button>
+      </div>
+    );
+  }
 
   if (!ready || !shop || data === undefined) {
     return (
