@@ -134,6 +134,7 @@ export default function MeShopPage() {
               <QRCard
                 qrToken={qrToken}
                 customerName={data.customer.name}
+                shopName={shop.name}
                 cardBg={theme?.colors.card.background}
                 cardBorder={theme?.colors.card.border}
                 textPrimary={theme?.colors.text}

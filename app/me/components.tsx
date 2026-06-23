@@ -143,9 +143,10 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
 
 // ─── QRCard ───────────────────────────────────────────────────────────────────
 
-export function QRCard({ qrToken, customerName, cardBg, cardBorder, textPrimary, textMuted, accentColor }: {
+export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, textPrimary, textMuted, accentColor }: {
   qrToken: string;
   customerName: string;
+  shopName?: string;
   cardBg?: string;
   cardBorder?: string;
   textPrimary?: string;
@@ -168,46 +169,71 @@ export function QRCard({ qrToken, customerName, cardBg, cardBorder, textPrimary,
   }, [qrToken]);
 
   return (
-    <div className="relative mx-auto w-full max-w-xs flex flex-col items-center">
-      {/* Name */}
-      <div className="text-center mb-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1" style={{ color: tMuted }}>
-          Bereit zum Scannen
-        </p>
-        <p className="text-2xl font-bold" style={{ color: tPrim }}>{customerName}</p>
-      </div>
+    <div className="relative mx-auto w-full max-w-xs">
+      <div
+        className="rounded-3xl overflow-hidden"
+        style={{
+          background: bg,
+          border,
+          boxShadow: "0 24px 64px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.3)",
+        }}
+      >
+        {/* Header / Branding Band */}
+        <div
+          className="relative px-6 pt-7 pb-6 overflow-hidden"
+          style={{ background: `linear-gradient(135deg, ${hexToRgba(accent, 0.28)} 0%, ${hexToRgba(accent, 0.06)} 100%)` }}
+        >
+          <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full" style={{ background: hexToRgba(accent, 0.08) }} />
+          <div className="absolute top-3 -right-5 w-20 h-20 rounded-full" style={{ background: hexToRgba(accent, 0.05) }} />
 
-      {/* QR container with glow */}
-      <div className="relative">
-        {/* Card */}
-        <div className="relative rounded-3xl p-5 shadow-2xl" style={{ background: bg, border }}>
-          {/* Corner accent bars */}
-          {[
-            "top-3 left-3 w-5 h-0.5",
-            "top-3 left-3 w-0.5 h-5",
-            "top-3 right-3 w-5 h-0.5",
-            "top-3 right-3 w-0.5 h-5",
-            "bottom-3 left-3 w-5 h-0.5",
-            "bottom-3 left-3 w-0.5 h-5",
-            "bottom-3 right-3 w-5 h-0.5",
-            "bottom-3 right-3 w-0.5 h-5",
-          ].map((cls, i) => (
-            <div key={i} className={`absolute ${cls} rounded-full`} style={{ background: accent, opacity: 0.6 }} />
-          ))}
+          <p className="relative z-10 text-[9px] font-bold uppercase tracking-[0.25em] mb-1.5" style={{ color: hexToRgba(accent, 0.75) }}>
+            Stempelkarte
+          </p>
+          {shopName && (
+            <h2 className="relative z-10 text-[22px] font-bold leading-tight" style={{ color: tPrim }}>
+              {shopName}
+            </h2>
+          )}
+          <div className="relative z-10 flex items-center gap-1.5 mt-3">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
+            <p className="text-[10px] font-semibold" style={{ color: hexToRgba(accent, 0.8) }}>
+              Bereit zum Scannen
+            </p>
+          </div>
+        </div>
 
-          {/* QR code */}
-          <div className="rounded-2xl overflow-hidden" style={{ background: "#fff", boxShadow: "inset 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 3px rgba(0,0,0,0.08)" }}>
+        {/* Perforated Divider */}
+        <div className="mx-5 border-t border-dashed" style={{ borderColor: hexToRgba(accent, 0.22) }} />
+
+        {/* QR + Identity */}
+        <div className="px-6 pt-6 pb-7 flex flex-col items-center gap-5">
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{
+              background: "#fff",
+              boxShadow: "inset 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 3px rgba(0,0,0,0.08)",
+            }}
+          >
             <div className="p-3">
               <canvas ref={canvasRef} className="block" />
             </div>
           </div>
+
+          <div className="text-center">
+            <p className="text-[9px] font-bold uppercase tracking-[0.22em] mb-0.5" style={{ color: tMuted }}>
+              Inhaber
+            </p>
+            <p className="text-xl font-bold" style={{ color: tPrim }}>{customerName}</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 pb-5 border-t text-center" style={{ borderColor: hexToRgba(accent, 0.12) }}>
+          <p className="text-[10px] font-medium pt-4" style={{ color: tMuted }}>
+            Im Laden vorzeigen · Stempel sammeln
+          </p>
         </div>
       </div>
-
-      {/* Footer */}
-      <p className="text-[11px] text-center mt-5 font-medium" style={{ color: tMuted }}>
-        Im Laden vorzeigen · Stempel sammeln
-      </p>
     </div>
   );
 }
