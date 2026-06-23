@@ -163,7 +163,7 @@ export default function StampPage() {
               className="text-amber-400 font-semibold mt-2">{topTier.text}</motion.p>
           )}
         </div>
-        <button onClick={() => router.push(adminRole === "mitarbeiter" ? `/betrieb/${shopSlug}/scan` : `/betrieb/${shopSlug}`)}
+        <button onClick={() => router.replace(adminRole === "mitarbeiter" ? `/betrieb/${shopSlug}/scan` : `/betrieb/${shopSlug}`)}
           className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
           <ArrowLeft size={15} /> Zurück zur Übersicht
         </button>
@@ -184,7 +184,7 @@ export default function StampPage() {
           <p className="text-zinc-400 mt-1">{customer.name} erhält:</p>
           <p className="text-amber-400 font-semibold mt-1">{redeemedTierText ?? shop.rewardText}</p>
         </div>
-        <button onClick={() => router.push(adminRole === "mitarbeiter" ? `/betrieb/${shopSlug}/scan` : `/betrieb/${shopSlug}`)}
+        <button onClick={() => router.replace(adminRole === "mitarbeiter" ? `/betrieb/${shopSlug}/scan` : `/betrieb/${shopSlug}`)}
           className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
           <ArrowLeft size={15} /> Zurück zur Übersicht
         </button>
@@ -201,7 +201,7 @@ export default function StampPage() {
 
       {/* Header */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 relative z-10">
-        <button onClick={() => router.push(adminRole === "mitarbeiter" ? `/betrieb/${shopSlug}/scan` : `/betrieb/${shopSlug}`)}
+        <button onClick={() => router.replace(adminRole === "mitarbeiter" ? `/betrieb/${shopSlug}/scan` : `/betrieb/${shopSlug}`)}
           className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
           style={theme ? { background: c.cardBg, border: c.card.border, color: c.accent } : undefined}
         >
