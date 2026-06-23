@@ -75,6 +75,7 @@ type MembershipEntry = {
     stampIcon?: string | null;
     theme?: string;
     bonusProgramEnabled?: boolean;
+    stampValue?: number | null;
     milestonesEnabled?: boolean;
     milestones?: { stamps: number; text: string; enabled: boolean }[];
   } | null;
@@ -137,33 +138,38 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
       className="w-full text-left rounded-2xl overflow-hidden"
       style={{
         background: "#141414",
-        border: `1px solid #242424`,
-        boxShadow: "0 2px 16px rgba(0,0,0,0.5)",
+        border: `1px solid ${hexToRgba(accent, 0.2)}`,
+        boxShadow: `0 2px 16px rgba(0,0,0,0.5)`,
       }}
     >
-      {/* Solid colored header — like a real loyalty card */}
-      <div className="px-4 py-3 flex items-center justify-between gap-3"
-        style={{ background: accent }}>
+      {/* Thin accent stripe */}
+      <div style={{ height: 3, background: accent }} />
+
+      {/* Header — dark, accent only for icon + label */}
+      <div className="px-4 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center shrink-0">
-            <StampIcon size={17} color="#fff" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: hexToRgba(accent, 0.14), border: `1px solid ${hexToRgba(accent, 0.22)}` }}>
+            <StampIcon size={17} style={{ color: accent }} />
           </div>
           <div className="min-w-0">
-            <p className="text-[8px] font-bold tracking-[0.22em] uppercase text-black/50 leading-none mb-0.5">
+            <p className="text-[8px] font-bold tracking-[0.22em] uppercase leading-none mb-0.5"
+              style={{ color: hexToRgba(accent, 0.55) }}>
               Stempelkarte
             </p>
-            <h2 className="text-sm font-bold text-zinc-900 leading-tight truncate">
+            <h2 className="text-sm font-bold text-zinc-100 leading-tight truncate">
               {shop.name}
             </h2>
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {isReady && (
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-black/20 text-zinc-900">
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+              style={{ background: hexToRgba(accent, 0.16), color: accent }}>
               BEREIT
             </span>
           )}
-          <ChevronRight size={14} className="text-black/40" />
+          <ChevronRight size={14} style={{ color: hexToRgba(accent, 0.35) }} />
         </div>
       </div>
 
@@ -235,6 +241,13 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
             />
           </div>
         </div>
+
+        {/* Stempelwert */}
+        {shop.stampValue ? (
+          <p className="text-[10px] mt-1" style={{ color: hexToRgba(accent, 0.45) }}>
+            1 Stempel pro €{shop.stampValue} Einkauf
+          </p>
+        ) : null}
 
         {/* Reached milestones */}
         {reachedMilestones.length > 0 && (

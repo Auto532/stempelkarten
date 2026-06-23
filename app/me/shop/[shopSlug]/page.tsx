@@ -133,6 +133,7 @@ export default function MeShopPage() {
                 cardBorder={theme?.colors.card.border}
                 textPrimary={theme?.colors.text}
                 textMuted={theme?.colors.accentDim}
+                accentColor={theme?.colors.accent}
               />
               <button
                 onClick={() => setShowQR(false)}
@@ -160,6 +161,7 @@ export default function MeShopPage() {
                     qrToken={qrToken}
                     rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
                     accentColor={shop.accentColor}
+                    stampValue={shop.stampValue}
                   />
                   <theme.Banner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined} />
                   {shop.milestonesEnabled && shop.milestones && (
@@ -180,6 +182,7 @@ export default function MeShopPage() {
                     rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
                     accentColor={shop.customDesignEnabled ? shop.accentColor : undefined}
                     stampIcon={shop.stampIcon}
+                    stampValue={shop.stampValue}
                   />
                   {shop.milestonesEnabled && shop.milestones && (
                     <MilestonesSection

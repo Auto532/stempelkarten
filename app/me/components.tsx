@@ -143,54 +143,99 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
 
 // ─── QRCard ───────────────────────────────────────────────────────────────────
 
-export function QRCard({ qrToken, customerName, cardBg, cardBorder, textPrimary, textMuted }: {
+export function QRCard({ qrToken, customerName, cardBg, cardBorder, textPrimary, textMuted, accentColor }: {
   qrToken: string;
   customerName: string;
   cardBg?: string;
   cardBorder?: string;
   textPrimary?: string;
   textMuted?: string;
+  accentColor?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bg     = cardBg     ?? "#18181b";
   const border = cardBorder ?? "1px solid #27272a";
   const tPrim  = textPrimary ?? "#f4f4f5";
   const tMuted = textMuted   ?? "#71717a";
+  const accent = accentColor ?? "#fbbf24";
 
   useEffect(() => {
     if (canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
-        width: 210, margin: 1, color: { dark: "#09090b", light: "#fafafa" },
+        width: 248, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
       });
     }
   }, [qrToken]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
-      className="relative mx-auto w-full max-w-xs"
+      initial={{ opacity: 0, scale: 0.88, y: 16 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+      className="relative mx-auto w-full max-w-xs flex flex-col items-center"
     >
-      <div className="absolute inset-0 bg-white/5 blur-3xl rounded-3xl scale-95" />
-      <div className="relative rounded-3xl p-6 shadow-2xl" style={{ background: bg, border }}>
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: tMuted }}>Stempelkarte</p>
-            <p className="font-bold text-lg leading-tight mt-0.5" style={{ color: tPrim }}>{customerName}</p>
-          </div>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: bg, border }}>
-            <Gift size={18} style={{ color: tMuted }} />
-          </div>
-        </div>
-        <div className="flex justify-center">
-          <div className="bg-white rounded-2xl p-3">
-            <canvas ref={canvasRef} className="block rounded-lg" />
-          </div>
-        </div>
-        <p className="text-center text-[11px] mt-4 font-medium" style={{ color: tMuted }}>
-          Im Laden vorzeigen zum Stempel sammeln
+      {/* Name */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+        className="text-center mb-6"
+      >
+        <p className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1" style={{ color: tMuted }}>
+          Bereit zum Scannen
         </p>
+        <p className="text-2xl font-bold" style={{ color: tPrim }}>{customerName}</p>
+      </motion.div>
+
+      {/* QR container with glow */}
+      <div className="relative">
+        {/* Outer pulse glow */}
+        <motion.div
+          animate={{ scale: [1, 1.12, 1], opacity: [0.25, 0.5, 0.25] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -inset-4 rounded-[2.5rem] blur-2xl pointer-events-none"
+          style={{ background: accent }}
+        />
+
+        {/* Card */}
+        <div className="relative rounded-3xl p-5 shadow-2xl" style={{ background: bg, border }}>
+          {/* Corner accent bars */}
+          {[
+            "top-3 left-3 w-5 h-0.5",
+            "top-3 left-3 w-0.5 h-5",
+            "top-3 right-3 w-5 h-0.5",
+            "top-3 right-3 w-0.5 h-5",
+            "bottom-3 left-3 w-5 h-0.5",
+            "bottom-3 left-3 w-0.5 h-5",
+            "bottom-3 right-3 w-5 h-0.5",
+            "bottom-3 right-3 w-0.5 h-5",
+          ].map((cls, i) => (
+            <div key={i} className={`absolute ${cls} rounded-full`} style={{ background: accent, opacity: 0.6 }} />
+          ))}
+
+          {/* QR code */}
+          <div className="relative rounded-2xl overflow-hidden" style={{ background: "#fff" }}>
+            <div className="p-3">
+              <canvas ref={canvasRef} className="block" />
+            </div>
+            {/* Scan line */}
+            <motion.div
+              animate={{ y: [0, 264, 0] }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.4 }}
+              className="absolute left-0 right-0 h-[2px] pointer-events-none"
+              style={{ background: `linear-gradient(to right, transparent 0%, ${accent} 30%, ${accent} 70%, transparent 100%)`, opacity: 0.75 }}
+            />
+          </div>
+        </div>
       </div>
+
+      {/* Footer */}
+      <motion.p
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+        className="text-[11px] text-center mt-5 font-medium"
+        style={{ color: tMuted }}
+      >
+        Im Laden vorzeigen · Stempel sammeln
+      </motion.p>
     </motion.div>
   );
 }
@@ -285,7 +330,7 @@ export function MilestonesSection({
 
 export function LoyaltyCard({
   shopName, rewardText, stampsRequired, currentStamps, rewardsRedeemed,
-  animateIndex, onShowQR, qrToken, rewardTiers, accentColor, stampIcon, hideQR,
+  animateIndex, onShowQR, qrToken, rewardTiers, accentColor, stampIcon, hideQR, stampValue,
 }: {
   shopName: string;
   rewardText: string;
@@ -299,6 +344,7 @@ export function LoyaltyCard({
   accentColor?: string;
   stampIcon?: string | null;
   hideQR?: boolean;
+  stampValue?: number | null;
 }) {
   const accent = accentColor ?? "#fbbf24";
   const StampIconComponent = getStampIcon(stampIcon);
@@ -395,6 +441,13 @@ export function LoyaltyCard({
           })}
         </div>
       </div>
+
+      {/* Stempelwert-Hinweis */}
+      {stampValue ? (
+        <div className="px-6 pb-2">
+          <p className="text-[10px] text-neutral-600">1 Stempel pro €{stampValue} Einkauf</p>
+        </div>
+      ) : null}
 
       {/* Belohnungs-Abschnitt */}
       <div className="px-5 pb-6 space-y-2">

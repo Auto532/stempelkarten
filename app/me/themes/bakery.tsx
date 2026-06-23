@@ -22,7 +22,7 @@ function BroetchenIcon({ className, style }: { className?: string; style?: React
 }
 
 
-export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor }: ThemeCardProps) {
+export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor, stampValue }: ThemeCardProps) {
   const accent = accentColor ?? A;
   const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
   const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
@@ -82,6 +82,11 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
               style={{ background: `linear-gradient(to right, ${accent}, ${AD})` }}
             />
           </div>
+          {stampValue ? (
+            <p className="text-[10px] mt-1.5 font-semibold" style={{ color: AD }}>
+              1 Stempel pro €{stampValue} Einkauf
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

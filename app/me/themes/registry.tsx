@@ -88,6 +88,7 @@ export interface ThemeCardProps {
   hideQR?: boolean;
   rewardTiers?: ThemeTier[];
   accentColor?: string;
+  stampValue?: number | null;
 }
 
 export interface ThemeBannerProps {

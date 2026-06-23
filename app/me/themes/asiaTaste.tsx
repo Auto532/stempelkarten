@@ -115,7 +115,7 @@ export function AsiaTasteBackground() {
   );
 }
 
-export function AsiaTasteLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor }: ThemeCardProps) {
+export function AsiaTasteLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor, stampValue }: ThemeCardProps) {
   const accent = accentColor ?? TERRA;
   const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
   const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
@@ -217,6 +217,11 @@ export function AsiaTasteLoyaltyCard({ shopName, stampsRequired, currentStamps, 
               style={{ background: `linear-gradient(to right, ${TERRA}, ${GREEN})` }}
             />
           </div>
+          {stampValue ? (
+            <p className="text-[10px] mt-1.5" style={{ color: MUTED }}>
+              1 Stempel pro €{stampValue} Einkauf
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

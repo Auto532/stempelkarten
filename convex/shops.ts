@@ -67,10 +67,11 @@ export const updateSettings = mutation({
       text: v.string(),
       enabled: v.boolean(),
     }))),
+    stampValue: v.optional(v.number()),
   },
-  handler: async (ctx, { shopId, adminToken, stampsRequired, rewardText, rewardTiers }) => {
+  handler: async (ctx, { shopId, adminToken, stampsRequired, rewardText, rewardTiers, stampValue }) => {
     await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
-    await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers });
+    await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, stampValue });
   },
 });
 

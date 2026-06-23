@@ -37,6 +37,7 @@ export default defineSchema({
     datenschutzText: v.optional(v.string()),
     stampIcon: v.optional(v.string()),
     theme: v.optional(v.string()),
+    stampValue: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_slug", ["slug"])

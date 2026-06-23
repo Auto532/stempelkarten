@@ -56,6 +56,7 @@ export default function BetriebDashboard() {
   // Base settings
   const [stampsRequired, setStampsRequired] = useState(0);
   const [rewardText, setRewardText] = useState("");
+  const [stampValue, setStampValue] = useState<number | "">("");
   const [baseSaving, setBaseSaving] = useState(false);
   const [baseSaved, setBaseSaved] = useState(false);
 
@@ -101,7 +102,11 @@ export default function BetriebDashboard() {
   }, [router, shopSlug]);
 
   useEffect(() => {
-    if (shop) { setStampsRequired(shop.stampsRequired); setRewardText(shop.rewardText); }
+    if (shop) {
+      setStampsRequired(shop.stampsRequired);
+      setRewardText(shop.rewardText);
+      setStampValue(shop.stampValue ?? "");
+    }
   }, [shop]);
 
   useEffect(() => {
@@ -154,7 +159,7 @@ export default function BetriebDashboard() {
     return customer?.name.toLowerCase().includes(q) || (shop.showLeads && customer?.phone.includes(q));
   }) ?? [];
 
-  const baseDirty = stampsRequired !== shop.stampsRequired || rewardText !== shop.rewardText;
+  const baseDirty = stampsRequired !== shop.stampsRequired || rewardText !== shop.rewardText || stampValue !== (shop.stampValue ?? "");
   const tiersDirty = JSON.stringify(tiers) !== JSON.stringify(
     shop.rewardTiers?.length ? shop.rewardTiers : [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true }]
   );
@@ -163,7 +168,10 @@ export default function BetriebDashboard() {
   const handleSaveBase = async () => {
     setBaseSaving(true);
     try {
-      await updateSettings({ shopId: shop._id, adminToken, stampsRequired, rewardText });
+      await updateSettings({
+        shopId: shop._id, adminToken, stampsRequired, rewardText,
+        stampValue: stampValue === "" ? undefined : Number(stampValue),
+      });
       setBaseSaved(true); setTimeout(() => setBaseSaved(false), 2500);
     } finally { setBaseSaving(false); }
   };
@@ -400,8 +408,34 @@ export default function BetriebDashboard() {
                   className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none"
                   style={inp} />
               </div>
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: tm }}>
+                  Mindesteinkauf pro Stempel (optional)
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold" style={{ color: tm }}>€</span>
+                    <input
+                      type="number" min={1} max={9999} value={stampValue}
+                      onChange={e => setStampValue(e.target.value === "" ? "" : Number(e.target.value))}
+                      placeholder="z.B. 10"
+                      className="w-full pl-8 pr-4 py-2.5 rounded-xl text-sm focus:outline-none"
+                      style={inp}
+                    />
+                  </div>
+                  {stampValue !== "" && (
+                    <button onClick={() => setStampValue("")}
+                      className="px-3 py-2.5 rounded-xl text-xs" style={{ ...sub, color: tm }}>
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] mt-1.5" style={{ color: tm }}>
+                  Wird auf der Kundenkarte angezeigt: „1 Stempel pro €{stampValue || "___"} Einkauf"
+                </p>
+              </div>
               <SaveBar dirty={baseDirty} saving={baseSaving} saved={baseSaved}
-                onSave={handleSaveBase} onReset={() => { setStampsRequired(shop.stampsRequired); setRewardText(shop.rewardText); }} />
+                onSave={handleSaveBase} onReset={() => { setStampsRequired(shop.stampsRequired); setRewardText(shop.rewardText); setStampValue(shop.stampValue ?? ""); }} />
             </div>
 
             {/* Bonus-Stufen: nur wenn Bonus-Programm aktiv */}
