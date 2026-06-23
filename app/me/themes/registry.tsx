@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { BeatesGrillBackground, BeatesGrillLoyaltyCard, BeatesGrillRewardBanner, BeatesGrillMilestonesSection } from "./beatesGrill";
 import { AsiaTasteBackground, AsiaTasteLoyaltyCard, AsiaTasteRewardBanner, AsiaTasteMilestonesSection } from "./asiaTaste";
 import { BakeryLoyaltyCard, BakeryRewardBanner, BakeryMilestonesSection } from "./bakery";
+import { BarberBackground, BarberLoyaltyCard, BarberRewardBanner, BarberMilestonesSection } from "./barber";
 import type { ComponentType } from "react";
 
 type Star = { id: number; x: number; y: number; size: number; delay: number; dur: number };
@@ -172,6 +173,28 @@ const THEMES: Record<string, ThemeConfig> = {
     Card:       AsiaTasteLoyaltyCard,
     Banner:     AsiaTasteRewardBanner,
     Milestones: AsiaTasteMilestonesSection,
+  },
+  "barber": {
+    colors: {
+      accent:      "#cca352",
+      accentDim:   "#6b5535",
+      accentFaint: "#1a1208",
+      text:        "#f0e8d0",
+      textBody:    "#c8a878",
+      cardBg:      "#0f0f11",
+      dark:        "#050506",
+      divider:     "#cca35220",
+      gradient:    "linear-gradient(135deg, #e8d08d, #cca352, #8b6a2a)",
+      card:    { background: "#0f0f11", border: "1px solid #cca35228" },
+      sub:     { background: "#0a0a0c", border: "1px solid #cca35218" },
+      input:   { background: "#0a0a0c", border: "1px solid #cca35230", color: "#f0e8d0" },
+      badge:   { background: "#cca35218", border: "1px solid #cca35240", color: "#e8d08d" },
+      subCard: { background: "#0f0f1188", borderRadius: "0.75rem", padding: "0.75rem" },
+    },
+    Background: BarberBackground,
+    Card:       BarberLoyaltyCard,
+    Banner:     BarberRewardBanner,
+    Milestones: BarberMilestonesSection,
   },
   "beates-grill": {
     colors: {
