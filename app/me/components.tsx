@@ -196,7 +196,7 @@ export function QRCard({ qrToken, customerName, cardBg, cardBorder, textPrimary,
           ))}
 
           {/* QR code */}
-          <div className="rounded-2xl overflow-hidden" style={{ background: "#fff" }}>
+          <div className="rounded-2xl overflow-hidden" style={{ background: "#fff", boxShadow: "inset 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 3px rgba(0,0,0,0.08)" }}>
             <div className="p-3">
               <canvas ref={canvasRef} className="block" />
             </div>
