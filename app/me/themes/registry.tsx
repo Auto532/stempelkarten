@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { BeatesGrillBackground, BeatesGrillLoyaltyCard, BeatesGrillRewardBanner, BeatesGrillMilestonesSection } from "./beatesGrill";
 import { AsiaTasteBackground, AsiaTasteLoyaltyCard, AsiaTasteRewardBanner, AsiaTasteMilestonesSection } from "./asiaTaste";
-import { BakeryBackground, BakeryLoyaltyCard, BakeryRewardBanner, BakeryMilestonesSection } from "./bakery";
+import { BakeryLoyaltyCard, BakeryRewardBanner, BakeryMilestonesSection } from "./bakery";
 import type { ComponentType } from "react";
 
 type Star = { id: number; x: number; y: number; size: number; delay: number; dur: number };
@@ -38,6 +38,25 @@ export function DefaultBackground() {
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 50% 40% at 75% 65%, #0A1840 0%, transparent 55%)" }} />
     </div>
   );
+}
+
+export function makePhotoBackground(url: string): ComponentType {
+  return function PhotoBackground() {
+    useEffect(() => {
+      const b = document.body;
+      b.style.backgroundImage = `url('${url}')`;
+      b.style.backgroundSize = "cover";
+      b.style.backgroundPosition = "center center";
+      b.style.backgroundAttachment = "scroll";
+      return () => {
+        b.style.backgroundImage = "";
+        b.style.backgroundSize = "";
+        b.style.backgroundPosition = "";
+        b.style.backgroundAttachment = "";
+      };
+    }, []);
+    return null;
+  };
 }
 
 export interface ThemeColors {
@@ -125,7 +144,7 @@ const THEMES: Record<string, ThemeConfig> = {
       badge:   { background: "#d9770618", border: "1px solid #d97706", color: "#b45309" },
       subCard: { background: "#fffbeb88", borderRadius: "0.75rem", padding: "0.75rem" },
     },
-    Background: BakeryBackground,
+    Background: makePhotoBackground('/Hintergrund_meisterbaeckerei.png'),
     Card:       BakeryLoyaltyCard,
     Banner:     BakeryRewardBanner,
     Milestones: BakeryMilestonesSection,
