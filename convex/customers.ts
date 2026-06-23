@@ -1,6 +1,37 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+export const findCustomerByPhone = query({
+  args: { phone: v.string(), adminToken: v.string() },
+  handler: async (ctx, { phone, adminToken }) => {
+    const shop = await ctx.db
+      .query("shops")
+      .filter(q => q.eq(q.field("adminLoginToken"), adminToken))
+      .first();
+    if (!shop) return null;
+
+    const customer = await ctx.db
+      .query("customers")
+      .withIndex("by_phone", q => q.eq("phone", phone))
+      .first();
+    if (!customer) return null;
+
+    const membership = await ctx.db
+      .query("memberships")
+      .withIndex("by_customer_and_shop", q =>
+        q.eq("customerId", customer._id).eq("shopId", shop._id)
+      )
+      .unique();
+    if (!membership) return null;
+
+    return {
+      name: customer.name,
+      currentStamps: membership.currentStamps,
+      qrToken: customer.qrToken,
+    };
+  },
+});
+
 export const getByQrToken = query({
   args: { qrToken: v.string() },
   handler: async (ctx, { qrToken }) => {

@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ScanLine, Users, Award, Stamp, X, Check, QrCode,
   Phone, Printer, Search, Gift, Plus, TrendingUp,
-  Trophy, ChevronRight, ArrowLeft, Settings,
+  Trophy, ChevronRight, ArrowLeft, Settings, KeyRound, Share2, Copy,
 } from "lucide-react";
 import { QRImage } from "@/app/components/QRImage";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
@@ -37,7 +37,7 @@ async function printQR(shopName: string, url: string) {
 }
 
 type Tier = { stamps: number; text: string; enabled: boolean };
-type View = "home" | "einstellungen" | "kunden" | "einloesungen" | "qr" | "scan";
+type View = "home" | "einstellungen" | "kunden" | "einloesungen" | "qr" | "scan" | "wiederherstellung";
 
 export default function BetriebDashboard() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -70,6 +70,15 @@ export default function BetriebDashboard() {
   const [milestonesInit, setMilestonesInit] = useState(false);
   const [milestoneSaving, setMilestoneSaving] = useState(false);
   const [milestoneSaved, setMilestoneSaved] = useState(false);
+
+  const [recoveryPhone, setRecoveryPhone] = useState("");
+  const [submittedPhone, setSubmittedPhone] = useState<string | null>(null);
+  const [recoveryCopied, setRecoveryCopied] = useState(false);
+
+  const recoveryResult = useQuery(
+    api.customers.findCustomerByPhone,
+    submittedPhone && adminToken ? { phone: submittedPhone, adminToken } : "skip"
+  );
 
   const updateSettings = useMutation(api.shops.updateSettings);
   const updateMilestones = useMutation(api.shops.updateMilestones);
@@ -307,6 +316,13 @@ export default function BetriebDashboard() {
               icon: QrCode,
               label: "QR-Code",
               sub: "Drucken & aufhängen",
+              badge: null,
+            },
+            {
+              id: "wiederherstellung" as View,
+              icon: KeyRound,
+              label: "Konto suchen",
+              sub: "Karte wiederherstellen",
               badge: null,
             },
           ].map(({ id, icon: Icon, label, sub, badge }) => (
@@ -717,6 +733,113 @@ export default function BetriebDashboard() {
             <ScanLine size={15} /> Kundencode in den Rahmen halten
           </p>
         </motion.div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // WIEDERHERSTELLUNG VIEW
+  // ══════════════════════════════════════════════════════════════════════════
+  if (view === "wiederherstellung") {
+    const recoveryUrl = recoveryResult ? `${typeof window !== "undefined" ? window.location.origin : ""}/me/${recoveryResult.qrToken}` : null;
+
+    const handleShare = async () => {
+      if (!recoveryUrl) return;
+      const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
+      if (nav.share) {
+        try { await nav.share({ title: `${shop.name} – Stempelkarte`, url: recoveryUrl }); } catch {}
+      } else {
+        await navigator.clipboard.writeText(recoveryUrl);
+        setRecoveryCopied(true);
+        setTimeout(() => setRecoveryCopied(false), 2500);
+      }
+    };
+
+    return (
+      <div className={wrapperClass}>
+        {theme && <theme.Background />}
+        <SubHeader title="Konto suchen" />
+
+        <div className="space-y-4">
+          {/* Eingabe */}
+          <div className="rounded-2xl p-5 space-y-4" style={card}>
+            <p className="text-xs" style={{ color: tm }}>
+              Handynummer des Kunden eingeben — es wird nur gesucht wenn eine Mitgliedschaft bei <span style={{ color: ic }}>{shop.name}</span> existiert.
+            </p>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: tm }} />
+                <input
+                  value={recoveryPhone}
+                  onChange={e => { setRecoveryPhone(e.target.value); setSubmittedPhone(null); }}
+                  placeholder="+49 …"
+                  type="tel"
+                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-sm focus:outline-none"
+                  style={inp}
+                  onKeyDown={e => e.key === "Enter" && recoveryPhone.trim() && setSubmittedPhone(recoveryPhone.trim())}
+                />
+              </div>
+              <button
+                onClick={() => recoveryPhone.trim() && setSubmittedPhone(recoveryPhone.trim())}
+                disabled={!recoveryPhone.trim()}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
+                style={{ background: btn, color: "#18181b" }}>
+                <Search size={15} />
+              </button>
+            </div>
+          </div>
+
+          {/* Ergebnis */}
+          <AnimatePresence>
+            {submittedPhone && recoveryResult === undefined && (
+              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="rounded-2xl px-5 py-4 text-sm text-center" style={{ color: tm, ...card }}>
+                Suche…
+              </motion.div>
+            )}
+
+            {submittedPhone && recoveryResult === null && (
+              <motion.div key="notfound" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-2xl px-5 py-4 text-sm text-center" style={card}>
+                <span style={{ color: tm }}>Kein Konto bei <span style={{ color: ic }}>{shop.name}</span> für diese Nummer gefunden.</span>
+              </motion.div>
+            )}
+
+            {submittedPhone && recoveryResult && recoveryUrl && (
+              <motion.div key="found" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-2xl p-5 space-y-4" style={card}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold"
+                    style={{ background: `${ic}18`, color: ic }}>
+                    {recoveryResult.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: tx }}>{recoveryResult.name}</p>
+                    <p className="text-xs" style={{ color: tm }}>{recoveryResult.currentStamps} Stempel bei {shop.name}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl px-4 py-2.5 font-mono text-[11px] break-all" style={{ ...sub, color: tm }}>
+                  {recoveryUrl}
+                </div>
+
+                <button
+                  onClick={handleShare}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold"
+                  style={{ background: btn, color: "#18181b" }}>
+                  {recoveryCopied
+                    ? <><Check size={15} /> Kopiert!</>
+                    : "share" in navigator
+                      ? <><Share2 size={15} /> Link teilen</>
+                      : <><Copy size={15} /> Link kopieren</>}
+                </button>
+                <p className="text-[11px] text-center" style={{ color: tm }}>
+                  Kunde öffnet den Link — Konto ist wiederhergestellt.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     );
   }
