@@ -125,8 +125,7 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
     : [];
 
   const StampIcon = getStampIcon(shop.stampIcon);
-  const dotSize = totalSlots <= 10 ? 32 : totalSlots <= 15 ? 27 : totalSlots <= 20 ? 23 : 19;
-  const iconSize = Math.round(dotSize * 0.46);
+  const stepsLeft = nextTier ? nextTier.stamps - membership.currentStamps : 0;
 
   return (
     <motion.button
@@ -138,125 +137,88 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
       className="w-full text-left rounded-2xl overflow-hidden"
       style={{
         background: "#141414",
-        border: `1px solid ${hexToRgba(accent, 0.2)}`,
-        boxShadow: `0 2px 16px rgba(0,0,0,0.5)`,
+        border: `1px solid ${hexToRgba(accent, 0.18)}`,
+        boxShadow: "0 2px 20px rgba(0,0,0,0.45)",
       }}
     >
-      {/* Thin accent stripe */}
+      {/* Accent stripe */}
       <div style={{ height: 3, background: accent }} />
 
-      {/* Header — dark, accent only for icon + label */}
-      <div className="px-4 py-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: hexToRgba(accent, 0.14), border: `1px solid ${hexToRgba(accent, 0.22)}` }}>
-            <StampIcon size={17} style={{ color: accent }} />
+      <div className="p-4">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: hexToRgba(accent, 0.13), border: `1px solid ${hexToRgba(accent, 0.2)}` }}>
+            <StampIcon size={20} style={{ color: accent }} />
           </div>
-          <div className="min-w-0">
-            <p className="text-[8px] font-bold tracking-[0.22em] uppercase leading-none mb-0.5"
-              style={{ color: hexToRgba(accent, 0.55) }}>
-              Stempelkarte
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-bold text-zinc-100 leading-tight truncate">{shop.name}</h2>
+            <p className="text-[10px] mt-0.5 truncate" style={{ color: hexToRgba(accent, 0.45) }}>
+              {shop.stampValue ? `€${shop.stampValue} = 1 Stempel` : "Stempelkarte"}
             </p>
-            <h2 className="text-sm font-bold text-zinc-100 leading-tight truncate">
-              {shop.name}
-            </h2>
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {isReady && (
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: hexToRgba(accent, 0.16), color: accent }}>
-              BEREIT
+          {isReady ? (
+            <span className="text-[9px] font-bold px-2.5 py-1 rounded-full shrink-0"
+              style={{ background: hexToRgba(accent, 0.18), border: `1px solid ${hexToRgba(accent, 0.35)}`, color: accent }}>
+              BEREIT ✓
             </span>
+          ) : (
+            <ChevronRight size={15} style={{ color: hexToRgba(accent, 0.3) }} className="shrink-0" />
           )}
-          <ChevronRight size={14} style={{ color: hexToRgba(accent, 0.35) }} />
         </div>
-      </div>
 
-      {/* Stamp grid */}
-      <div className="px-4 pt-3.5 pb-3">
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {Array.from({ length: Math.min(totalSlots, 25) }).map((_, i) => {
+        {/* Mini stamp dots */}
+        <div className="flex flex-wrap gap-[5px] mb-3">
+          {Array.from({ length: Math.min(totalSlots, 32) }).map((_, i) => {
             const filled = i < membership.currentStamps;
             const isCheckpoint = tierCheckpoints.has(i + 1);
             return (
-              <div key={i}
-                className="rounded-full flex items-center justify-center"
+              <div key={i} className="rounded-full"
                 style={{
-                  width: dotSize, height: dotSize,
+                  width: 10, height: 10,
                   background: filled
-                    ? isCheckpoint ? accent : hexToRgba(accent, 0.22)
-                    : "#1e1e1e",
-                  border: filled
-                    ? `1.5px solid ${isCheckpoint ? accent : hexToRgba(accent, 0.5)}`
-                    : isCheckpoint
-                      ? `1.5px dashed ${hexToRgba(accent, 0.4)}`
-                      : `1px solid #2a2a2a`,
-                  boxShadow: filled && isCheckpoint ? `0 0 7px ${hexToRgba(accent, 0.45)}` : undefined,
-                }}>
-                {filled
-                  ? isCheckpoint
-                    ? <Trophy size={iconSize} color="#141414" />
-                    : <StampIcon size={iconSize} style={{ color: accent }} />
-                  : isCheckpoint
-                    ? <Gift size={iconSize - 1} style={{ color: hexToRgba(accent, 0.45) }} />
-                    : null
-                }
-              </div>
+                    ? isCheckpoint ? accent : hexToRgba(accent, 0.6)
+                    : hexToRgba(accent, 0.1),
+                  boxShadow: filled && isCheckpoint ? `0 0 5px ${hexToRgba(accent, 0.55)}` : undefined,
+                  outline: !filled && isCheckpoint ? `1.5px dashed ${hexToRgba(accent, 0.3)}` : undefined,
+                  outlineOffset: !filled && isCheckpoint ? "1px" : undefined,
+                }}
+              />
             );
           })}
-          {totalSlots > 25 && (
-            <span className="text-[10px] self-center ml-0.5" style={{ color: hexToRgba(accent, 0.5) }}>
-              +{totalSlots - 25}
-            </span>
+          {totalSlots > 32 && (
+            <span className="text-[9px] self-center" style={{ color: hexToRgba(accent, 0.4) }}>+{totalSlots - 32}</span>
           )}
         </div>
 
-        {/* Progress toward current tier */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center gap-2">
-            <div className="flex items-center gap-1.5 min-w-0">
-              {activeTiers.length > 1 && nextTier && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0"
-                  style={{ background: hexToRgba(accent, 0.15), color: accent }}>
-                  STUFE {currentTierIndex + 1}
-                </span>
-              )}
-              <span className="text-[11px] text-neutral-500 truncate">
-                {nextTier ? nextTier.text : highestTier.text}
-              </span>
-            </div>
-            <span className="text-[11px] font-bold tabular-nums shrink-0" style={{ color: accent }}>
-              {nextTier
-                ? `${membership.currentStamps}/${targetStamps}`
-                : `✓ ${highestTier.text}`}
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full overflow-hidden bg-zinc-800">
-            <motion.div
-              initial={{ width: 0 }} animate={{ width: `${barProgress * 100}%` }}
-              transition={{ duration: 0.7, delay: index * 0.07 + 0.2 }}
-              className="h-full rounded-full"
-              style={{ background: accent }}
-            />
-          </div>
+        {/* Progress bar */}
+        <div className="h-1.5 rounded-full overflow-hidden mb-2.5" style={{ background: hexToRgba(accent, 0.1) }}>
+          <motion.div
+            initial={{ width: 0 }} animate={{ width: `${barProgress * 100}%` }}
+            transition={{ duration: 0.7, delay: index * 0.07 + 0.2 }}
+            className="h-full rounded-full"
+            style={{ background: accent }}
+          />
         </div>
 
-        {/* Stempelwert */}
-        {shop.stampValue ? (
-          <p className="text-[10px] mt-1" style={{ color: hexToRgba(accent, 0.45) }}>
-            1 Stempel pro €{shop.stampValue} Einkauf
-          </p>
-        ) : null}
+        {/* Reward + counter */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] text-zinc-500 truncate flex-1">
+            {nextTier ? nextTier.text : highestTier.text}
+          </span>
+          <span className="text-[11px] font-bold tabular-nums shrink-0" style={{ color: accent }}>
+            {nextTier ? `noch ${stepsLeft}` : "✓ fertig"}
+          </span>
+        </div>
 
-        {/* Reached milestones */}
+        {/* Milestones */}
         {reachedMilestones.length > 0 && (
-          <div className="mt-2.5 pt-2.5 flex items-center gap-1.5 flex-wrap"
-            style={{ borderTop: `1px solid #242424` }}>
-            <Trophy size={11} style={{ color: accent }} className="shrink-0" />
+          <div className="mt-3 pt-2.5 flex items-center gap-1.5 flex-wrap"
+            style={{ borderTop: `1px solid #1e1e1e` }}>
+            <Trophy size={10} style={{ color: accent }} className="shrink-0" />
             {reachedMilestones.map((m, i) => (
-              <span key={i} className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: hexToRgba(accent, 0.1), color: hexToRgba(accent, 0.8) }}>
+              <span key={i} className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: hexToRgba(accent, 0.1), color: hexToRgba(accent, 0.75) }}>
                 {m.text}
               </span>
             ))}
