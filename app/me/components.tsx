@@ -179,12 +179,6 @@ export function QRCard({ qrToken, customerName, cardBg, cardBorder, textPrimary,
 
       {/* QR container with glow */}
       <div className="relative">
-        {/* Static glow */}
-        <div
-          className="absolute -inset-4 rounded-[2.5rem] blur-2xl pointer-events-none"
-          style={{ background: accent, opacity: 0.3 }}
-        />
-
         {/* Card */}
         <div className="relative rounded-3xl p-5 shadow-2xl" style={{ background: bg, border }}>
           {/* Corner accent bars */}
