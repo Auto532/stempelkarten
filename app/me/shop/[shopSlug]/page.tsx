@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Gift, Check } from "lucide-react";
 import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection, getActiveTiers } from "../../components";
+import type { CardTier } from "../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
@@ -22,6 +23,7 @@ export default function MeShopPage() {
   const [showRedeemSuccess, setShowRedeemSuccess] = useState(false);
   const [redeemedText, setRedeemedText] = useState("");
   const [redeeming, setRedeeming] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<CardTier | null>(null);
   const customerRedeem = useMutation(api.memberships.customerRedeemReward);
 
   useEffect(() => {
@@ -95,14 +97,23 @@ export default function MeShopPage() {
     rewardText: shop.rewardText,
     rewardTiers: shop.bonusProgramEnabled ? shop.rewardTiers : undefined,
   });
-  const availableReward = activeTiers.find(t => membership.currentStamps >= t.stamps) ?? null;
+  const availableRewards = activeTiers.filter(t => membership.currentStamps >= t.stamps);
+
+  const openRedeemSheet = () => {
+    setSelectedReward(availableRewards[0] ?? null);
+    setShowRedeemConfirm(true);
+  };
 
   const handleRedeem = async () => {
-    if (!qrToken) return;
+    if (!qrToken || !selectedReward) return;
     setRedeeming(true);
     try {
-      const result = await customerRedeem({ qrToken, membershipId: membership._id });
-      setRedeemedText(result?.rewardText ?? availableReward?.text ?? "");
+      const result = await customerRedeem({
+        qrToken,
+        membershipId: membership._id,
+        targetStamps: selectedReward.stamps,
+      });
+      setRedeemedText(result?.rewardText ?? selectedReward.text);
       setShowRedeemConfirm(false);
       setShowRedeemSuccess(true);
     } catch {
@@ -189,22 +200,51 @@ export default function MeShopPage() {
               style={{ border: "1px solid #27272a", borderBottom: "none" }}
             >
               <div className="w-10 h-1 bg-zinc-700 rounded-full mx-auto mb-5" />
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: `${c.accent}15`, border: `1px solid ${c.accent}30` }}>
-                  <Gift size={22} style={{ color: c.accent }} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-0.5">Belohnung einlösen</p>
-                  <p className="text-base font-bold text-zinc-100 truncate">{availableReward?.text}</p>
-                </div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-3">Belohnung wählen</p>
+
+              {/* Reward-Auswahl */}
+              <div className="space-y-2 mb-5">
+                {availableRewards.map((reward) => {
+                  const active = selectedReward?.stamps === reward.stamps;
+                  return (
+                    <button
+                      key={reward.stamps}
+                      onClick={() => setSelectedReward(reward)}
+                      className="w-full flex items-center gap-3 rounded-2xl p-3.5 text-left transition-all"
+                      style={{
+                        background: active ? `${c.accent}12` : "#18181b",
+                        border: `1.5px solid ${active ? c.accent : "#27272a"}`,
+                      }}
+                    >
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: active ? `${c.accent}20` : "#27272a" }}
+                      >
+                        <Gift size={16} style={{ color: active ? c.accent : "#71717a" }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-zinc-100 truncate">{reward.text}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: active ? c.accent + "99" : "#52525b" }}>
+                          {reward.stamps} Stempel
+                        </p>
+                      </div>
+                      <div
+                        className="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center"
+                        style={{ borderColor: active ? c.accent : "#3f3f46" }}
+                      >
+                        {active && <div className="w-2 h-2 rounded-full" style={{ background: c.accent }} />}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              <p className="text-zinc-500 text-sm mb-6">
-                Deine Stempel werden abgezogen. Zeig den nächsten Bildschirm dem Mitarbeiter — der gibt dir dann deine Belohnung.
+
+              <p className="text-zinc-600 text-xs mb-5">
+                Deine Stempel werden abgezogen. Zeig den nächsten Bildschirm dem Mitarbeiter.
               </p>
               <button
                 onClick={handleRedeem}
-                disabled={redeeming}
+                disabled={redeeming || !selectedReward}
                 className="w-full py-3.5 rounded-2xl text-base font-bold text-zinc-900 mb-2 disabled:opacity-60"
                 style={{ background: c.accent }}
               >
@@ -281,21 +321,6 @@ export default function MeShopPage() {
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-4"
             >
-              {availableReward && (
-                <motion.button
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setShowRedeemConfirm(true)}
-                  className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 text-base font-bold text-zinc-900"
-                  style={{ background: c.accent }}
-                >
-                  <Gift size={18} />
-                  Belohnung einlösen
-                </motion.button>
-              )}
-
               {theme ? (
                 <>
                   <theme.Card
@@ -310,6 +335,18 @@ export default function MeShopPage() {
                     stampValue={shop.stampValue}
                     cardNumber={cardNumber}
                   />
+                  {availableRewards.length > 0 && (
+                    <motion.button
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 }} whileTap={{ scale: 0.97 }}
+                      onClick={openRedeemSheet}
+                      className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 text-base font-bold text-zinc-900"
+                      style={{ background: c.accent }}
+                    >
+                      <Gift size={18} />
+                      {availableRewards.length > 1 ? `${availableRewards.length} Belohnungen wählen` : "Belohnung einlösen"}
+                    </motion.button>
+                  )}
                   <theme.Banner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined} />
                   {shop.milestonesEnabled && shop.milestones && (
                     <theme.Milestones milestones={shop.milestones} totalStampsEver={membership.totalStampsEver} />
@@ -332,6 +369,18 @@ export default function MeShopPage() {
                     stampValue={shop.stampValue}
                     cardNumber={cardNumber}
                   />
+                  {availableRewards.length > 0 && (
+                    <motion.button
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 }} whileTap={{ scale: 0.97 }}
+                      onClick={openRedeemSheet}
+                      className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 text-base font-bold text-zinc-900"
+                      style={{ background: c.accent }}
+                    >
+                      <Gift size={18} />
+                      {availableRewards.length > 1 ? `${availableRewards.length} Belohnungen wählen` : "Belohnung einlösen"}
+                    </motion.button>
+                  )}
                   {shop.milestonesEnabled && shop.milestones && (
                     <MilestonesSection
                       milestones={shop.milestones}
