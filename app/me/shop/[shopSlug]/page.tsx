@@ -229,7 +229,7 @@ export default function MeShopPage() {
           >
             {showBack && (
               <button
-                onClick={() => router.push("/me")}
+                onClick={() => showQR ? setShowQR(false) : router.push("/me")}
                 className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:border-zinc-700 transition-colors shrink-0"
               >
                 <ArrowLeft size={16} className="text-zinc-400" />
