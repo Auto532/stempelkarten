@@ -116,6 +116,29 @@ export const updateShopConfig = mutation({
 
 // ─── Admin-Mutations (Freischalt-Flags) ──────────────────────────────────────
 
+export const adminUpdateShopContent = mutation({
+  args: {
+    shopId: v.id("shops"),
+    adminSecret: v.string(),
+    stampsRequired: v.number(),
+    rewardText: v.string(),
+    rewardTiers: v.optional(v.array(v.object({
+      stamps: v.number(),
+      text: v.string(),
+      enabled: v.boolean(),
+    }))),
+    milestones: v.optional(v.array(v.object({
+      stamps: v.number(),
+      text: v.string(),
+      enabled: v.boolean(),
+    }))),
+  },
+  handler: async (ctx, { shopId, adminSecret, stampsRequired, rewardText, rewardTiers, milestones }) => {
+    requireAdmin({ secret: adminSecret });
+    await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, milestones });
+  },
+});
+
 export const adminSetFeatures = mutation({
   args: {
     shopId: v.id("shops"),

@@ -7,8 +7,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
-  Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy, type LucideIcon,
+  Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy, Sliders, type LucideIcon,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { STAMP_ICONS } from "@/app/me/components";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
@@ -43,6 +44,195 @@ function detectIcon(text: string): string {
     })) return icon;
   }
   return "stamp";
+}
+
+// ─── ShopSettingsModal ────────────────────────────────────────────────────────
+
+function ShopSettingsModal({ shop, adminSecret, onClose }: { shop: Doc<"shops">; adminSecret: string; onClose: () => void }) {
+  const updateContent = useMutation(api.shops.adminUpdateShopContent);
+  const [stampsRequired, setStampsRequired] = useState(shop.stampsRequired);
+  const [rewardText, setRewardText] = useState(shop.rewardText);
+  const [tiers, setTiers] = useState<{ stamps: number; text: string; enabled: boolean }[]>(
+    shop.rewardTiers?.map(t => ({ ...t })) ?? []
+  );
+  const [milestones, setMilestones] = useState<{ stamps: number; text: string; enabled: boolean }[]>(
+    shop.milestones?.map(m => ({ ...m })) ?? []
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSave = async () => {
+    setError("");
+    setSaving(true);
+    try {
+      await updateContent({
+        shopId: shop._id,
+        adminSecret,
+        stampsRequired,
+        rewardText,
+        rewardTiers: tiers.length > 0 ? tiers : undefined,
+        milestones: milestones.length > 0 ? milestones : undefined,
+      });
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Fehler beim Speichern");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addTier = () => {
+    const lastStamps = tiers[tiers.length - 1]?.stamps ?? stampsRequired;
+    setTiers([...tiers, { stamps: lastStamps + 5, text: "", enabled: true }]);
+  };
+
+  const addMilestone = () => {
+    const lastStamps = milestones[milestones.length - 1]?.stamps ?? 0;
+    setMilestones([...milestones, { stamps: lastStamps + 10, text: "", enabled: true }]);
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-end justify-center">
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/70"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        className="relative w-full max-w-sm bg-zinc-900 rounded-t-3xl max-h-[88vh] flex flex-col"
+      >
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-zinc-700" />
+        </div>
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-zinc-800 shrink-0">
+          <div className="flex-1">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Programm</p>
+            <p className="font-semibold text-zinc-100">{shop.name}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-100 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+          {/* Grundeinstellungen */}
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Grundeinstellungen</p>
+            <div className="space-y-2">
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1.5">Stempel bis Belohnung</label>
+                <input type="number" min={1} max={50} value={stampsRequired}
+                  onChange={e => setStampsRequired(Number(e.target.value))}
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 focus:outline-none focus:border-amber-400/50 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1.5">Belohnungstext</label>
+                <input value={rewardText} onChange={e => setRewardText(e.target.value)}
+                  placeholder="z.B. 1x Gratis Kaffee"
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/50 text-sm" />
+              </div>
+            </div>
+          </div>
+
+          {/* Bonus-Stufen */}
+          {shop.bonusProgramEnabled && (
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Bonus-Stufen</p>
+              <div className="space-y-2">
+                {tiers.map((tier, i) => (
+                  <div key={i} className="bg-zinc-800 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-500">Stufe {i + 1}</span>
+                      <div className="flex-1" />
+                      <button
+                        onClick={() => setTiers(tiers.map((t, j) => j === i ? { ...t, enabled: !t.enabled } : t))}
+                        style={{ minWidth: "2.25rem", height: "1.25rem" }}
+                        className={`relative rounded-full transition-colors flex items-center px-0.5 ${tier.enabled ? "bg-amber-400" : "bg-zinc-600"}`}
+                      >
+                        <motion.div animate={{ x: tier.enabled ? 16 : 0 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          className="w-3.5 h-3.5 rounded-full bg-white shadow-sm" />
+                      </button>
+                      <button onClick={() => setTiers(tiers.filter((_, j) => j !== i))} className="text-zinc-600 hover:text-red-400 transition-colors">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <input type="number" min={1} value={tier.stamps}
+                        onChange={e => setTiers(tiers.map((t, j) => j === i ? { ...t, stamps: Number(e.target.value) } : t))}
+                        className="w-16 px-2 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-xs focus:outline-none focus:border-amber-400/50 text-center" />
+                      <span className="text-xs text-zinc-500">Stempel</span>
+                    </div>
+                    <input value={tier.text}
+                      onChange={e => setTiers(tiers.map((t, j) => j === i ? { ...t, text: e.target.value } : t))}
+                      placeholder="Belohnungstext für diese Stufe..."
+                      className="w-full px-2.5 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 placeholder-zinc-500 text-xs focus:outline-none focus:border-amber-400/50" />
+                  </div>
+                ))}
+                <button onClick={addTier}
+                  className="w-full py-2 border border-dashed border-zinc-700 rounded-xl text-xs text-zinc-500 hover:text-amber-400 hover:border-amber-400/40 transition-colors flex items-center justify-center gap-1.5">
+                  <Plus size={13} /> Stufe hinzufügen
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Meilensteine */}
+          {shop.milestonesEnabled && (
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Meilensteine</p>
+              <div className="space-y-2">
+                {milestones.map((m, i) => (
+                  <div key={i} className="bg-zinc-800 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-500">Meilenstein {i + 1}</span>
+                      <div className="flex-1" />
+                      <button
+                        onClick={() => setMilestones(milestones.map((ms, j) => j === i ? { ...ms, enabled: !ms.enabled } : ms))}
+                        style={{ minWidth: "2.25rem", height: "1.25rem" }}
+                        className={`relative rounded-full transition-colors flex items-center px-0.5 ${m.enabled ? "bg-amber-400" : "bg-zinc-600"}`}
+                      >
+                        <motion.div animate={{ x: m.enabled ? 16 : 0 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          className="w-3.5 h-3.5 rounded-full bg-white shadow-sm" />
+                      </button>
+                      <button onClick={() => setMilestones(milestones.filter((_, j) => j !== i))} className="text-zinc-600 hover:text-red-400 transition-colors">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <input type="number" min={1} value={m.stamps}
+                        onChange={e => setMilestones(milestones.map((ms, j) => j === i ? { ...ms, stamps: Number(e.target.value) } : ms))}
+                        className="w-16 px-2 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 text-xs focus:outline-none focus:border-amber-400/50 text-center" />
+                      <span className="text-xs text-zinc-500">Stempel gesamt</span>
+                    </div>
+                    <input value={m.text}
+                      onChange={e => setMilestones(milestones.map((ms, j) => j === i ? { ...ms, text: e.target.value } : ms))}
+                      placeholder="Meilenstein-Beschreibung..."
+                      className="w-full px-2.5 py-1.5 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 placeholder-zinc-500 text-xs focus:outline-none focus:border-amber-400/50" />
+                  </div>
+                ))}
+                <button onClick={addMilestone}
+                  className="w-full py-2 border border-dashed border-zinc-700 rounded-xl text-xs text-zinc-500 hover:text-amber-400 hover:border-amber-400/40 transition-colors flex items-center justify-center gap-1.5">
+                  <Plus size={13} /> Meilenstein hinzufügen
+                </button>
+              </div>
+            </div>
+          )}
+
+          {error && <p className="text-red-400 text-xs pb-2">{error}</p>}
+        </div>
+
+        <div className="px-5 py-4 border-t border-zinc-800 shrink-0">
+          <button onClick={handleSave} disabled={saving}
+            className="w-full py-3 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-semibold rounded-2xl text-sm transition-colors">
+            {saving ? "Speichert..." : "Speichern"}
+          </button>
+        </div>
+      </motion.div>
+    </div>,
+    document.body
+  );
 }
 
 // ─── ShopCard ────────────────────────────────────────────────────────────────
@@ -84,6 +274,7 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
   const [togglingMilestones, setTogglingMilestones] = useState(false);
   const [clearingTheme, setClearingTheme] = useState(false);
   const [settingTheme, setSettingTheme] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -159,6 +350,7 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
   };
 
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
@@ -267,6 +459,16 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Programm konfigurieren */}
+      <div className="border-t border-zinc-800/50">
+        <button onClick={() => setShowSettings(true)}
+          className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+          <Sliders size={14} className="text-amber-400 shrink-0" />
+          <span className="text-xs font-medium text-zinc-300 flex-1 text-left">Programm konfigurieren</span>
+          <ChevronRight size={13} className="text-zinc-600" />
+        </button>
       </div>
 
       {/* QR Code accordion */}
@@ -401,6 +603,12 @@ function ShopCard({ shop, adminSecret, index }: { shop: Doc<"shops">; adminSecre
       </div>
 
     </motion.div>
+    <AnimatePresence>
+      {showSettings && (
+        <ShopSettingsModal shop={shop} adminSecret={adminSecret} onClose={() => setShowSettings(false)} />
+      )}
+    </AnimatePresence>
+    </>
   );
 }
 
