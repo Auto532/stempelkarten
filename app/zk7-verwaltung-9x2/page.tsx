@@ -478,6 +478,7 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
               { id: "beates-grill", label: "Beate's Grill", color: "#E8A020" },
               { id: "asia-taste",   label: "Asia Taste",    color: "#D2603A" },
               { id: "bakery",       label: "Bäckerei",      color: "#d97706" },
+              { id: "barber",       label: "Barbershop",    color: "#cca352" },
             ].map(({ id, label, color }) => (
               <button key={id} onClick={() => handleSetTheme(id, color)} disabled={!!settingTheme}
                 className="text-[11px] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
