@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Gift, Award, QrCode } from "lucide-react";
 import type { ThemeCardProps, ThemeBannerProps, ThemeMilestonesProps } from "./registry";
@@ -22,17 +23,20 @@ function BroetchenIcon({ className, style }: { className?: string; style?: React
 }
 
 export function BakeryBackground() {
-  return (
-    <style>{`
-      body {
-        background-image: url('/Hintergrund_meisterbaeckerei.png') !important;
-        background-size: cover !important;
-        background-position: center center !important;
-        background-attachment: scroll !important;
-        background-color: #f5deb3 !important;
-      }
-    `}</style>
-  );
+  useEffect(() => {
+    const b = document.body;
+    b.style.backgroundImage = "url('/Hintergrund_meisterbaeckerei.png')";
+    b.style.backgroundSize = "cover";
+    b.style.backgroundPosition = "center center";
+    b.style.backgroundAttachment = "scroll";
+    return () => {
+      b.style.backgroundImage = "";
+      b.style.backgroundSize = "";
+      b.style.backgroundPosition = "";
+      b.style.backgroundAttachment = "";
+    };
+  }, []);
+  return null;
 }
 
 export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor }: ThemeCardProps) {
