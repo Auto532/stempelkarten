@@ -63,55 +63,29 @@ function LevelCard({ totalStamps, accent }: { totalStamps: number; accent: strin
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 }}
-      className="rounded-2xl p-4 mb-6 flex items-center gap-4"
-      style={{
-        background: hexToRgba(accent, 0.06),
-        border: `1px solid ${hexToRgba(accent, 0.2)}`,
-      }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.1 }}
+      className="rounded-xl px-3.5 py-2.5 mb-5 flex items-center gap-3"
+      style={{ background: hexToRgba(accent, 0.04), border: `1px solid ${hexToRgba(accent, 0.12)}` }}
     >
-      {/* Level badge */}
-      <div
-        className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0"
-        style={{
-          background: hexToRgba(accent, 0.14),
-          border: `1.5px solid ${hexToRgba(accent, 0.35)}`,
-        }}
-      >
-        <span className="text-[8px] font-bold uppercase tracking-wider leading-none mb-0.5" style={{ color: hexToRgba(accent, 0.6) }}>
-          LVL
-        </span>
-        <span className="text-2xl font-black leading-none" style={{ color: accent }}>
-          {idx + 1}
-        </span>
-      </div>
-
-      {/* Info */}
+      <span className="text-[9px] font-bold uppercase tracking-widest shrink-0" style={{ color: hexToRgba(accent, 0.45) }}>
+        Lvl {idx + 1}
+      </span>
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between gap-2 mb-1.5">
-          <span className="text-sm font-bold text-zinc-100">{level.label}</span>
-          <span className="text-[10px] font-bold tabular-nums shrink-0" style={{ color: hexToRgba(accent, 0.55) }}>
-            {totalStamps} Stempel
-          </span>
-        </div>
-        <div className="h-1.5 rounded-full overflow-hidden mb-1.5" style={{ background: hexToRgba(accent, 0.1) }}>
+        <div className="h-1 rounded-full overflow-hidden" style={{ background: hexToRgba(accent, 0.1) }}>
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${progress * 100}%` }}
-            transition={{ duration: 0.9, delay: 0.25, ease: "easeOut" }}
+            transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
             className="h-full rounded-full"
-            style={{ background: accent }}
+            style={{ background: hexToRgba(accent, 0.5) }}
           />
         </div>
-        <p className="text-[10px]" style={{ color: hexToRgba(accent, 0.45) }}>
-          {nextLevel
-            ? `Noch ${nextLevel.min - totalStamps} Stempel bis „${nextLevel.label}"`
-            : "Höchstes Level erreicht"
-          }
-        </p>
       </div>
+      <span className="text-[9px] font-semibold shrink-0" style={{ color: hexToRgba(accent, 0.4) }}>
+        {level.label}
+      </span>
     </motion.div>
   );
 }
