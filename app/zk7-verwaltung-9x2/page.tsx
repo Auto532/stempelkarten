@@ -242,6 +242,7 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
   // Program
   const [stampsRequired, setStampsRequired] = useState(shop.stampsRequired);
   const [rewardText, setRewardText]         = useState(shop.rewardText);
+  const [stampValue, setStampValue]         = useState<number | "">(shop.stampValue ?? "");
   const [tiers, setTiers]         = useState<Tier[]>(shop.rewardTiers?.map(t => ({ ...t })) ?? []);
   const [milestones, setMilestones] = useState<Tier[]>(shop.milestones?.map(m => ({ ...m })) ?? []);
   const [savingContent, setSavingContent] = useState(false);
@@ -269,6 +270,7 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
         shopId: shop._id, adminSecret, stampsRequired, rewardText,
         rewardTiers: tiers.length > 0 ? tiers : undefined,
         milestones: milestones.length > 0 ? milestones : undefined,
+        stampValue: stampValue === "" ? undefined : Number(stampValue),
       });
       setSavedContent(true);
       setTimeout(() => setSavedContent(false), 2000);
@@ -344,6 +346,26 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
             <input value={rewardText} onChange={e => setRewardText(e.target.value)}
               placeholder="z.B. 1x Gratis Kaffee"
               className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/50 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-500 block mb-1.5">Mindesteinkauf pro Stempel (optional)</label>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500">€</span>
+                <input type="number" min={1} max={9999} value={stampValue}
+                  onChange={e => setStampValue(e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder="z.B. 10"
+                  className="w-full pl-7 pr-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/50 text-sm" />
+              </div>
+              {stampValue !== "" && (
+                <button onClick={() => setStampValue("")} className="p-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-500 hover:text-zinc-300 transition-colors">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+            {stampValue !== "" && (
+              <p className="text-[10px] text-zinc-600 mt-1">→ „1 Stempel pro €{stampValue} Einkauf"</p>
+            )}
           </div>
 
           {/* Bonus-Stufen */}

@@ -133,10 +133,11 @@ export const adminUpdateShopContent = mutation({
       text: v.string(),
       enabled: v.boolean(),
     }))),
+    stampValue: v.optional(v.number()),
   },
-  handler: async (ctx, { shopId, adminSecret, stampsRequired, rewardText, rewardTiers, milestones }) => {
+  handler: async (ctx, { shopId, adminSecret, stampsRequired, rewardText, rewardTiers, milestones, stampValue }) => {
     requireAdmin({ secret: adminSecret });
-    await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, milestones });
+    await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, milestones, stampValue });
   },
 });
 
