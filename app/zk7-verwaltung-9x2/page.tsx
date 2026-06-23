@@ -963,6 +963,21 @@ function SettingsTab() {
         </div>
       </div>
 
+      {/* Gerät zurücksetzen */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Sliders size={14} className="text-zinc-400 shrink-0" />
+          <p className="text-sm font-medium text-zinc-200">Gerät zurücksetzen</p>
+        </div>
+        <p className="text-[11px] text-zinc-500">Löscht alle gespeicherten Tokens auf <span className="text-zinc-400 font-medium">diesem Gerät</span> (QR-Token, Admin-PIN, Shop-Login). Nur lokal — keine Daten in der Datenbank werden gelöscht.</p>
+        <button onClick={() => {
+          ["qrToken","adminTestQrToken","adminPin","adminToken","adminShopSlug","adminRole","adminPinLS","meAccentColor","meBgPreset","meStarsOn"].forEach(k => localStorage.removeItem(k));
+          window.location.reload();
+        }} className="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors">
+          Lokalen Speicher löschen & neu laden
+        </button>
+      </div>
+
       {/* Kunden-Reset */}
       <div className="bg-zinc-900 border border-orange-900/40 rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2">
