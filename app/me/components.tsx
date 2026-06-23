@@ -168,32 +168,21 @@ export function QRCard({ qrToken, customerName, cardBg, cardBorder, textPrimary,
   }, [qrToken]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.88, y: 16 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 260, damping: 22 }}
-      className="relative mx-auto w-full max-w-xs flex flex-col items-center"
-    >
+    <div className="relative mx-auto w-full max-w-xs flex flex-col items-center">
       {/* Name */}
-      <motion.div
-        initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.12 }}
-        className="text-center mb-6"
-      >
+      <div className="text-center mb-6">
         <p className="text-[10px] font-bold uppercase tracking-[0.28em] mb-1" style={{ color: tMuted }}>
           Bereit zum Scannen
         </p>
         <p className="text-2xl font-bold" style={{ color: tPrim }}>{customerName}</p>
-      </motion.div>
+      </div>
 
       {/* QR container with glow */}
       <div className="relative">
-        {/* Outer pulse glow */}
-        <motion.div
-          animate={{ scale: [1, 1.12, 1], opacity: [0.25, 0.5, 0.25] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        {/* Static glow */}
+        <div
           className="absolute -inset-4 rounded-[2.5rem] blur-2xl pointer-events-none"
-          style={{ background: accent }}
+          style={{ background: accent, opacity: 0.3 }}
         />
 
         {/* Card */}
@@ -213,30 +202,19 @@ export function QRCard({ qrToken, customerName, cardBg, cardBorder, textPrimary,
           ))}
 
           {/* QR code */}
-          <div className="relative rounded-2xl overflow-hidden" style={{ background: "#fff" }}>
+          <div className="rounded-2xl overflow-hidden" style={{ background: "#fff" }}>
             <div className="p-3">
               <canvas ref={canvasRef} className="block" />
             </div>
-            {/* Scan line */}
-            <motion.div
-              animate={{ y: [0, 264, 0] }}
-              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.4 }}
-              className="absolute left-0 right-0 h-[2px] pointer-events-none"
-              style={{ background: `linear-gradient(to right, transparent 0%, ${accent} 30%, ${accent} 70%, transparent 100%)`, opacity: 0.75 }}
-            />
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <motion.p
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-        className="text-[11px] text-center mt-5 font-medium"
-        style={{ color: tMuted }}
-      >
+      <p className="text-[11px] text-center mt-5 font-medium" style={{ color: tMuted }}>
         Im Laden vorzeigen · Stempel sammeln
-      </motion.p>
-    </motion.div>
+      </p>
+    </div>
   );
 }
 
