@@ -35,7 +35,12 @@ export default function StampPage() {
   // Admin mode
   const [adminMode, setAdminMode] = useState(false);
   const [adminPin, setAdminPin] = useState("");
+  const [adminPinInput, setAdminPinInput] = useState("");
+  const [adminPinError, setAdminPinError] = useState(false);
   const [adminSelectedShopId, setAdminSelectedShopId] = useState<Id<"shops"> | null>(null);
+  const [noCredentials, setNoCredentials] = useState(false);
+
+  const checkPin = useMutation(api.admin.checkPin);
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
@@ -51,9 +56,24 @@ export default function StampPage() {
       setAdminMode(true);
       setReady(true);
     } else {
-      router.replace("/me");
+      setNoCredentials(true);
+      setReady(true);
     }
-  }, [router]);
+  }, []);
+
+  const handlePinLogin = async () => {
+    if (!adminPinInput) return;
+    setLoading(true); setAdminPinError(false);
+    try {
+      await checkPin({ pin: adminPinInput });
+      localStorage.setItem("adminPin", adminPinInput);
+      setAdminPin(adminPinInput);
+      setAdminMode(true);
+      setNoCredentials(false);
+    } catch {
+      setAdminPinError(true);
+    } finally { setLoading(false); }
+  };
 
   const shop = useQuery(api.shops.getBySlug, shopSlug ? { slug: shopSlug } : "skip");
   const data = useQuery(
@@ -205,6 +225,33 @@ export default function StampPage() {
     );
   }
 
+  // PIN-Eingabe wenn kein Token im Browser
+  if (noCredentials) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 gap-5">
+        <div className="w-14 h-14 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center">
+          <ShieldCheck size={26} className="text-amber-400" />
+        </div>
+        <div className="text-center">
+          <h1 className="text-xl font-bold text-zinc-100">Admin-PIN</h1>
+          <p className="text-zinc-500 text-sm mt-1">Nur für Betriebe</p>
+        </div>
+        <div className="w-full max-w-xs space-y-3">
+          <input type="password" value={adminPinInput}
+            onChange={e => { setAdminPinInput(e.target.value); setAdminPinError(false); }}
+            onKeyDown={e => e.key === "Enter" && handlePinLogin()}
+            placeholder="PIN eingeben" autoFocus
+            className={`w-full px-4 py-3.5 bg-zinc-900 border rounded-2xl text-zinc-100 placeholder-zinc-600 focus:outline-none text-center tracking-widest text-xl transition-colors ${adminPinError ? "border-red-500/60" : "border-zinc-800 focus:border-amber-400/50"}`} />
+          {adminPinError && <p className="text-red-400 text-sm text-center">Falscher PIN</p>}
+          <button onClick={handlePinLogin} disabled={loading || !adminPinInput}
+            className="w-full py-3.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-semibold rounded-2xl transition-colors">
+            {loading ? "Prüfe..." : "Einloggen"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!ready || !shop || data === undefined) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -214,7 +261,7 @@ export default function StampPage() {
     );
   }
 
-  if (!shopSlug) {
+  if (!shopSlug && !adminMode) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-5">
         <LogIn size={40} className="text-zinc-600" />
