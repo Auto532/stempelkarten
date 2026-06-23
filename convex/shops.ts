@@ -214,20 +214,3 @@ export const listCustomersForShop = query({
     return results.filter((r) => r.customer !== null);
   },
 });
-
-// ─── Migration ────────────────────────────────────────────────────────────────
-
-export const migrateMitarbeiterToken = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const shops = await ctx.db.query("shops").collect();
-    let patched = 0;
-    for (const shop of shops) {
-      if (!shop.mitarbeiterToken) {
-        await ctx.db.patch(shop._id, { mitarbeiterToken: crypto.randomUUID() });
-        patched++;
-      }
-    }
-    return `${patched} Shops migriert`;
-  },
-});
