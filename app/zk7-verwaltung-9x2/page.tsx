@@ -861,7 +861,8 @@ function StempelTab({ shops, adminSecret }: { shops: Doc<"shops">[] | undefined;
 // ─── SettingsTab ──────────────────────────────────────────────────────────────
 
 function SettingsTab() {
-  const clearAllData = useMutation(api.admin.clearAllData);
+  const clearAllData       = useMutation(api.admin.clearAllData);
+  const clearCustomerData  = useMutation(api.admin.clearCustomerData);
   const [showDangerZone, setShowDangerZone] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteText, setDeleteText] = useState("");
@@ -869,6 +870,9 @@ function SettingsTab() {
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [customerResetPin, setCustomerResetPin] = useState("");
+  const [resettingCustomers, setResettingCustomers] = useState(false);
+  const [customersReset, setCustomersReset] = useState(false);
 
   const base = typeof window !== "undefined" ? window.location.origin : "";
   const adminUrl = `${base}/zk7-verwaltung-9x2`;
@@ -886,6 +890,16 @@ function SettingsTab() {
       setDeleted(true);
       setConfirmDelete(false);
     } finally { setDeleting(false); }
+  };
+
+  const handleCustomerReset = async () => {
+    setResettingCustomers(true);
+    try {
+      await clearCustomerData({ adminSecret: customerResetPin });
+      setCustomersReset(true);
+      setCustomerResetPin("");
+      setTimeout(() => setCustomersReset(false), 3000);
+    } finally { setResettingCustomers(false); }
   };
 
   return (
@@ -911,6 +925,30 @@ function SettingsTab() {
             <p className="text-[11px] text-zinc-500">PIN wird server-seitig geprüft — nicht im Client-Bundle sichtbar.</p>
           </div>
         </div>
+      </div>
+
+      {/* Kunden-Reset */}
+      <div className="bg-zinc-900 border border-orange-900/40 rounded-2xl p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Trash2 size={14} className="text-orange-400 shrink-0" />
+          <p className="text-sm font-medium text-orange-400">Kunden-Reset</p>
+        </div>
+        <p className="text-[11px] text-zinc-500">Löscht alle Kunden, Mitgliedschaften und Stempel-Events. <span className="text-zinc-400 font-medium">Shops + Design bleiben erhalten.</span></p>
+        {customersReset ? (
+          <div className="flex items-center gap-2 text-green-400 text-sm">
+            <Check size={14} /> Kundendaten gelöscht.
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input type="password" value={customerResetPin} onChange={e => setCustomerResetPin(e.target.value)}
+              placeholder="PIN zur Bestätigung"
+              className="flex-1 px-3 py-2 bg-zinc-800 border border-orange-900/50 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none text-sm text-center tracking-widest" />
+            <button onClick={handleCustomerReset} disabled={resettingCustomers || !customerResetPin}
+              className="px-4 py-2 bg-orange-700 hover:bg-orange-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
+              {resettingCustomers ? "..." : "Reset"}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-zinc-900 border border-red-900/40 rounded-2xl overflow-hidden">

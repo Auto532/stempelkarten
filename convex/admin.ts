@@ -28,6 +28,23 @@ export const clearAllData = mutation({
   },
 });
 
+export const clearCustomerData = mutation({
+  args: { adminSecret: v.string() },
+  handler: async (ctx, { adminSecret }) => {
+    const expected = process.env.ADMIN_PIN;
+    if (!expected) throw new Error("ADMIN_PIN nicht gesetzt");
+    if (adminSecret !== expected) throw new Error("Nicht autorisiert");
+    const tables = ["stampEvents", "memberships", "customers"] as const;
+    for (const table of tables) {
+      const docs = await ctx.db.query(table).collect();
+      for (const doc of docs) {
+        await ctx.db.delete(doc._id);
+      }
+    }
+    return "Kundendaten gelöscht";
+  },
+});
+
 export const clearAll = internalMutation({
   args: {},
   handler: async (ctx) => {
