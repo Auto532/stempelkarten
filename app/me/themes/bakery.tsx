@@ -9,7 +9,6 @@ const AD  = "#7c2d12";  // dunkles Rotbraun
 const AF  = "#3b0d00";  // sehr dunkles Braun
 const T   = "#1a0700";  // fast Schwarz für maximalen Kontrast
 const TB  = "#3b0d00";  // dunkelbraun sekundär
-const BG  = "#f0c040";  // satt goldgelb — klar sichtbarer Hintergrund
 const C   = "#fffdf0";  // warmes Weiß — Card hebt sich klar ab
 const C2  = "#fef9d0";
 
@@ -25,41 +24,16 @@ function BroetchenIcon({ className, style }: { className?: string; style?: React
 export function BakeryBackground() {
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-[-1]">
-      <div className="absolute inset-0" style={{ background: `linear-gradient(175deg, #e8b030 0%, ${BG} 45%, #d4960a 100%)` }} />
-
-      {[0, 1, 2].map((i) => (
-        <motion.div key={i}
-          className="absolute bottom-0"
-          style={{
-            left: `${i * 35 - 5}%`,
-            width: "50%",
-            height: "40%",
-            background: `radial-gradient(ellipse at 50% 100%, ${i % 2 === 0 ? A : AD}28 0%, transparent 70%)`,
-            filter: "blur(22px)",
-          }}
-          animate={{ opacity: [0.4, 0.75, 0.4], scaleY: [1, 1.1, 1] }}
-          transition={{ duration: 3 + i * 0.6, repeat: Infinity, delay: i * 0.9, ease: "easeInOut" }}
-        />
-      ))}
-
-      {[...Array(10)].map((_, i) => (
-        <motion.div key={i}
-          className="absolute rounded-full"
-          style={{
-            width: i % 3 === 0 ? 4 : 2,
-            height: i % 3 === 0 ? 4 : 2,
-            background: "rgba(255,255,255,0.85)",
-            left: `${6 + i * 9}%`,
-            bottom: `${10 + (i % 4) * 8}%`,
-          }}
-          animate={{
-            y: [0, -(90 + i * 18)],
-            x: [0, (i % 2 === 0 ? 1 : -1) * (10 + i * 4)],
-            opacity: [0, 0.7, 0],
-          }}
-          transition={{ duration: 4.5 + i * 0.4, repeat: Infinity, delay: i * 0.65, ease: "easeOut" }}
-        />
-      ))}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: "url('/Hintergrund_meisterbaeckerei.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+      <div className="absolute inset-0" style={{ background: "rgba(180, 100, 0, 0.12)" }} />
     </div>
   );
 }
