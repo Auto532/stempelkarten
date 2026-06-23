@@ -25,6 +25,15 @@ html[data-shop-theme] #star-field {
   display: none;
 }
 
+/* ── Bakery theme: Hintergrundfoto direkt auf body ── */
+html[data-shop-theme="bakery"] body {
+  background-color: #f5deb3;
+  background-image: url('/Hintergrund_meisterbaeckerei.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
 /* ── Star background animation ──────────────────────────────────── */
 @keyframes starFloat {
   0%   { transform: translate(0px, 0px)    scale(1);    }
