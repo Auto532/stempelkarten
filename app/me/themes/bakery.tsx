@@ -22,8 +22,19 @@ function BroetchenIcon({ className, style }: { className?: string; style?: React
 }
 
 export function BakeryBackground() {
-  // Hintergrundfoto wird via globals.css auf html[data-shop-theme="bakery"] gesetzt
-  return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1,
+        backgroundImage: "url('/Hintergrund_meisterbaeckerei.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        pointerEvents: "none",
+      }}
+    />
+  );
 }
 
 export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor }: ThemeCardProps) {

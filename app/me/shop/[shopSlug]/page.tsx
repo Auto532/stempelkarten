@@ -80,9 +80,9 @@ export default function MeShopPage() {
   const c = theme?.colors ?? DEFAULT_COLORS;
 
   return (
-    <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col relative ${theme ? "z-[2]" : ""}`}>
-
+    <>
       {theme && <theme.Background />}
+      <div className="min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col relative z-[2]">
 
       <AnimatePresence>
         {showStampOverlay && <StampOverlay onDone={() => setShowStampOverlay(false)} />}
@@ -210,5 +210,6 @@ export default function MeShopPage() {
         )}
       </div>
     </div>
+    </>
   );
 }
