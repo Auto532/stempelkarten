@@ -28,6 +28,24 @@ export const clearAllData = mutation({
   },
 });
 
+export const adminCreateTestCustomer = mutation({
+  args: { adminSecret: v.string(), qrToken: v.string(), name: v.string() },
+  handler: async (ctx, { adminSecret, qrToken, name }) => {
+    const expected = process.env.ADMIN_PIN;
+    if (!expected) throw new Error("ADMIN_PIN nicht gesetzt");
+    if (adminSecret !== expected) throw new Error("Nicht autorisiert");
+
+    const existing = await ctx.db
+      .query("customers")
+      .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
+      .unique();
+    if (existing) return { qrToken: existing.qrToken, created: false };
+
+    await ctx.db.insert("customers", { name, phone: "", qrToken, createdAt: Date.now() });
+    return { qrToken, created: true };
+  },
+});
+
 export const clearCustomerData = mutation({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {

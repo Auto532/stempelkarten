@@ -763,7 +763,8 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
 // ─── StempelTab ───────────────────────────────────────────────────────────────
 
 function StempelTab({ shops, adminSecret }: { shops: Doc<"shops">[] | undefined; adminSecret: string }) {
-  const adminStamp = useMutation(api.memberships.adminStampForCustomer);
+  const adminStamp          = useMutation(api.memberships.adminStampForCustomer);
+  const createTestCustomer  = useMutation(api.admin.adminCreateTestCustomer);
   const [selectedShopId, setSelectedShopId] = useState<Id<"shops"> | null>(null);
   const [qrToken, setQrToken] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("adminTestQrToken") ?? "" : ""
@@ -771,11 +772,24 @@ function StempelTab({ shops, adminSecret }: { shops: Doc<"shops">[] | undefined;
   const [stamping, setStamping] = useState(false);
   const [result, setResult] = useState<{ rewardReached: boolean; currentStamps: number; stampsRequired: number; customerName: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [registering, setRegistering] = useState(false);
+  const [registered, setRegistered] = useState(false);
 
   const saveQrToken = (token: string) => {
     setQrToken(token);
     if (token) localStorage.setItem("adminTestQrToken", token);
     else localStorage.removeItem("adminTestQrToken");
+  };
+
+  const handleRegister = async () => {
+    setRegistering(true);
+    try {
+      const token = localStorage.getItem("adminTestQrToken") || crypto.randomUUID();
+      const res = await createTestCustomer({ adminSecret, qrToken: token, name: "Admin" });
+      saveQrToken(res.qrToken);
+      localStorage.setItem("qrToken", res.qrToken);
+      setRegistered(true);
+    } finally { setRegistering(false); }
   };
 
   const handleStamp = async () => {
@@ -793,6 +807,28 @@ function StempelTab({ shops, adminSecret }: { shops: Doc<"shops">[] | undefined;
 
   return (
     <motion.div key="stempel" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+
+      {/* Registrierung */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+        <p className="text-sm font-semibold text-zinc-200">Mein Account</p>
+        {registered ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+            <div className="flex items-center gap-2 text-green-400 text-sm">
+              <Check size={14} /> Registriert! /me ist jetzt aktiv.
+            </div>
+            <p className="text-[11px] text-zinc-500">QR-Token gespeichert — kannst jetzt /me öffnen.</p>
+          </motion.div>
+        ) : (
+          <>
+            <p className="text-[11px] text-zinc-500">Erstellt deinen Kunden-Account und verbindet ihn mit /me — einmalig nach jedem Reset.</p>
+            <button onClick={handleRegister} disabled={registering}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 bg-zinc-700 hover:bg-zinc-600 text-zinc-100">
+              {registering ? "Erstelle..." : "Als Admin-Kunde registrieren"}
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
         <p className="text-sm font-semibold text-zinc-200">Shop</p>
         {!shops || shops.length === 0 ? (
