@@ -23,17 +23,15 @@ function BroetchenIcon({ className, style }: { className?: string; style?: React
 
 export function BakeryBackground() {
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1,
-        backgroundImage: "url('/Hintergrund_meisterbaeckerei.png')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        pointerEvents: "none",
-      }}
-    />
+    <style>{`
+      body {
+        background-image: url('/Hintergrund_meisterbaeckerei.png') !important;
+        background-size: cover !important;
+        background-position: center center !important;
+        background-attachment: scroll !important;
+        background-color: #f5deb3 !important;
+      }
+    `}</style>
   );
 }
 
