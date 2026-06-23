@@ -243,11 +243,6 @@ export default function BetriebDashboard() {
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="pt-10 pb-6">
-          <button onClick={() => router.back()}
-            className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 transition-colors"
-            style={card}>
-            <ArrowLeft size={16} style={{ color: tm }} />
-          </button>
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: tm }}>Inhaber · {shop.name}</p>
           <h1 className="text-3xl font-bold mt-1" style={{ color: tx }}>Dashboard</h1>
         </motion.div>

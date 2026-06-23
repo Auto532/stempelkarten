@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, UserPlus, Stamp, Gift, ScanLine,
+  UserPlus, Stamp, Gift, ScanLine,
   Users, ChevronRight, Award, X, QrCode, Phone, Eye,
   Printer, Search, Check,
 } from "lucide-react";
@@ -353,17 +353,9 @@ export default function ScanPage() {
       <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto ${theme ? "relative z-[2]" : ""}`}>
         {theme && <theme.Background />}
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => { setScannedToken(null); setView("dashboard"); }}
-            className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-200 transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="font-bold text-zinc-100">{shop.name}</h1>
-            <p className="text-xs text-zinc-500">QR-Code scannen</p>
-          </div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
+          <h1 className="font-bold text-zinc-100">{shop.name}</h1>
+          <p className="text-xs text-zinc-500">QR-Code scannen</p>
         </motion.div>
 
         <AnimatePresence mode="wait">
