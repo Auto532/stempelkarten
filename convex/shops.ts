@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireShopRole, sanitizeShop } from "./auth";
+import type { Id } from "./_generated/dataModel";
 
 export const getBySlug = query({
   args: { slug: v.string() },
@@ -220,19 +221,75 @@ export const getGlobalStats = query({
 });
 
 export const getGlobalAnalyticsByPeriod = query({
-  args: { adminSecret: v.string(), since: v.optional(v.number()) },
-  handler: async (ctx, { adminSecret, since }) => {
+  args: {
+    adminSecret: v.string(),
+    since: v.optional(v.number()),
+    prevSince: v.optional(v.number()),
+  },
+  handler: async (ctx, { adminSecret, since, prevSince }) => {
     requireAdmin({ secret: adminSecret });
-    const shops = await ctx.db.query("shops").collect();
+    const shops     = await ctx.db.query("shops").collect();
     const customers = await ctx.db.query("customers").collect();
 
-    let events = await ctx.db.query("stampEvents").order("desc").collect();
-    if (since !== undefined) events = events.filter(e => e.timestamp >= since);
+    const allEvents = await ctx.db.query("stampEvents").order("desc").collect();
 
-    const stamps   = events.filter(e => e.type === "stamp").length;
-    const redeems  = events.filter(e => e.type === "redeem").length;
+    // Current period
+    const events = since !== undefined ? allEvents.filter(e => e.timestamp >= since) : allEvents;
+    const stamps  = events.filter(e => e.type === "stamp").length;
+    const redeems = events.filter(e => e.type === "redeem").length;
     const activeShopIds = new Set(events.map(e => e.shopId.toString()));
 
+    // Previous period (for growth %)
+    const prevUntil = since;
+    const prevEvents = (prevSince !== undefined && prevUntil !== undefined)
+      ? allEvents.filter(e => e.timestamp >= prevSince && e.timestamp < prevUntil)
+      : [];
+    const prevStamps  = prevEvents.filter(e => e.type === "stamp").length;
+    const prevRedeems = prevEvents.filter(e => e.type === "redeem").length;
+
+    // New customers in period
+    const allMemberships = await ctx.db.query("memberships").collect();
+    const newMemberships = since !== undefined
+      ? allMemberships.filter(m => m._creationTime >= since)
+      : allMemberships;
+    const newCustomerIds = new Set(newMemberships.map(m => m.customerId.toString()));
+
+    // Daily breakdown (last 60 days max)
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const dayMap = new Map<number, { stamps: number; redeems: number }>();
+    for (const e of events) {
+      const day = Math.floor(e.timestamp / DAY_MS) * DAY_MS;
+      const cur = dayMap.get(day) ?? { stamps: 0, redeems: 0 };
+      if (e.type === "stamp")  cur.stamps++;
+      else                     cur.redeems++;
+      dayMap.set(day, cur);
+    }
+    const dailyBreakdown = Array.from(dayMap.entries())
+      .map(([dayStart, v]) => ({ dayStart, ...v }))
+      .sort((a, b) => a.dayStart - b.dayStart)
+      .slice(-60);
+
+    // Top customers (by stamps in period)
+    const membershipStampMap = new Map<string, number>();
+    events.filter(e => e.type === "stamp").forEach(e => {
+      const k = e.membershipId.toString();
+      membershipStampMap.set(k, (membershipStampMap.get(k) ?? 0) + 1);
+    });
+    const top10ids = Array.from(membershipStampMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+    const topCustomers = (await Promise.all(
+      top10ids.map(async ([mid, s]) => {
+        const membership = await ctx.db.get(mid as Id<"memberships">);
+        if (!membership) return null;
+        const customer = await ctx.db.get(membership.customerId);
+        if (!customer) return null;
+        const shop = shops.find(sh => sh._id === membership.shopId);
+        return { name: customer.name, stamps: s, shopName: shop?.name ?? "" };
+      })
+    )).filter(Boolean) as { name: string; stamps: number; shopName: string }[];
+
+    // Per-shop breakdown
     const shopsData = await Promise.all(
       shops.map(async (shop) => {
         const shopEvents = events.filter(e => e.shopId === shop._id);
@@ -240,17 +297,9 @@ export const getGlobalAnalyticsByPeriod = query({
         const shopRedeems = shopEvents.filter(e => e.type === "redeem").length;
         const activeMemberIds = new Set(
           (await Promise.all(shopEvents.map(e => ctx.db.get(e.membershipId))))
-            .filter(Boolean)
-            .map(m => m!.customerId.toString())
+            .filter(Boolean).map(m => m!.customerId.toString())
         );
-        return {
-          _id: shop._id,
-          name: shop.name,
-          slug: shop.slug,
-          stamps: shopStamps,
-          redeems: shopRedeems,
-          activeCustomers: activeMemberIds.size,
-        };
+        return { _id: shop._id, name: shop.name, slug: shop.slug, stamps: shopStamps, redeems: shopRedeems, activeCustomers: activeMemberIds.size };
       })
     );
 
@@ -260,6 +309,11 @@ export const getGlobalAnalyticsByPeriod = query({
       stamps,
       redeems,
       activeShops: activeShopIds.size,
+      newCustomers: newCustomerIds.size,
+      prevStamps,
+      prevRedeems,
+      dailyBreakdown,
+      topCustomers,
       shops: shopsData.sort((a, b) => b.stamps - a.stamps),
     };
   },

@@ -796,10 +796,23 @@ const PERIODS: { id: Period; label: string }[] = [
   { id: "all",  label: "Alle" },
 ];
 
-function periodToSince(p: Period): number | undefined {
+function periodDays(p: Period): number | undefined {
   if (p === "all") return undefined;
-  const days = p === "7d" ? 7 : p === "30d" ? 30 : p === "90d" ? 90 : 365;
-  return Date.now() - days * 24 * 60 * 60 * 1000;
+  return p === "7d" ? 7 : p === "30d" ? 30 : p === "90d" ? 90 : 365;
+}
+function periodToSince(p: Period): number | undefined {
+  const d = periodDays(p);
+  return d !== undefined ? Date.now() - d * 86400000 : undefined;
+}
+function periodToPrevSince(p: Period): number | undefined {
+  const d = periodDays(p);
+  return d !== undefined ? Date.now() - 2 * d * 86400000 : undefined;
+}
+function growthBadge(current: number, prev: number): { label: string; up: boolean | null } {
+  if (prev === 0 && current === 0) return { label: "—", up: null };
+  if (prev === 0) return { label: "Neu", up: true };
+  const pct = Math.round(((current - prev) / prev) * 100);
+  return { label: `${pct >= 0 ? "+" : ""}${pct}%`, up: pct >= 0 };
 }
 
 function PeriodSelector({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
@@ -820,11 +833,53 @@ function PeriodSelector({ value, onChange }: { value: Period; onChange: (p: Peri
 
 // ─── AnalyticsTab (globale Gesamt-Auswertung) ─────────────────────────────────
 
+function MiniBarChart({ data }: { data: { dayStart: number; stamps: number }[] }) {
+  if (!data.length) return null;
+  const max = Math.max(...data.map(d => d.stamps), 1);
+  const W = 300; const H = 48; const gap = 2;
+  const barW = Math.max(2, Math.floor((W - gap * (data.length - 1)) / data.length));
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none" style={{ height: 48 }}>
+      {data.map((d, i) => {
+        const h = Math.max(2, Math.round((d.stamps / max) * (H - 4)));
+        return (
+          <rect key={i}
+            x={i * (barW + gap)} y={H - h} width={barW} height={h}
+            rx={1} fill="#fbbf24" opacity={0.75}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function GrowthCard({ label, value, prev, color, period }: {
+  label: string; value: number; prev: number; color: string; period: Period;
+}) {
+  const badge = period !== "all" ? growthBadge(value, prev) : null;
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
+      <div className="flex items-start justify-between gap-1">
+        <p className={`text-3xl font-bold ${color}`}>{value}</p>
+        {badge && (
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md mt-1 ${
+            badge.up === true ? "bg-green-500/15 text-green-400" :
+            badge.up === false ? "bg-red-500/15 text-red-400" : "text-zinc-600"}`}>
+            {badge.label}
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-zinc-500">{label}</p>
+    </div>
+  );
+}
+
 function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
   const [period, setPeriod] = useState<Period>("all");
   const data = useQuery(api.shops.getGlobalAnalyticsByPeriod, {
     adminSecret,
     since: periodToSince(period),
+    prevSince: periodToPrevSince(period),
   });
 
   return (
@@ -837,23 +892,68 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
           className="text-zinc-500 text-sm text-center py-10">Laden...</motion.div>
       ) : (
         <>
-          {/* Gesamt-Stats */}
+          {/* Gesamt-Stats mit Wachstum */}
           <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: "Stempel",      value: data.stamps,         color: "text-amber-400"  },
-              { label: "Einlösungen",  value: data.redeems,        color: "text-purple-400" },
-              { label: "Aktive Shops", value: data.activeShops,    color: "text-green-400"  },
-              { label: "Kunden ges.",  value: data.totalCustomers, color: "text-blue-400"   },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-                <p className={`text-3xl font-bold ${color}`}>{value}</p>
-                <p className="text-xs text-zinc-500 mt-1">{label}</p>
+            <GrowthCard label="Stempel"      value={data.stamps}         prev={data.prevStamps}  color="text-amber-400"  period={period} />
+            <GrowthCard label="Einlösungen"  value={data.redeems}        prev={data.prevRedeems} color="text-purple-400" period={period} />
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+              <p className="text-3xl font-bold text-green-400">{data.activeShops}</p>
+              <p className="text-xs text-zinc-500 mt-1">Aktive Shops</p>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+              <div className="flex items-start justify-between gap-1">
+                <p className="text-3xl font-bold text-blue-400">{data.newCustomers}</p>
+                {period !== "all" && (
+                  <span className="text-[10px] text-zinc-600 mt-1.5">Neu</span>
+                )}
               </div>
-            ))}
+              <p className="text-xs text-zinc-500 mt-1">Neue Kunden</p>
+            </div>
           </div>
 
+          {/* Tages-Chart */}
+          {data.dailyBreakdown.length > 1 && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+              <p className="text-xs font-semibold text-zinc-400 mb-3">Stempel pro Tag</p>
+              <MiniBarChart data={data.dailyBreakdown} />
+              <div className="flex justify-between mt-1.5">
+                <span className="text-[10px] text-zinc-600">
+                  {new Date(data.dailyBreakdown[0].dayStart).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                </span>
+                <span className="text-[10px] text-zinc-600">
+                  {new Date(data.dailyBreakdown[data.dailyBreakdown.length - 1].dayStart).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Top Kunden */}
+          {data.topCustomers.length > 0 && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+                <Trophy size={14} className="text-amber-400" />
+                <span className="text-sm font-medium text-zinc-200">Top Kunden</span>
+              </div>
+              <div className="divide-y divide-zinc-800/50">
+                {data.topCustomers.map((c, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="text-[11px] font-bold w-4 shrink-0"
+                      style={{ color: i === 0 ? "#fbbf24" : i === 1 ? "#94a3b8" : i === 2 ? "#b45309" : "#52525b" }}>
+                      {i + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-zinc-200 truncate">{c.name}</p>
+                      <p className="text-[10px] text-zinc-600 truncate">{c.shopName}</p>
+                    </div>
+                    <p className="text-sm font-bold text-amber-400 shrink-0">{c.stamps}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Pro-Shop-Ranking */}
-          {data.shops.length > 0 && (
+          {data.shops.some(s => s.stamps > 0) && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
                 <TrendingUp size={14} className="text-zinc-400" />
@@ -865,7 +965,7 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
                     <span className="text-[11px] font-bold text-zinc-600 w-4 shrink-0">{i + 1}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-zinc-200 font-medium truncate">{shop.name}</p>
-                      <p className="text-[11px] text-zinc-500">{shop.activeCustomers} aktive Kunden · {shop.redeems}× eingelöst</p>
+                      <p className="text-[11px] text-zinc-500">{shop.activeCustomers} Kunden · {shop.redeems}× eingelöst</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-bold text-amber-400">{shop.stamps}</p>
@@ -877,7 +977,7 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
             </div>
           )}
 
-          {data.shops.every(s => s.stamps === 0) && (
+          {!data.stamps && !data.redeems && (
             <p className="text-center text-zinc-600 text-sm py-4">Keine Aktivität im gewählten Zeitraum.</p>
           )}
         </>
@@ -888,8 +988,105 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
 
 // ─── ShopAnalytics (pro Shop, wird in ShopWorkspace eingebettet) ──────────────
 
+async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
+  stamps: number; redeems: number;
+  customers: { customerName: string; stamps: number; redeems: number; currentStamps: number }[];
+}) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const accent = [251, 191, 36] as [number, number, number];
+  const W = 210;
+
+  // Header bar
+  doc.setFillColor(...accent);
+  doc.rect(0, 0, W, 28, "F");
+  doc.setTextColor(24, 24, 27);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text(shop.name, 14, 12);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  const periodLabel = period === "all" ? "Gesamt" : period === "7d" ? "Letzte 7 Tage" : period === "30d" ? "Letzter Monat" : period === "90d" ? "Letzte 3 Monate" : "Letztes Jahr";
+  doc.text(`Bericht · ${periodLabel} · ${new Date().toLocaleDateString("de-DE")}`, 14, 20);
+
+  // Stats block
+  let y = 38;
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Zusammenfassung", 14, y); y += 7;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(60, 60, 60);
+
+  const stats = [
+    ["Stempel vergeben:", String(data.stamps)],
+    ["Belohnungen eingelöst:", String(data.redeems)],
+    ["Aktive Kunden:", String(data.customers.length)],
+    ...(shop.stampValue ? [["Mindestumsatz (geschätzt):", `€${(data.stamps * shop.stampValue).toFixed(0)} (bei €${shop.stampValue} / Stempel)`]] : []),
+  ];
+  for (const [label, val] of stats) {
+    doc.text(label, 14, y);
+    doc.setFont("helvetica", "bold");
+    doc.text(val, 90, y);
+    doc.setFont("helvetica", "normal");
+    y += 6;
+  }
+
+  // Divider
+  y += 4;
+  doc.setDrawColor(200, 200, 200);
+  doc.line(14, y, W - 14, y); y += 8;
+
+  // Customer table header
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(30, 30, 30);
+  doc.text("Kunden im Zeitraum", 14, y); y += 7;
+
+  doc.setFontSize(8);
+  doc.setFillColor(245, 245, 245);
+  doc.rect(14, y - 4, W - 28, 6, "F");
+  doc.setTextColor(80, 80, 80);
+  doc.text("Name", 16, y);
+  doc.text("Stempel", 110, y);
+  doc.text("Eingelöst", 140, y);
+  doc.text("Aktuell", 170, y);
+  y += 6;
+
+  doc.setFont("helvetica", "normal");
+  for (const c of data.customers) {
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.setTextColor(30, 30, 30);
+    doc.text(c.customerName.slice(0, 38), 16, y);
+    doc.text(String(c.stamps),            112, y);
+    doc.text(c.redeems > 0 ? String(c.redeems) : "—", 142, y);
+    doc.text(`${c.currentStamps}/${shop.stampsRequired}`, 172, y);
+    y += 5.5;
+  }
+
+  // Footer
+  doc.setFontSize(7);
+  doc.setTextColor(150, 150, 150);
+  doc.text("Erstellt von Stempelkarten App", 14, 287);
+
+  const blob = doc.output("blob");
+  const file = new File([blob], `${shop.slug}-bericht.pdf`, { type: "application/pdf" });
+  if (typeof navigator !== "undefined" && (navigator as Navigator & { share?: (data: object) => Promise<void> }).share) {
+    try {
+      await (navigator as Navigator & { share: (d: object) => Promise<void> }).share({ files: [file], title: `${shop.name} Bericht` });
+      return;
+    } catch { /* fallback to download */ }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = file.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
 function ShopAnalytics({ shop }: { shop: Doc<"shops">; adminSecret: string }) {
   const [period, setPeriod] = useState<Period>("all");
+  const [exporting, setExporting] = useState(false);
 
   const data = useQuery(
     api.shops.getShopAnalyticsByPeriod,
@@ -897,6 +1094,13 @@ function ShopAnalytics({ shop }: { shop: Doc<"shops">; adminSecret: string }) {
       ? { shopId: shop._id, adminToken: shop.adminLoginToken, since: periodToSince(period) }
       : "skip"
   );
+
+  const handleExport = async () => {
+    if (!data) return;
+    setExporting(true);
+    try { await exportShopPdf(shop, period, data); }
+    finally { setExporting(false); }
+  };
 
   return (
     <motion.div key="shop-analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
@@ -908,6 +1112,17 @@ function ShopAnalytics({ shop }: { shop: Doc<"shops">; adminSecret: string }) {
           className="text-zinc-500 text-sm text-center py-10">Laden...</motion.div>
       ) : (
         <>
+          {/* PDF Export */}
+          <button
+            onClick={handleExport}
+            disabled={exporting || !data.customers.length}
+            className="w-full py-3 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold transition-colors disabled:opacity-40"
+            style={{ background: "#fbbf2415", border: "1px solid #fbbf2440", color: "#fbbf24" }}
+          >
+            <Printer size={15} />
+            {exporting ? "Exportieren..." : "Als PDF exportieren"}
+          </button>
+
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: "Stempel",      value: data.stamps,           color: "text-amber-400"  },

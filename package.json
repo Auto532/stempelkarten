@@ -12,6 +12,7 @@
     "@yudiel/react-qr-scanner": "^2.6.0",
     "convex": "^1.41.0",
     "framer-motion": "^12.40.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.21.0",
     "next": "14.2.35",
     "qrcode": "^1.5.4",
