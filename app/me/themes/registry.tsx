@@ -6,6 +6,7 @@ import { BeatesGrillBackground, BeatesGrillLoyaltyCard, BeatesGrillRewardBanner,
 import { AsiaTasteBackground, AsiaTasteLoyaltyCard, AsiaTasteRewardBanner, AsiaTasteMilestonesSection } from "./asiaTaste";
 import { BakeryLoyaltyCard, BakeryRewardBanner, BakeryMilestonesSection } from "./bakery";
 import { BarberLoyaltyCard, BarberRewardBanner, BarberMilestonesSection } from "./barber";
+import { EiszauberBackground, EiszauberLoyaltyCard, EiszauberRewardBanner, EiszauberMilestonesSection } from "./eiszauber";
 import type { ComponentType } from "react";
 
 type Star = { id: number; x: number; y: number; size: number; delay: number; dur: number };
@@ -217,6 +218,28 @@ const THEMES: Record<string, ThemeConfig> = {
     Card:       BeatesGrillLoyaltyCard,
     Banner:     BeatesGrillRewardBanner,
     Milestones: BeatesGrillMilestonesSection,
+  },
+  "eiszauber": {
+    colors: {
+      accent:      "#ff4fa0",
+      accentDim:   "#c93d82",
+      accentFaint: "#ffd6e9",
+      text:        "#2c1020",
+      textBody:    "#8c6578",
+      cardBg:      "#fffafe",
+      dark:        "#fff1f8",
+      divider:     "rgba(192,80,140,.14)",
+      gradient:    "linear-gradient(135deg, #ff4fa0, #c93d82)",
+      card:    { background: "rgba(255,250,254,0.95)", border: "1px solid rgba(255,79,160,.14)" },
+      sub:     { background: "#fff7fb", border: "1px solid rgba(192,80,140,.14)" },
+      input:   { background: "#fff7fb", border: "1px solid rgba(255,79,160,.3)", color: "#2c1020" },
+      badge:   { background: "#ffd6e9", border: "1px solid #ff4fa088", color: "#c93d82" },
+      subCard: { background: "#fff7fb88", borderRadius: "0.75rem", padding: "0.75rem" },
+    },
+    Background: EiszauberBackground,
+    Card:       EiszauberLoyaltyCard,
+    Banner:     EiszauberRewardBanner,
+    Milestones: EiszauberMilestonesSection,
   },
 };
 
