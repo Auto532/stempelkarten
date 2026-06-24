@@ -251,20 +251,6 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
   const adminSetFeatures  = useMutation(api.shops.adminSetFeatures);
   const updateContent     = useMutation(api.shops.adminUpdateShopContent);
   const updateLegalTexts  = useMutation(api.shops.updateLegalTexts);
-  const resetCards        = useMutation(api.shops.adminResetShopCards);
-  const [cardResetConfirm, setCardResetConfirm] = useState(false);
-  const [cardResetting, setCardResetting]       = useState(false);
-  const [cardResetDone, setCardResetDone]       = useState(false);
-
-  const handleCardReset = async () => {
-    setCardResetting(true);
-    try {
-      await resetCards({ shopId: shop._id, adminSecret });
-      setCardResetDone(true);
-      setCardResetConfirm(false);
-      setTimeout(() => setCardResetDone(false), 3000);
-    } finally { setCardResetting(false); }
-  };
 
   // Program
   const [stampsRequired, setStampsRequired] = useState(shop.stampsRequired);
@@ -517,32 +503,6 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
           {shop.theme && <p className="text-[10px] text-zinc-600">Aktiv: {shop.theme}</p>}
         </div>
       )}
-
-      {/* Karten-Reset */}
-      <div className="bg-zinc-900 border border-orange-900/40 rounded-2xl p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Trash2 size={14} className="text-orange-400 shrink-0" />
-          <p className="text-sm font-medium text-orange-400">Karten zurücksetzen</p>
-        </div>
-        <p className="text-[11px] text-zinc-500">Setzt alle aktuellen Stempel auf 0. Kunden & Gesamthistorie bleiben erhalten.</p>
-        {cardResetDone ? (
-          <div className="flex items-center gap-2 text-green-400 text-sm"><Check size={14} /> Zurückgesetzt.</div>
-        ) : !cardResetConfirm ? (
-          <button onClick={() => setCardResetConfirm(true)}
-            className="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-orange-900/30 text-zinc-400 hover:text-orange-400 transition-colors">
-            Karten zurücksetzen
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <button onClick={handleCardReset} disabled={cardResetting}
-              className="flex-1 py-2.5 bg-orange-700 hover:bg-orange-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
-              {cardResetting ? "..." : "Wirklich zurücksetzen"}
-            </button>
-            <button onClick={() => setCardResetConfirm(false)}
-              className="px-4 py-2.5 bg-zinc-800 text-zinc-400 text-sm rounded-xl">Abbrechen</button>
-          </div>
-        )}
-      </div>
 
       {/* Rechtliche Texte */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
@@ -861,7 +821,7 @@ function PeriodSelector({ value, onChange }: { value: Period; onChange: (p: Peri
 // ─── AnalyticsTab (globale Gesamt-Auswertung) ─────────────────────────────────
 
 function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
-  const [period, setPeriod] = useState<Period>("30d");
+  const [period, setPeriod] = useState<Period>("all");
   const data = useQuery(api.shops.getGlobalAnalyticsByPeriod, {
     adminSecret,
     since: periodToSince(period),
@@ -929,11 +889,12 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
 // ─── ShopAnalytics (pro Shop, wird in ShopWorkspace eingebettet) ──────────────
 
 function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
-  const [period, setPeriod] = useState<Period>("30d");
-  const resetCards = useMutation(api.shops.adminResetShopCards);
-  const [confirmReset, setConfirmReset] = useState(false);
-  const [resetting, setResetting]       = useState(false);
-  const [resetDone, setResetDone]       = useState(false);
+  const [period, setPeriod] = useState<Period>("all");
+  const restoreStamps = useMutation(api.shops.adminRestoreCustomerStamps);
+  const [restoreId, setRestoreId]     = useState<string | null>(null);
+  const [restoreCount, setRestoreCount] = useState("");
+  const [restoring, setRestoring]     = useState(false);
+  const [restoreDone, setRestoreDone] = useState<string | null>(null);
 
   const data = useQuery(
     api.shops.getShopAnalyticsByPeriod,
@@ -942,13 +903,17 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
       : "skip"
   );
 
-  const handleReset = async () => {
-    setResetting(true);
+  const handleRestore = async (membershipId: string) => {
+    const n = parseInt(restoreCount, 10);
+    if (isNaN(n) || n < 0) return;
+    setRestoring(true);
     try {
-      await resetCards({ shopId: shop._id, adminSecret });
-      setResetDone(true); setConfirmReset(false);
-      setTimeout(() => setResetDone(false), 3000);
-    } finally { setResetting(false); }
+      await restoreStamps({ membershipId: membershipId as Id<"memberships">, adminSecret, stamps: n });
+      setRestoreDone(membershipId);
+      setRestoreId(null);
+      setRestoreCount("");
+      setTimeout(() => setRestoreDone(null), 2500);
+    } finally { setRestoring(false); }
   };
 
   return (
@@ -964,9 +929,9 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
           {/* Stats im Zeitraum */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Stempel",     value: data.stamps,           color: "text-amber-400"  },
-              { label: "Einlösungen", value: data.redeems,          color: "text-purple-400" },
-              { label: "Kunden aktiv",value: data.customers.length, color: "text-blue-400"   },
+              { label: "Stempel",      value: data.stamps,           color: "text-amber-400"  },
+              { label: "Einlösungen",  value: data.redeems,          color: "text-purple-400" },
+              { label: "Kunden aktiv", value: data.customers.length, color: "text-blue-400"   },
             ].map(({ label, value, color }) => (
               <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 flex flex-col items-center gap-1">
                 <p className={`text-xl font-bold ${color}`}>{value}</p>
@@ -975,65 +940,81 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
             ))}
           </div>
 
-          {/* Kunden-Ranking im Zeitraum */}
+          {/* Kunden-Liste mit Wiederherstellung */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
               <Users size={14} className="text-zinc-500" />
-              <span className="text-sm font-medium text-zinc-200">Kunden im Zeitraum</span>
+              <span className="text-sm font-medium text-zinc-200">Kunden</span>
+              <span className="ml-auto text-[10px] text-zinc-600">Tippen zum Wiederherstellen</span>
             </div>
             <div className="divide-y divide-zinc-800/50">
               {data.customers.length === 0 && (
                 <div className="px-4 py-6 text-center text-zinc-600 text-sm">Keine Aktivität im Zeitraum.</div>
               )}
-              {data.customers.map((c, i) => (
-                <div key={c.membershipId} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-bold shrink-0">
-                    {c.customerName[0]?.toUpperCase() ?? "?"}
+              {data.customers.map((c) => {
+                const isOpen = restoreId === c.membershipId;
+                const isDone = restoreDone === c.membershipId;
+                return (
+                  <div key={c.membershipId}>
+                    <button
+                      onClick={() => { setRestoreId(isOpen ? null : c.membershipId); setRestoreCount(String(c.currentStamps)); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800/40 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-bold shrink-0">
+                        {c.customerName[0]?.toUpperCase() ?? "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-zinc-200 truncate">{c.customerName}</p>
+                        <p className="text-[11px] text-zinc-500">
+                          +{c.stamps} Stempel{c.redeems > 0 ? ` · ${c.redeems}× eingelöst` : ""}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {isDone ? (
+                          <Check size={14} className="text-green-400" />
+                        ) : (
+                          <>
+                            <p className="text-xs font-semibold text-amber-400">{c.currentStamps}/{shop.stampsRequired}</p>
+                            <p className="text-[10px] text-zinc-600">aktuell</p>
+                          </>
+                        )}
+                      </div>
+                    </button>
+                    <AnimatePresence>
+                      {isOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-4 pb-3 pt-1 flex gap-2 bg-zinc-800/30">
+                            <input
+                              type="number" min={0} max={999}
+                              value={restoreCount}
+                              onChange={e => setRestoreCount(e.target.value)}
+                              placeholder="Stempelzahl"
+                              className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 text-sm focus:outline-none focus:border-amber-400/50"
+                            />
+                            <button
+                              onClick={() => handleRestore(c.membershipId)}
+                              disabled={restoring || restoreCount === ""}
+                              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-zinc-900 text-sm font-bold rounded-xl transition-colors"
+                            >
+                              {restoring ? "..." : "Wiederherstellen"}
+                            </button>
+                            <button onClick={() => setRestoreId(null)}
+                              className="px-3 py-2 bg-zinc-800 text-zinc-400 text-sm rounded-xl">✕</button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-zinc-200 truncate">{c.customerName}</p>
-                    <p className="text-[11px] text-zinc-500">
-                      +{c.stamps} Stempel{c.redeems > 0 ? ` · ${c.redeems}× eingelöst` : ""}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs font-semibold text-amber-400">{c.currentStamps}/{shop.stampsRequired}</p>
-                    <p className="text-[10px] text-zinc-600">aktuell</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </>
       )}
-
-      {/* Card reset */}
-      <div className="bg-zinc-900 border border-orange-900/40 rounded-2xl p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Trash2 size={14} className="text-orange-400 shrink-0" />
-          <p className="text-sm font-medium text-orange-400">Karten zurücksetzen</p>
-        </div>
-        <p className="text-[11px] text-zinc-500">Setzt alle aktuellen Stempel auf 0. Kunden & Gesamthistorie bleiben erhalten.</p>
-        {resetDone ? (
-          <div className="flex items-center gap-2 text-green-400 text-sm"><Check size={14} /> Zurückgesetzt.</div>
-        ) : !confirmReset ? (
-          <button onClick={() => setConfirmReset(true)}
-            className="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-orange-900/30 text-zinc-400 hover:text-orange-400 transition-colors">
-            Karten zurücksetzen
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <button onClick={handleReset} disabled={resetting}
-              className="flex-1 py-2.5 bg-orange-700 hover:bg-orange-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
-              {resetting ? "..." : "Wirklich zurücksetzen"}
-            </button>
-            <button onClick={() => setConfirmReset(false)}
-              className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-sm rounded-xl transition-colors">
-              Abbrechen
-            </button>
-          </div>
-        )}
-      </div>
     </motion.div>
   );
 }

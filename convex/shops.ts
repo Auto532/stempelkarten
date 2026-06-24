@@ -331,18 +331,13 @@ export const listCustomersForShop = query({
   },
 });
 
-export const adminResetShopCards = mutation({
-  args: { shopId: v.id("shops"), adminSecret: v.string() },
-  handler: async (ctx, { shopId, adminSecret }) => {
+export const adminRestoreCustomerStamps = mutation({
+  args: { membershipId: v.id("memberships"), adminSecret: v.string(), stamps: v.number() },
+  handler: async (ctx, { membershipId, adminSecret, stamps }) => {
     requireAdmin({ secret: adminSecret });
-    const memberships = await ctx.db
-      .query("memberships")
-      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
-      .collect();
-    for (const m of memberships) {
-      await ctx.db.patch(m._id, { currentStamps: 0, rewardsRedeemed: 0, lastStampAt: undefined });
-    }
-    return { resetCount: memberships.length };
+    const membership = await ctx.db.get(membershipId);
+    if (!membership) throw new Error("Membership not found");
+    await ctx.db.patch(membershipId, { currentStamps: Math.max(0, stamps) });
   },
 });
 

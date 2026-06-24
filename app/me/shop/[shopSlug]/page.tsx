@@ -415,6 +415,23 @@ export default function MeShopPage() {
                     stampValue={shop.stampValue}
                     cardNumber={cardNumber}
                   />
+                  {shop.stampValue && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="rounded-2xl p-4 flex items-center gap-3"
+                      style={{ background: hexToRgba(c.accent, 0.06), border: `1px solid ${hexToRgba(c.accent, 0.15)}` }}
+                    >
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: hexToRgba(c.accent, 0.12) }}>
+                        <Banknote size={16} style={{ color: c.accent }} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: c.accent }}>Stempelwert</p>
+                        <p className="text-sm font-medium" style={{ color: c.text }}>1 Stempel = €{shop.stampValue} Einkauf</p>
+                      </div>
+                    </motion.div>
+                  )}
                   {availableRewards.length > 0 && (
                     <motion.button
                       initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -430,23 +447,6 @@ export default function MeShopPage() {
                   <theme.Banner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined} />
                   {shop.milestonesEnabled && shop.milestones && (
                     <theme.Milestones milestones={shop.milestones} totalStampsEver={membership.totalStampsEver} />
-                  )}
-                  {shop.stampValue && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="rounded-2xl p-4 flex items-center gap-3"
-                      style={{ background: hexToRgba(c.accent, 0.06), border: `1px solid ${hexToRgba(c.accent, 0.15)}` }}
-                    >
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: hexToRgba(c.accent, 0.12) }}>
-                        <Banknote size={16} style={{ color: c.accent }} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: c.accent }}>Stempelwert</p>
-                        <p className="text-sm font-medium" style={{ color: c.text }}>1 Stempel = €{shop.stampValue} Einkauf</p>
-                      </div>
-                    </motion.div>
                   )}
                 </>
               ) : (
@@ -466,6 +466,23 @@ export default function MeShopPage() {
                     stampValue={shop.stampValue}
                     cardNumber={cardNumber}
                   />
+                  {shop.stampValue && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="rounded-2xl p-4 flex items-center gap-3"
+                      style={{ background: hexToRgba(c.accent, 0.06), border: `1px solid ${hexToRgba(c.accent, 0.15)}` }}
+                    >
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: hexToRgba(c.accent, 0.12) }}>
+                        <Banknote size={16} style={{ color: c.accent }} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: c.accent }}>Stempelwert</p>
+                        <p className="text-sm font-medium text-zinc-300">1 Stempel = €{shop.stampValue} Einkauf</p>
+                      </div>
+                    </motion.div>
+                  )}
                   {availableRewards.length > 0 && (
                     <motion.button
                       initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -484,23 +501,6 @@ export default function MeShopPage() {
                       totalStampsEver={membership.totalStampsEver}
                       accent={shop.customDesignEnabled ? shop.accentColor : undefined}
                     />
-                  )}
-                  {shop.stampValue && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="rounded-2xl p-4 flex items-center gap-3"
-                      style={{ background: hexToRgba(c.accent, 0.06), border: `1px solid ${hexToRgba(c.accent, 0.15)}` }}
-                    >
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: hexToRgba(c.accent, 0.12) }}>
-                        <Banknote size={16} style={{ color: c.accent }} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: c.accent }}>Stempelwert</p>
-                        <p className="text-sm font-medium text-zinc-300">1 Stempel = €{shop.stampValue} Einkauf</p>
-                      </div>
-                    </motion.div>
                   )}
                 </>
               )}

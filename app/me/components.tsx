@@ -449,13 +449,6 @@ export function LoyaltyCard({
         </div>
       </div>
 
-      {/* Stempelwert-Hinweis */}
-      {stampValue ? (
-        <div className="px-6 pb-2">
-          <p className="text-[10px] text-neutral-600">1 Stempel pro €{stampValue} Einkauf</p>
-        </div>
-      ) : null}
-
       {/* Belohnungs-Abschnitt */}
       <div className="px-5 pb-6 space-y-2">
         {activeTiers.map((tier, i) => {
@@ -467,26 +460,27 @@ export function LoyaltyCard({
               style={{
                 background: reached
                   ? `linear-gradient(to right, ${hexToRgba(accent, 0.18)}, ${hexToRgba(accent, 0.08)})`
-                  : "#111111",
+                  : "rgba(255,255,255,0.02)",
                 border: reached
                   ? `1px solid ${hexToRgba(accent, 0.45)}`
-                  : "1px solid #222222",
+                  : "1px solid rgba(255,255,255,0.06)",
+                opacity: reached ? 1 : 0.45,
               }}
             >
-              <Gift size={28} style={{ color: reached ? accent : "#3a3a3a", flexShrink: 0 }} />
+              <Gift size={28} style={{ color: reached ? accent : "#888888", flexShrink: 0 }} />
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-bold tracking-wider uppercase mb-0.5"
-                  style={{ color: reached ? accent : "#444444" }}>
+                  style={{ color: reached ? accent : "#888888" }}>
                   {reached ? "Bereit zum Einlösen" : `Ab ${tier.stamps} Stempeln`}
                 </p>
-                <p className={`font-semibold leading-snug`}
-                  style={{ color: reached ? "#fefce8" : "#3d3d3d" }}>
+                <p className="font-semibold leading-snug"
+                  style={{ color: reached ? "#fefce8" : "#888888" }}>
                   {tier.text}
                 </p>
               </div>
               {i === activeTiers.length - 1 && rewardsRedeemed > 0 && (
                 <div className="shrink-0 text-center">
-                  <p className="text-sm font-bold" style={{ color: reached ? accent : "#3a3a3a" }}>{rewardsRedeemed}×</p>
+                  <p className="text-sm font-bold" style={{ color: reached ? accent : "#666666" }}>{rewardsRedeemed}×</p>
                   <p className="text-[9px] text-neutral-600">genutzt</p>
                 </div>
               )}

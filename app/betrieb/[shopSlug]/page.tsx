@@ -83,11 +83,6 @@ export default function BetriebDashboard() {
 
   const updateSettings     = useMutation(api.shops.updateSettings);
   const updateMilestones   = useMutation(api.shops.updateMilestones);
-  const inhaberResetCards  = useMutation(api.shops.inhaberResetShopCards);
-  const [cardResetConfirm, setCardResetConfirm] = useState(false);
-  const [cardResetting, setCardResetting]       = useState(false);
-  const [cardResetDone, setCardResetDone]       = useState(false);
-
   const customers = useQuery(
     api.shops.listCustomersForShop,
     shop && adminToken ? { shopId: shop._id, adminToken, limit: showAllCustomers ? undefined : 20 } : "skip"
@@ -555,41 +550,6 @@ export default function BetriebDashboard() {
           </AnimatePresence>
         </div>
 
-        {/* Karten zurücksetzen */}
-        <div className="rounded-2xl p-4 space-y-3 mt-5" style={{ background: "#1a0a0a", border: "1px solid #5c1a0080" }}>
-          <div className="flex items-center gap-2">
-            <Trash2 size={14} className="text-orange-400 shrink-0" />
-            <p className="text-sm font-medium text-orange-400">Karten zurücksetzen</p>
-          </div>
-          <p className="text-[11px]" style={{ color: tm }}>Setzt alle aktuellen Stempel auf 0. Kunden & Gesamthistorie bleiben erhalten.</p>
-          {cardResetDone ? (
-            <div className="flex items-center gap-2 text-green-400 text-sm"><Check size={14} /> Zurückgesetzt.</div>
-          ) : !cardResetConfirm ? (
-            <button onClick={() => setCardResetConfirm(true)}
-              className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors"
-              style={{ background: "#2a1010", color: "#f97316" }}>
-              Karten zurücksetzen
-            </button>
-          ) : (
-            <div className="flex gap-2">
-              <button
-                onClick={async () => {
-                  setCardResetting(true);
-                  try {
-                    await inhaberResetCards({ shopId: shop._id, adminToken });
-                    setCardResetDone(true); setCardResetConfirm(false);
-                    setTimeout(() => setCardResetDone(false), 3000);
-                  } finally { setCardResetting(false); }
-                }}
-                disabled={cardResetting}
-                className="flex-1 py-2.5 bg-orange-700 hover:bg-orange-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
-                {cardResetting ? "..." : "Wirklich zurücksetzen"}
-              </button>
-              <button onClick={() => setCardResetConfirm(false)}
-                className="px-4 py-2.5 rounded-xl text-sm" style={inp}>Abbrechen</button>
-            </div>
-          )}
-        </div>
       </div>
     );
   }
