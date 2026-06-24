@@ -170,18 +170,6 @@ export default function JoinPage() {
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }} className="mb-10 relative z-10">
 
-        {/* Progress stamps */}
-        <div className="flex gap-1.5 mb-6">
-          {Array.from({ length: shop.stampsRequired }).map((_, i) => (
-            <motion.div key={i}
-              initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: i * 0.05, duration: 0.3, type: "spring" }}
-              className="h-2 rounded-full flex-1"
-              style={{ background: i < 3 ? c.gradient : c.dark }}
-            />
-          ))}
-        </div>
-
         <h1 className="text-3xl font-bold tracking-tight" style={{ color: c.text }}>{shop.name}</h1>
         <p className="mt-1 text-sm" style={{ color: c.accentDim }}>Digitale Stempelkarte</p>
 
