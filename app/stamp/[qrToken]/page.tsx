@@ -85,6 +85,7 @@ export default function StampPage() {
   const redeemReward = useMutation(api.memberships.redeemReward);
   const createMembership = useMutation(api.memberships.createMembershipForExistingCustomer);
   const adminStamp = useMutation(api.memberships.adminStampForCustomer);
+  const confirmPendingRedemption = useMutation(api.memberships.confirmPendingRedemption);
 
   // Admin-mode queries
   const allShops = useQuery(api.shops.listAllShops, adminMode && adminPin ? { adminSecret: adminPin } : "skip");
@@ -116,6 +117,17 @@ export default function StampPage() {
     try {
       await redeemReward({ membershipId: data.membership._id, adminToken, rewardText: tierText });
       setRedeemedTierText(tierText ?? null);
+      setDone("redeemed");
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    finally { setLoading(false); }
+  };
+
+  const handleConfirmPendingRedemption = async () => {
+    if (!data?.membership) return;
+    setLoading(true); setError("");
+    try {
+      const result = await confirmPendingRedemption({ membershipId: data.membership._id, adminToken });
+      setRedeemedTierText(result.rewardText);
       setDone("redeemed");
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
     finally { setLoading(false); }
@@ -432,7 +444,33 @@ export default function StampPage() {
 
       {/* Action */}
       <AnimatePresence mode="wait">
-        {!membership ? (
+        {membership?.pendingRedemption ? (
+          <motion.div key="pending-redeem" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <div className="rounded-2xl px-5 py-4 flex items-center gap-3" style={{ background: `${c.accent}15`, border: `2px solid ${c.accent}55` }}>
+              <Gift size={28} style={{ color: c.accent }} className="shrink-0" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: c.accent }}>Belohnung ausstehend</p>
+                <p className="font-semibold text-sm" style={{ color: c.text }}>{membership.pendingRedemption.rewardText}</p>
+                <p className="text-[11px] mt-0.5" style={{ color: c.accentDim }}>{membership.pendingRedemption.stamps} Stempel</p>
+              </div>
+            </div>
+            <button onClick={handleConfirmPendingRedemption} disabled={loading}
+              className="w-full py-4 font-bold rounded-2xl flex items-center justify-center gap-2 text-base transition-colors disabled:opacity-50"
+              style={{ background: c.accent, color: "#18181b" }}>
+              <Gift size={18} />
+              {loading ? "Bestätigen..." : "Belohnung bestätigen & Stempel abziehen"}
+            </button>
+            <button onClick={async () => {
+                setLoading(true);
+                try { await handleStamp(); } finally { setLoading(false); }
+              }}
+              disabled={loading}
+              className="w-full py-3 rounded-2xl text-sm font-medium transition-colors disabled:opacity-40"
+              style={{ background: c.dark, color: c.accentDim, border: `1px solid ${c.accent}22` }}>
+              Stattdessen Stempel geben
+            </button>
+          </motion.div>
+        ) : !membership ? (
           <motion.div key="no-member" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
             <p className="text-sm text-zinc-500 text-center bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
               Noch nicht für {shop.name} registriert.

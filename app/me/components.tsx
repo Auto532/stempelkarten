@@ -467,22 +467,26 @@ export function LoyaltyCard({
               style={{
                 background: reached
                   ? `linear-gradient(to right, ${hexToRgba(accent, 0.18)}, ${hexToRgba(accent, 0.08)})`
-                  : "linear-gradient(to right, #1a1208, #110d04)",
-                border: `1px solid ${hexToRgba(accent, reached ? 0.45 : 0.2)}`,
+                  : "#111111",
+                border: reached
+                  ? `1px solid ${hexToRgba(accent, 0.45)}`
+                  : "1px solid #222222",
               }}
             >
-              <Gift size={28} style={{ color: accent, flexShrink: 0 }} />
+              <Gift size={28} style={{ color: reached ? accent : "#3a3a3a", flexShrink: 0 }} />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold tracking-wider uppercase mb-0.5" style={{ color: accent }}>
+                <p className="text-[10px] font-bold tracking-wider uppercase mb-0.5"
+                  style={{ color: reached ? accent : "#444444" }}>
                   {reached ? "Bereit zum Einlösen" : `Ab ${tier.stamps} Stempeln`}
                 </p>
-                <p className={`font-semibold leading-snug ${reached ? "text-amber-50" : "text-neutral-400"}`}>
+                <p className={`font-semibold leading-snug`}
+                  style={{ color: reached ? "#fefce8" : "#3d3d3d" }}>
                   {tier.text}
                 </p>
               </div>
               {i === activeTiers.length - 1 && rewardsRedeemed > 0 && (
                 <div className="shrink-0 text-center">
-                  <p className="text-sm font-bold" style={{ color: accent }}>{rewardsRedeemed}×</p>
+                  <p className="text-sm font-bold" style={{ color: reached ? accent : "#3a3a3a" }}>{rewardsRedeemed}×</p>
                   <p className="text-[9px] text-neutral-600">genutzt</p>
                 </div>
               )}

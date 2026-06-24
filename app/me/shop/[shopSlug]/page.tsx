@@ -5,8 +5,8 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Gift, Check } from "lucide-react";
-import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection, getActiveTiers } from "../../components";
+import { ArrowLeft, Gift, Check, Banknote } from "lucide-react";
+import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection, getActiveTiers, hexToRgba } from "../../components";
 import type { CardTier } from "../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
@@ -21,10 +21,12 @@ export default function MeShopPage() {
   const [showQR, setShowQR] = useState(false);
   const [showRedeemConfirm, setShowRedeemConfirm] = useState(false);
   const [showRedeemSuccess, setShowRedeemSuccess] = useState(false);
+  const [showRedeemQR, setShowRedeemQR] = useState(false);
   const [redeemedText, setRedeemedText] = useState("");
   const [redeeming, setRedeeming] = useState(false);
   const [selectedReward, setSelectedReward] = useState<CardTier | null>(null);
-  const customerRedeem = useMutation(api.memberships.customerRedeemReward);
+  const setPending = useMutation(api.memberships.setPendingRedemption);
+  const cancelPending = useMutation(api.memberships.cancelPendingRedemption);
 
   useEffect(() => {
     if (searchParams.get("qr") === "1") setShowQR(true);
@@ -55,25 +57,39 @@ export default function MeShopPage() {
   const cardNumber = entry?.cardNumber;
   useShopThemeSync(shop);
 
+  const prevPendingRef = useRef<boolean>(false);
+
   useEffect(() => {
     if (!membership) return;
     const current = membership.currentStamps;
+    const hasPending = !!membership.pendingRedemption;
 
     if (isFirstLoad.current) {
       isFirstLoad.current = false;
       prevStampsRef.current = current;
+      prevPendingRef.current = hasPending;
       return;
     }
 
     const prev = prevStampsRef.current ?? current;
-    if (current > prev) {
+    const wasPending = prevPendingRef.current;
+
+    // Redemption confirmed by shop: pending was true, now false, stamps decreased
+    if (wasPending && !hasPending && current < prev) {
+      setShowRedeemQR(false);
+      setShowRedeemSuccess(true);
+    }
+    // Normal stamp added
+    else if (current > prev && !wasPending) {
       setStampAnim(current - 1);
       setShowStampOverlay(true);
       setShowQR(false);
       setTimeout(() => setStampAnim(null), 1200);
     }
+
     prevStampsRef.current = current;
-  }, [membership?.currentStamps]); // eslint-disable-line react-hooks/exhaustive-deps
+    prevPendingRef.current = hasPending;
+  }, [membership?.currentStamps, membership?.pendingRedemption]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!mounted || data === undefined) {
     return (
@@ -108,19 +124,28 @@ export default function MeShopPage() {
     if (!qrToken || !selectedReward) return;
     setRedeeming(true);
     try {
-      const result = await customerRedeem({
+      await setPending({
         qrToken,
         membershipId: membership._id,
         targetStamps: selectedReward.stamps,
       });
-      setRedeemedText(result?.rewardText ?? selectedReward.text);
+      setRedeemedText(selectedReward.text);
       setShowRedeemConfirm(false);
-      setShowRedeemSuccess(true);
+      setShowRedeemQR(true);
     } catch {
       // server validation handles edge cases
     } finally {
       setRedeeming(false);
     }
+  };
+
+  const handleCancelRedemption = async () => {
+    if (!qrToken) return;
+    try {
+      await cancelPending({ qrToken, membershipId: membership._id });
+    } catch { /* ignore */ }
+    setShowRedeemQR(false);
+    setSelectedReward(null);
   };
 
   return (
@@ -130,6 +155,61 @@ export default function MeShopPage() {
 
       <AnimatePresence>
         {showStampOverlay && <StampOverlay onDone={() => setShowStampOverlay(false)} />}
+      </AnimatePresence>
+
+      {/* Warte-auf-Scan-Overlay: QR zeigen, Shop bestätigt Einlösung */}
+      <AnimatePresence>
+        {showRedeemQR && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/98 backdrop-blur-md px-6"
+          >
+            <motion.div
+              initial={{ scale: 0.3, rotate: -8 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5"
+              style={{ background: `${c.accent}18`, border: `2px solid ${c.accent}40` }}
+            >
+              <Gift size={38} style={{ color: c.accent }} />
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              className="text-center mb-6"
+            >
+              <p className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: `${c.accent}99` }}>
+                Belohnung ausstehend
+              </p>
+              <h2 className="text-xl font-black text-white leading-tight mb-1">{redeemedText}</h2>
+              <p className="text-zinc-500 text-sm">bei {shop.name}</p>
+            </motion.div>
+            <div className="bg-white rounded-2xl p-3 mb-4">
+              <QRCard
+                qrToken={qrToken}
+                customerName={data.customer.name}
+                shopName={shop.name}
+                accentColor={c.accent}
+              />
+            </div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+              className="text-center mb-6"
+            >
+              <div className="flex items-center gap-2 justify-center mb-1">
+                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-amber-400 text-xs font-semibold">Warte auf Bestätigung</span>
+              </div>
+              <p className="text-zinc-500 text-sm">Zeig den QR-Code dem Mitarbeiter zum Scannen</p>
+            </motion.div>
+            <motion.button
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+              onClick={handleCancelRedemption}
+              className="text-zinc-600 text-sm hover:text-zinc-400 transition-colors"
+            >
+              Abbrechen
+            </motion.button>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Erfolgs-Overlay: Belohnung eingelöst */}
@@ -269,7 +349,7 @@ export default function MeShopPage() {
           >
             {showBack && (
               <button
-                onClick={() => showQR ? setShowQR(false) : router.push("/me")}
+                onClick={() => showQR ? setShowQR(false) : router.back()}
                 className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:border-zinc-700 transition-colors shrink-0"
               >
                 <ArrowLeft size={16} className="text-zinc-400" />
@@ -351,6 +431,23 @@ export default function MeShopPage() {
                   {shop.milestonesEnabled && shop.milestones && (
                     <theme.Milestones milestones={shop.milestones} totalStampsEver={membership.totalStampsEver} />
                   )}
+                  {shop.stampValue && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="rounded-2xl p-4 flex items-center gap-3"
+                      style={{ background: hexToRgba(c.accent, 0.06), border: `1px solid ${hexToRgba(c.accent, 0.15)}` }}
+                    >
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: hexToRgba(c.accent, 0.12) }}>
+                        <Banknote size={16} style={{ color: c.accent }} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: c.accent }}>Stempelwert</p>
+                        <p className="text-sm font-medium" style={{ color: c.text }}>1 Stempel = €{shop.stampValue} Einkauf</p>
+                      </div>
+                    </motion.div>
+                  )}
                 </>
               ) : (
                 <>
@@ -387,6 +484,23 @@ export default function MeShopPage() {
                       totalStampsEver={membership.totalStampsEver}
                       accent={shop.customDesignEnabled ? shop.accentColor : undefined}
                     />
+                  )}
+                  {shop.stampValue && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="rounded-2xl p-4 flex items-center gap-3"
+                      style={{ background: hexToRgba(c.accent, 0.06), border: `1px solid ${hexToRgba(c.accent, 0.15)}` }}
+                    >
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: hexToRgba(c.accent, 0.12) }}>
+                        <Banknote size={16} style={{ color: c.accent }} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: c.accent }}>Stempelwert</p>
+                        <p className="text-sm font-medium text-zinc-300">1 Stempel = €{shop.stampValue} Einkauf</p>
+                      </div>
+                    </motion.div>
                   )}
                 </>
               )}

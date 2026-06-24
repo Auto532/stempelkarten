@@ -175,6 +175,7 @@ export const createShop = mutation({
     stampsRequired: v.number(),
     rewardText: v.string(),
     stampIcon: v.optional(v.string()),
+    stampValue: v.optional(v.number()),
   },
   handler: async (ctx, { adminSecret, ...args }) => {
     requireAdmin({ secret: adminSecret });
@@ -237,5 +238,35 @@ export const listCustomersForShop = query({
       })
     );
     return results.filter((r) => r.customer !== null);
+  },
+});
+
+export const adminResetShopCards = mutation({
+  args: { shopId: v.id("shops"), adminSecret: v.string() },
+  handler: async (ctx, { shopId, adminSecret }) => {
+    requireAdmin({ secret: adminSecret });
+    const memberships = await ctx.db
+      .query("memberships")
+      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
+      .collect();
+    for (const m of memberships) {
+      await ctx.db.patch(m._id, { currentStamps: 0, rewardsRedeemed: 0, lastStampAt: undefined });
+    }
+    return { resetCount: memberships.length };
+  },
+});
+
+export const inhaberResetShopCards = mutation({
+  args: { shopId: v.id("shops"), adminToken: v.string() },
+  handler: async (ctx, { shopId, adminToken }) => {
+    await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
+    const memberships = await ctx.db
+      .query("memberships")
+      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
+      .collect();
+    for (const m of memberships) {
+      await ctx.db.patch(m._id, { currentStamps: 0, rewardsRedeemed: 0, lastStampAt: undefined });
+    }
+    return { resetCount: memberships.length };
   },
 });

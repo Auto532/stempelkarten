@@ -230,6 +230,19 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
   );
 }
 
+// ─── ToggleSwitch ─────────────────────────────────────────────────────────────
+
+function ToggleSwitch({ active, onToggle, disabled }: { active: boolean; onToggle: () => void; disabled: boolean }) {
+  return (
+    <button onClick={onToggle} disabled={disabled}
+      style={{ minWidth: "2.5rem", height: "1.375rem" }}
+      className={`relative rounded-full transition-colors flex items-center px-0.5 disabled:opacity-50 ${active ? "bg-amber-400" : "bg-zinc-700"}`}>
+      <motion.div animate={{ x: active ? 18 : 0 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        className="w-4 h-4 rounded-full bg-white shadow-sm" />
+    </button>
+  );
+}
+
 // ─── ShopEinstellungen ────────────────────────────────────────────────────────
 
 type Tier = { stamps: number; text: string; enabled: boolean };
@@ -238,6 +251,20 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
   const adminSetFeatures  = useMutation(api.shops.adminSetFeatures);
   const updateContent     = useMutation(api.shops.adminUpdateShopContent);
   const updateLegalTexts  = useMutation(api.shops.updateLegalTexts);
+  const resetCards        = useMutation(api.shops.adminResetShopCards);
+  const [cardResetConfirm, setCardResetConfirm] = useState(false);
+  const [cardResetting, setCardResetting]       = useState(false);
+  const [cardResetDone, setCardResetDone]       = useState(false);
+
+  const handleCardReset = async () => {
+    setCardResetting(true);
+    try {
+      await resetCards({ shopId: shop._id, adminSecret });
+      setCardResetDone(true);
+      setCardResetConfirm(false);
+      setTimeout(() => setCardResetDone(false), 3000);
+    } finally { setCardResetting(false); }
+  };
 
   // Program
   const [stampsRequired, setStampsRequired] = useState(shop.stampsRequired);
@@ -317,15 +344,6 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
     setMilestones([...milestones, { stamps: last + 10, text: "", enabled: true }]);
   };
 
-  const ToggleSwitch = ({ active, onToggle, disabled }: { active: boolean; onToggle: () => void; disabled: boolean }) => (
-    <button onClick={onToggle} disabled={disabled}
-      style={{ minWidth: "2.5rem", height: "1.375rem" }}
-      className={`relative rounded-full transition-colors flex items-center px-0.5 disabled:opacity-50 ${active ? "bg-amber-400" : "bg-zinc-700"}`}>
-      <motion.div animate={{ x: active ? 18 : 0 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        className="w-4 h-4 rounded-full bg-white shadow-sm" />
-    </button>
-  );
-
   return (
     <motion.div key="einstellungen" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
 
@@ -377,7 +395,7 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
               {tiers.map((tier, i) => (
                 <div key={i} className="bg-zinc-800 rounded-xl p-3 space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-500 flex-1">Stufe {i + 1}</span>
+                    <span className="text-xs text-zinc-500 flex-1">Stufe {i + 2}</span>
                     <ToggleSwitch active={tier.enabled} disabled={false}
                       onToggle={() => setTiers(tiers.map((t, j) => j === i ? { ...t, enabled: !t.enabled } : t))} />
                     <button onClick={() => setTiers(tiers.filter((_, j) => j !== i))} className="text-zinc-600 hover:text-red-400 transition-colors ml-1">
@@ -500,6 +518,32 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
         </div>
       )}
 
+      {/* Karten-Reset */}
+      <div className="bg-zinc-900 border border-orange-900/40 rounded-2xl p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Trash2 size={14} className="text-orange-400 shrink-0" />
+          <p className="text-sm font-medium text-orange-400">Karten zurücksetzen</p>
+        </div>
+        <p className="text-[11px] text-zinc-500">Setzt alle aktuellen Stempel auf 0. Kunden & Gesamthistorie bleiben erhalten.</p>
+        {cardResetDone ? (
+          <div className="flex items-center gap-2 text-green-400 text-sm"><Check size={14} /> Zurückgesetzt.</div>
+        ) : !cardResetConfirm ? (
+          <button onClick={() => setCardResetConfirm(true)}
+            className="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-orange-900/30 text-zinc-400 hover:text-orange-400 transition-colors">
+            Karten zurücksetzen
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button onClick={handleCardReset} disabled={cardResetting}
+              className="flex-1 py-2.5 bg-orange-700 hover:bg-orange-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
+              {cardResetting ? "..." : "Wirklich zurücksetzen"}
+            </button>
+            <button onClick={() => setCardResetConfirm(false)}
+              className="px-4 py-2.5 bg-zinc-800 text-zinc-400 text-sm rounded-xl">Abbrechen</button>
+          </div>
+        )}
+      </div>
+
       {/* Rechtliche Texte */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
@@ -596,6 +640,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
   const [stampsRequired, setStampsRequired] = useState(10);
   const [rewardText, setRewardText] = useState("");
   const [brancheText, setBrancheText] = useState("");
+  const [stampValue, setStampValue] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -604,7 +649,10 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setLoading(true);
     try {
-      await createShop({ adminSecret, name, slug, stampsRequired, rewardText, stampIcon });
+      await createShop({
+        adminSecret, name, slug, stampsRequired, rewardText, stampIcon,
+        stampValue: stampValue === "" ? undefined : Number(stampValue),
+      });
       onDone();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Fehler");
@@ -647,6 +695,20 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         <label className="block text-xs text-zinc-500 mb-1.5">Stempel bis Belohnung</label>
         <input type="number" min={1} max={50} value={stampsRequired} onChange={e => setStampsRequired(Number(e.target.value))} onFocus={e => e.target.select()} required
           className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 focus:outline-none focus:border-amber-400/50" />
+      </div>
+      <div>
+        <label className="block text-xs text-zinc-500 mb-1.5">Mindesteinkauf pro Stempel (optional)</label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500">€</span>
+          <input type="number" min={1} max={9999} value={stampValue}
+            onChange={e => setStampValue(e.target.value === "" ? "" : Number(e.target.value))}
+            onFocus={e => e.target.select()}
+            placeholder="z.B. 10"
+            className="w-full pl-7 pr-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/50" />
+        </div>
+        {stampValue !== "" && (
+          <p className="text-[10px] text-zinc-600 mt-1">→ „1 Stempel pro €{stampValue} Einkauf"</p>
+        )}
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <button type="submit" disabled={loading}
@@ -760,7 +822,147 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
   );
 }
 
-// ─── StempelTab ───────────────────────────────────────────────────────────────
+// ─── AnalyticsTab ─────────────────────────────────────────────────────────────
+
+function AnalyticsTab({ shops, adminSecret }: { shops: Doc<"shops">[] | undefined; adminSecret: string }) {
+  const [selectedShopId, setSelectedShopId] = useState<Id<"shops"> | null>(null);
+  const selectedShop = shops?.find(s => s._id === selectedShopId) ?? null;
+  const customers = useQuery(
+    api.shops.listCustomersForShop,
+    selectedShop?.adminLoginToken
+      ? { shopId: selectedShop._id, adminToken: selectedShop.adminLoginToken }
+      : "skip"
+  );
+  const resetCards = useMutation(api.shops.adminResetShopCards);
+  const [resetting, setResetting] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  const handleReset = async () => {
+    if (!selectedShopId) return;
+    setResetting(true);
+    try {
+      await resetCards({ shopId: selectedShopId, adminSecret });
+      setResetDone(true);
+      setConfirmReset(false);
+      setTimeout(() => setResetDone(false), 3000);
+    } finally { setResetting(false); }
+  };
+
+  return (
+    <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+
+      {/* Shop selector */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+        <p className="text-sm font-semibold text-zinc-200">Shop auswählen</p>
+        {!shops || shops.length === 0 ? (
+          <p className="text-xs text-zinc-600">Noch keine Shops vorhanden.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {shops.map(shop => (
+              <button key={shop._id}
+                onClick={() => { setSelectedShopId(shop._id); setResetDone(false); setConfirmReset(false); }}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                style={selectedShopId === shop._id
+                  ? { background: "#fbbf2433", border: "1px solid #fbbf2488", color: "#fbbf24" }
+                  : { background: "#27272a", border: "1px solid #3f3f46", color: "#71717a" }
+                }>
+                {shop.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {selectedShop && (
+        <>
+          {/* Stats */}
+          {customers !== undefined && (
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "Kunden", value: customers.length, color: "text-blue-400" },
+                { label: "Stempel ges.", value: customers.reduce((s, c) => s + c.membership.totalStampsEver, 0), color: "text-amber-400" },
+                { label: "Belohnungen", value: customers.reduce((s, c) => s + c.membership.rewardsRedeemed, 0), color: "text-purple-400" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 flex flex-col items-center gap-1">
+                  <p className={`text-xl font-bold ${color}`}>{value}</p>
+                  <p className="text-[10px] text-zinc-500">{label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Customer list */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+              <Users size={14} className="text-zinc-500" />
+              <span className="text-sm font-medium text-zinc-200">Kunden – {selectedShop.name}</span>
+            </div>
+            <div className="divide-y divide-zinc-800/50">
+              {customers === undefined && (
+                <div className="px-4 py-6 text-center text-zinc-600 text-sm">Laden...</div>
+              )}
+              {customers?.length === 0 && (
+                <div className="px-4 py-6 text-center text-zinc-600 text-sm">Noch keine Kunden.</div>
+              )}
+              {customers?.map(({ customer, membership }) => customer && (
+                <div key={membership._id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-bold shrink-0">
+                    {customer.name?.[0]?.toUpperCase() ?? "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-200 truncate">{customer.name}</p>
+                    <p className="text-[11px] text-zinc-500">
+                      Gesamt: {membership.totalStampsEver} Stempel · {membership.rewardsRedeemed}× eingelöst
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-semibold text-amber-400">{membership.currentStamps}/{selectedShop.stampsRequired}</p>
+                    <p className="text-[10px] text-zinc-600">aktuell</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Card reset */}
+          <div className="bg-zinc-900 border border-orange-900/40 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Trash2 size={14} className="text-orange-400 shrink-0" />
+              <p className="text-sm font-medium text-orange-400">Karten zurücksetzen</p>
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              Setzt alle aktuellen Stempel für <span className="text-zinc-400 font-medium">{selectedShop.name}</span> auf 0 zurück. Kunden & Gesamthistorie bleiben erhalten.
+            </p>
+            {resetDone ? (
+              <div className="flex items-center gap-2 text-green-400 text-sm">
+                <Check size={14} /> Karten zurückgesetzt.
+              </div>
+            ) : !confirmReset ? (
+              <button onClick={() => setConfirmReset(true)}
+                className="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-orange-900/30 text-zinc-400 hover:text-orange-400 transition-colors">
+                Karten zurücksetzen
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button onClick={handleReset} disabled={resetting}
+                  className="flex-1 py-2.5 bg-orange-700 hover:bg-orange-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
+                  {resetting ? "..." : "Wirklich zurücksetzen"}
+                </button>
+                <button onClick={() => setConfirmReset(false)}
+                  className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-sm rounded-xl transition-colors">
+                  Abbrechen
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── StempelTab (veraltet – Analytics ersetzt diesen Tab) ─────────────────────
 
 function StempelTab({ shops, adminSecret }: { shops: Doc<"shops">[] | undefined; adminSecret: string }) {
   const adminStamp          = useMutation(api.memberships.adminStampForCustomer);
@@ -1056,13 +1258,13 @@ function SettingsTab() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "shops" | "stempel" | "settings";
+type Tab = "overview" | "shops" | "analytics" | "settings";
 
 const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
-  { id: "overview",  label: "Übersicht",    icon: BarChart2 },
-  { id: "shops",     label: "Shops",        icon: Store     },
-  { id: "stempel",   label: "Stempel",      icon: Stamp     },
-  { id: "settings",  label: "Einstellungen", icon: Settings  },
+  { id: "overview",   label: "Übersicht",    icon: BarChart2  },
+  { id: "shops",      label: "Shops",        icon: Store      },
+  { id: "analytics",  label: "Analytics",    icon: TrendingUp },
+  { id: "settings",   label: "Einstellungen", icon: Settings  },
 ];
 
 export default function SuperAdminPage() {
@@ -1162,10 +1364,10 @@ export default function SuperAdminPage() {
         <AnimatePresence mode="wait">
           <motion.span key={activeTab} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.15 }}
             className="font-semibold text-zinc-100 text-base">
-            {activeTab === "overview" && "Übersicht"}
-            {activeTab === "shops"    && "Shops"}
-            {activeTab === "stempel"  && "Stempel"}
-            {activeTab === "settings" && "Einstellungen"}
+            {activeTab === "overview"  && "Übersicht"}
+            {activeTab === "shops"     && "Shops"}
+            {activeTab === "analytics" && "Analytics"}
+            {activeTab === "settings"  && "Einstellungen"}
           </motion.span>
         </AnimatePresence>
         <span className="ml-auto text-[10px] text-zinc-600 uppercase tracking-widest font-medium">Admin</span>
@@ -1173,10 +1375,10 @@ export default function SuperAdminPage() {
 
       <div className="flex-1 px-5 pt-5 pb-28 overflow-y-auto">
         <AnimatePresence mode="wait">
-          {activeTab === "overview" && <OverviewTab key="overview" adminSecret={adminSecret} onGoToShops={() => setActiveTab("shops")} />}
-          {activeTab === "shops"    && <ShopsTab    key="shops"    shops={allShops} adminSecret={adminSecret} onSelectShop={id => { setSelectedShopId(id); }} />}
-          {activeTab === "stempel"  && <StempelTab  key="stempel"  shops={allShops} adminSecret={adminSecret} />}
-          {activeTab === "settings" && <SettingsTab key="settings" />}
+          {activeTab === "overview"  && <OverviewTab   key="overview"   adminSecret={adminSecret} onGoToShops={() => setActiveTab("shops")} />}
+          {activeTab === "shops"     && <ShopsTab      key="shops"      shops={allShops} adminSecret={adminSecret} onSelectShop={id => { setSelectedShopId(id); }} />}
+          {activeTab === "analytics" && <AnalyticsTab  key="analytics"  shops={allShops} adminSecret={adminSecret} />}
+          {activeTab === "settings"  && <SettingsTab   key="settings" />}
         </AnimatePresence>
       </div>
 

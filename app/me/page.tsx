@@ -184,9 +184,9 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
       onClick={onClick}
       className="w-full text-left rounded-2xl overflow-hidden"
       style={{
-        background: "#141414",
+        background: "#1e1e22",
         border: `1px solid ${hexToRgba(accent, 0.18)}`,
-        boxShadow: "0 2px 20px rgba(0,0,0,0.45)",
+        boxShadow: "0 2px 20px rgba(0,0,0,0.35)",
       }}
     >
       {/* Accent stripe */}

@@ -218,6 +218,78 @@ export const adminStampForCustomer = mutation({
   },
 });
 
+export const setPendingRedemption = mutation({
+  args: { qrToken: v.string(), membershipId: v.id("memberships"), targetStamps: v.number() },
+  handler: async (ctx, { qrToken, membershipId, targetStamps }) => {
+    const customer = await ctx.db
+      .query("customers")
+      .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
+      .unique();
+    if (!customer) throw new Error("Kunde nicht gefunden");
+
+    const membership = await ctx.db.get(membershipId);
+    if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
+    if (membership.customerId !== customer._id) throw new Error("Nicht berechtigt");
+
+    const shop = await ctx.db.get(membership.shopId);
+    if (!shop) throw new Error("Shop nicht gefunden");
+
+    const activeTiers = (shop.rewardTiers ?? [])
+      .filter((t) => t.enabled)
+      .sort((a, b) => a.stamps - b.stamps);
+    const baseTier = { stamps: shop.stampsRequired, text: shop.rewardText };
+    const tiers = activeTiers.length > 0 ? activeTiers : [baseTier];
+    const tier = tiers.find((t) => t.stamps === targetStamps && membership.currentStamps >= t.stamps);
+    if (!tier) throw new Error("Keine Belohnung verfügbar");
+
+    await ctx.db.patch(membershipId, { pendingRedemption: { stamps: tier.stamps, rewardText: tier.text } });
+    return { rewardText: tier.text };
+  },
+});
+
+export const cancelPendingRedemption = mutation({
+  args: { qrToken: v.string(), membershipId: v.id("memberships") },
+  handler: async (ctx, { qrToken, membershipId }) => {
+    const customer = await ctx.db
+      .query("customers")
+      .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
+      .unique();
+    if (!customer) throw new Error("Kunde nicht gefunden");
+    const membership = await ctx.db.get(membershipId);
+    if (!membership || membership.customerId !== customer._id) throw new Error("Nicht berechtigt");
+    await ctx.db.patch(membershipId, { pendingRedemption: undefined });
+  },
+});
+
+export const confirmPendingRedemption = mutation({
+  args: { membershipId: v.id("memberships"), adminToken: v.string() },
+  handler: async (ctx, { membershipId, adminToken }) => {
+    const membership = await ctx.db.get(membershipId);
+    if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
+
+    await requireShopRole(ctx, { shopId: membership.shopId, token: adminToken, role: "mitarbeiter" });
+
+    const pending = membership.pendingRedemption;
+    if (!pending) throw new Error("Keine ausstehende Einlösung");
+    if (membership.currentStamps < pending.stamps) throw new Error("Nicht genug Stempel");
+
+    const carryOver = Math.max(0, membership.currentStamps - pending.stamps);
+    await ctx.db.patch(membershipId, {
+      currentStamps: carryOver,
+      rewardsRedeemed: membership.rewardsRedeemed + 1,
+      pendingRedemption: undefined,
+    });
+    await ctx.db.insert("stampEvents", {
+      membershipId,
+      shopId: membership.shopId,
+      type: "redeem",
+      rewardText: pending.rewardText,
+      timestamp: Date.now(),
+    });
+    return { rewardText: pending.rewardText };
+  },
+});
+
 export const getRedemptionsForShop = query({
   args: { shopId: v.id("shops"), adminToken: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminToken, limit }) => {
