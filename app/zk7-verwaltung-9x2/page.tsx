@@ -888,13 +888,8 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
 
 // ─── ShopAnalytics (pro Shop, wird in ShopWorkspace eingebettet) ──────────────
 
-function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
+function ShopAnalytics({ shop }: { shop: Doc<"shops">; adminSecret: string }) {
   const [period, setPeriod] = useState<Period>("all");
-  const restoreStamps = useMutation(api.shops.adminRestoreCustomerStamps);
-  const [restoreId, setRestoreId]     = useState<string | null>(null);
-  const [restoreCount, setRestoreCount] = useState("");
-  const [restoring, setRestoring]     = useState(false);
-  const [restoreDone, setRestoreDone] = useState<string | null>(null);
 
   const data = useQuery(
     api.shops.getShopAnalyticsByPeriod,
@@ -902,19 +897,6 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
       ? { shopId: shop._id, adminToken: shop.adminLoginToken, since: periodToSince(period) }
       : "skip"
   );
-
-  const handleRestore = async (membershipId: string) => {
-    const n = parseInt(restoreCount, 10);
-    if (isNaN(n) || n < 0) return;
-    setRestoring(true);
-    try {
-      await restoreStamps({ membershipId: membershipId as Id<"memberships">, adminSecret, stamps: n });
-      setRestoreDone(membershipId);
-      setRestoreId(null);
-      setRestoreCount("");
-      setTimeout(() => setRestoreDone(null), 2500);
-    } finally { setRestoring(false); }
-  };
 
   return (
     <motion.div key="shop-analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
@@ -926,7 +908,6 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
           className="text-zinc-500 text-sm text-center py-10">Laden...</motion.div>
       ) : (
         <>
-          {/* Stats im Zeitraum */}
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: "Stempel",      value: data.stamps,           color: "text-amber-400"  },
@@ -940,77 +921,32 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
             ))}
           </div>
 
-          {/* Kunden-Liste mit Wiederherstellung */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
               <Users size={14} className="text-zinc-500" />
               <span className="text-sm font-medium text-zinc-200">Kunden</span>
-              <span className="ml-auto text-[10px] text-zinc-600">Tippen zum Wiederherstellen</span>
             </div>
             <div className="divide-y divide-zinc-800/50">
               {data.customers.length === 0 && (
                 <div className="px-4 py-6 text-center text-zinc-600 text-sm">Keine Aktivität im Zeitraum.</div>
               )}
-              {data.customers.map((c) => {
-                const isOpen = restoreId === c.membershipId;
-                const isDone = restoreDone === c.membershipId;
-                return (
-                  <div key={c.membershipId}>
-                    <button
-                      onClick={() => { setRestoreId(isOpen ? null : c.membershipId); setRestoreCount(String(c.currentStamps)); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800/40 transition-colors"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-bold shrink-0">
-                        {c.customerName[0]?.toUpperCase() ?? "?"}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-zinc-200 truncate">{c.customerName}</p>
-                        <p className="text-[11px] text-zinc-500">
-                          +{c.stamps} Stempel{c.redeems > 0 ? ` · ${c.redeems}× eingelöst` : ""}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        {isDone ? (
-                          <Check size={14} className="text-green-400" />
-                        ) : (
-                          <>
-                            <p className="text-xs font-semibold text-amber-400">{c.currentStamps}/{shop.stampsRequired}</p>
-                            <p className="text-[10px] text-zinc-600">aktuell</p>
-                          </>
-                        )}
-                      </div>
-                    </button>
-                    <AnimatePresence>
-                      {isOpen && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="px-4 pb-3 pt-1 flex gap-2 bg-zinc-800/30">
-                            <input
-                              type="number" min={0} max={999}
-                              value={restoreCount}
-                              onChange={e => setRestoreCount(e.target.value)}
-                              placeholder="Stempelzahl"
-                              className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 text-sm focus:outline-none focus:border-amber-400/50"
-                            />
-                            <button
-                              onClick={() => handleRestore(c.membershipId)}
-                              disabled={restoring || restoreCount === ""}
-                              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-zinc-900 text-sm font-bold rounded-xl transition-colors"
-                            >
-                              {restoring ? "..." : "Wiederherstellen"}
-                            </button>
-                            <button onClick={() => setRestoreId(null)}
-                              className="px-3 py-2 bg-zinc-800 text-zinc-400 text-sm rounded-xl">✕</button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+              {data.customers.map((c) => (
+                <div key={c.membershipId} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-bold shrink-0">
+                    {c.customerName[0]?.toUpperCase() ?? "?"}
                   </div>
-                );
-              })}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-200 truncate">{c.customerName}</p>
+                    <p className="text-[11px] text-zinc-500">
+                      +{c.stamps} Stempel{c.redeems > 0 ? ` · ${c.redeems}× eingelöst` : ""}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-semibold text-amber-400">{c.currentStamps}/{shop.stampsRequired}</p>
+                    <p className="text-[10px] text-zinc-600">aktuell</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </>
