@@ -282,17 +282,31 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
           </span>
         </div>
 
-        {/* Milestones */}
-        {reachedMilestones.length > 0 && (
-          <div className="mt-3 pt-2.5 flex items-center gap-1.5 flex-wrap"
+        {/* Rewards redeemed + Milestones */}
+        {(membership.rewardsRedeemed > 0 || reachedMilestones.length > 0) && (
+          <div className="mt-3 pt-2.5 flex items-center gap-2 flex-wrap"
             style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-            <Trophy size={10} style={{ color: accent }} className="shrink-0" />
-            {reachedMilestones.map((m, i) => (
-              <span key={i} className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: hexToRgba(accent, 0.1), color: hexToRgba(accent, 0.75) }}>
-                {m.text}
+            {membership.rewardsRedeemed > 0 && (
+              <span className="flex items-center gap-1 text-[10px] font-medium"
+                style={{ color: hexToRgba(accent, 0.38) }}>
+                <Gift size={10} style={{ color: hexToRgba(accent, 0.35) }} />
+                {membership.rewardsRedeemed}× eingelöst
               </span>
-            ))}
+            )}
+            {membership.rewardsRedeemed > 0 && reachedMilestones.length > 0 && (
+              <span style={{ color: "rgba(255,255,255,0.08)", fontSize: 10 }}>·</span>
+            )}
+            {reachedMilestones.length > 0 && (
+              <>
+                <Trophy size={10} style={{ color: hexToRgba(accent, 0.38) }} className="shrink-0" />
+                {reachedMilestones.map((m, i) => (
+                  <span key={i} className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
+                    style={{ background: hexToRgba(accent, 0.08), color: hexToRgba(accent, 0.6) }}>
+                    {m.text}
+                  </span>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
