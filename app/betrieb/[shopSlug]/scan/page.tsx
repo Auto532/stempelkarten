@@ -71,6 +71,7 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
   const data = useQuery(api.memberships.getForCustomerAndShop, { qrToken, shopId });
   const addStamp = useMutation(api.memberships.addStamp);
   const redeemReward = useMutation(api.memberships.redeemReward);
+  const confirmPendingRedemption = useMutation(api.memberships.confirmPendingRedemption);
   const createMembership = useMutation(api.memberships.createMembershipForExistingCustomer);
   const [actionState, setActionState] = useState<ActionState>({ type: "idle" });
   const [error, setError] = useState("");
@@ -199,6 +200,15 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
     finally { setLoading(false); }
   };
 
+  const handleConfirmPending = async () => {
+    setLoading(true); setError("");
+    try {
+      const result = await confirmPendingRedemption({ membershipId: membership._id, adminToken });
+      setActionState({ type: "redeemed", customerName: customer.name, rewardText: result.rewardText });
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    finally { setLoading(false); }
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
 
@@ -249,7 +259,24 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
 
       {/* Actions */}
       <div className="space-y-3">
-        {rewardReady ? (
+        {membership.pendingRedemption ? (
+          <>
+            <div className="rounded-2xl px-5 py-4 flex items-center gap-3" style={{ background: `${c.accent}15`, border: `2px solid ${c.accent}55` }}>
+              <Gift size={24} style={{ color: c.accent }} className="shrink-0" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: c.accent }}>Gutschein ausstehend</p>
+                <p className="font-semibold text-sm" style={{ color: c.text }}>{membership.pendingRedemption.rewardText}</p>
+              </div>
+            </div>
+            <button onClick={handleConfirmPending} disabled={loading}
+              className="w-full py-4 font-bold rounded-xl flex items-center justify-center gap-2 text-base transition-colors disabled:opacity-50"
+              style={{ background: c.accent, color: "#18181b" }}>
+              {loading
+                ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-5 h-5 border-2 border-zinc-900/30 border-t-zinc-900 rounded-full" />
+                : <><Gift size={18} /> Gutschein bestätigen</>}
+            </button>
+          </>
+        ) : rewardReady ? (
           <>
             <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center">
               <p className="text-amber-400 text-sm font-semibold">🎉 {rewardText}</p>
