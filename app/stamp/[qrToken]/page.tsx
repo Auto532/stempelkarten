@@ -86,6 +86,7 @@ export default function StampPage() {
   const createMembership = useMutation(api.memberships.createMembershipForExistingCustomer);
   const adminStamp = useMutation(api.memberships.adminStampForCustomer);
   const confirmPendingRedemption = useMutation(api.memberships.confirmPendingRedemption);
+  const adminConfirmPendingRedemption = useMutation(api.memberships.adminConfirmPendingRedemption);
 
   // Admin-mode queries
   const allShops = useQuery(api.shops.listAllShops, adminMode && adminPin ? { adminSecret: adminPin } : "skip");
@@ -152,6 +153,17 @@ export default function StampPage() {
     finally { setLoading(false); }
   };
 
+  const handleAdminConfirmPending = async () => {
+    if (!adminMembershipData?.membership) return;
+    setLoading(true); setError("");
+    try {
+      const result = await adminConfirmPendingRedemption({ membershipId: adminMembershipData.membership._id, adminSecret: adminPin });
+      setRedeemedTierText(result.rewardText);
+      setDone("redeemed");
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    finally { setLoading(false); }
+  };
+
   // ── Admin-Modus UI ────────────────────────────────────────────────────────
   if (adminMode && ready) {
     if (done === "stamped") {
@@ -173,6 +185,28 @@ export default function StampPage() {
           <button onClick={() => { setDone(null); setAdminSelectedShopId(null); }}
             className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
             <ArrowLeft size={15} /> Weiterer Stempel
+          </button>
+        </div>
+      );
+    }
+
+    if (done === "redeemed") {
+      const shopName = allShops?.find(s => s._id === adminSelectedShopId)?.name ?? "";
+      return (
+        <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-6">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}>
+            <div className="w-24 h-24 rounded-full bg-amber-400 flex items-center justify-center mx-auto">
+              <Gift size={44} className="text-zinc-900" />
+            </div>
+          </motion.div>
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-100">Belohnung eingelöst! 🏆</h1>
+            <p className="text-zinc-400 mt-1">{customerInfo?.name ?? "Kunde"} · {shopName}</p>
+            <p className="text-amber-400 font-semibold mt-1">{redeemedTierText}</p>
+          </div>
+          <button onClick={() => { setDone(null); setAdminSelectedShopId(null); }}
+            className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+            <ArrowLeft size={15} /> Zurück
           </button>
         </div>
       );
@@ -228,6 +262,22 @@ export default function StampPage() {
         </div>
 
         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
+        {adminSelectedShop && adminMembershipData?.membership?.pendingRedemption && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <div className="bg-amber-400/10 border-2 border-amber-400/40 rounded-2xl px-5 py-4 flex items-center gap-3">
+              <Gift size={24} className="text-amber-400 shrink-0" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Gutschein ausstehend</p>
+                <p className="font-semibold text-sm text-zinc-100">{adminMembershipData.membership.pendingRedemption.rewardText}</p>
+              </div>
+            </div>
+            <button onClick={handleAdminConfirmPending} disabled={loading}
+              className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-3 text-base transition-colors">
+              {loading ? <Spinner /> : <><Gift size={20} /> Belohnung bestätigen</>}
+            </button>
+          </motion.div>
+        )}
 
         <button onClick={handleAdminStamp} disabled={!adminSelectedShopId || loading}
           className="w-full py-5 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-3 text-lg transition-colors">

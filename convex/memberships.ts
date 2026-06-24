@@ -290,6 +290,32 @@ export const confirmPendingRedemption = mutation({
   },
 });
 
+export const adminConfirmPendingRedemption = mutation({
+  args: { membershipId: v.id("memberships"), adminSecret: v.string() },
+  handler: async (ctx, { membershipId, adminSecret }) => {
+    requireAdmin({ secret: adminSecret });
+    const membership = await ctx.db.get(membershipId);
+    if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
+    const pending = membership.pendingRedemption;
+    if (!pending) throw new Error("Keine ausstehende Einlösung");
+    if (membership.currentStamps < pending.stamps) throw new Error("Nicht genug Stempel");
+    const carryOver = Math.max(0, membership.currentStamps - pending.stamps);
+    await ctx.db.patch(membershipId, {
+      currentStamps: carryOver,
+      rewardsRedeemed: membership.rewardsRedeemed + 1,
+      pendingRedemption: undefined,
+    });
+    await ctx.db.insert("stampEvents", {
+      membershipId,
+      shopId: membership.shopId,
+      type: "redeem",
+      rewardText: pending.rewardText,
+      timestamp: Date.now(),
+    });
+    return { rewardText: pending.rewardText };
+  },
+});
+
 export const getRedemptionsForShop = query({
   args: { shopId: v.id("shops"), adminToken: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminToken, limit }) => {
