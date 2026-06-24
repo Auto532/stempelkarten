@@ -143,7 +143,7 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
 
 // ─── QRCard ───────────────────────────────────────────────────────────────────
 
-export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, textPrimary, textMuted, accentColor, currentStamps, stampsRequired, rewardText, walletMode = true }: {
+export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, textPrimary, textMuted, accentColor }: {
   qrToken: string;
   customerName: string;
   shopName?: string;
@@ -152,141 +152,64 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
   textPrimary?: string;
   textMuted?: string;
   accentColor?: string;
-  currentStamps?: number;
-  stampsRequired?: number;
-  rewardText?: string;
-  walletMode?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bg     = cardBg     ?? "#18181b";
+  const border = cardBorder ?? "1px solid #27272a";
   const tPrim  = textPrimary ?? "#f4f4f5";
   const tMuted = textMuted   ?? "#71717a";
   const accent = accentColor ?? "#fbbf24";
-  const isLight = cardBg ? /^#f|^#e|^rgb|rgba.*,\s*0\.[89]|white/.test(cardBg) : false;
-
-  const qrSize = walletMode ? 200 : 240;
 
   useEffect(() => {
     if (canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
-        width: qrSize, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
+        width: 248, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
       });
     }
-  }, [qrToken, qrSize]);
-
-  const progress = (currentStamps != null && stampsRequired) ? Math.min(currentStamps / stampsRequired, 1) : null;
-
-  if (!walletMode) {
-    return (
-      <div className="relative mx-auto w-full max-w-[300px]"
-        style={{ filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.4)) drop-shadow(0 4px 12px rgba(0,0,0,0.2))" }}>
-        <div className="rounded-[32px] overflow-hidden flex flex-col items-center px-6 pt-6 pb-7 gap-5"
-          style={{ background: bg, border: cardBorder }}>
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.28em] text-center mb-0.5" style={{ color: hexToRgba(accent, 0.7) }}>Stempelkarte</p>
-            {shopName && <h2 className="text-xl font-black text-center" style={{ color: tPrim }}>{shopName}</h2>}
-          </div>
-          <div className="rounded-2xl overflow-hidden p-3" style={{ background: "#fff", boxShadow: "0 4px 20px rgba(0,0,0,0.12)" }}>
-            <canvas ref={canvasRef} className="block" />
-          </div>
-          <div className="text-center">
-            <p className="text-[8px] font-black uppercase tracking-[0.28em] mb-0.5" style={{ color: tMuted }}>Karteninhaber</p>
-            <p className="text-base font-bold" style={{ color: tPrim }}>{customerName}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  }, [qrToken]);
 
   return (
-    <div className="relative mx-auto w-full max-w-[300px]"
-      style={{ filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.45)) drop-shadow(0 6px 16px rgba(0,0,0,0.25))" }}>
-      <div className="rounded-[32px] overflow-hidden" style={{ background: bg }}>
+    <div className="relative mx-auto w-full max-w-xs">
+      <div className="rounded-3xl overflow-hidden"
+        style={{ background: bg, border, boxShadow: "0 24px 64px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.3)" }}>
 
-        {/* ── Header band ── */}
-        <div className="relative overflow-hidden px-6 pt-6 pb-5"
-          style={{ background: `linear-gradient(145deg, ${hexToRgba(accent, 0.95)}, ${hexToRgba(accent, 0.72)})` }}>
-          {/* decorative circles */}
-          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-30"
-            style={{ background: "rgba(255,255,255,0.25)" }} />
-          <div className="absolute -bottom-6 -left-4 w-28 h-28 rounded-full opacity-20"
-            style={{ background: "rgba(255,255,255,0.3)" }} />
-
-          <div className="relative z-10 flex items-start justify-between">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.28em] mb-1"
-                style={{ color: "rgba(255,255,255,0.7)" }}>Stempelkarte</p>
-              {shopName && (
-                <h2 className="text-[22px] font-black leading-tight tracking-tight"
-                  style={{ color: "#ffffff", textShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>{shopName}</h2>
-              )}
-            </div>
-            {/* Live dot */}
-            <div className="flex items-center gap-1.5 mt-1 px-2.5 py-1.5 rounded-full"
-              style={{ background: "rgba(255,255,255,0.22)" }}>
-              <motion.div className="w-1.5 h-1.5 rounded-full bg-white"
-                animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.8, repeat: Infinity }} />
-              <span className="text-[9px] font-bold text-white">LIVE</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Wallet fields ── */}
-        <div className="px-5 pt-4 pb-3">
-          {(currentStamps != null && stampsRequired) ? (
-            <div className="flex gap-3 mb-3">
-              <div className="flex-1 rounded-[14px] px-3.5 py-2.5"
-                style={{ background: hexToRgba(accent, isLight ? 0.1 : 0.14), border: `1px solid ${hexToRgba(accent, 0.2)}` }}>
-                <p className="text-[8px] font-black uppercase tracking-widest mb-0.5" style={{ color: tMuted }}>Stempel</p>
-                <p className="text-[22px] font-black leading-none" style={{ color: tPrim }}>
-                  {currentStamps}<span className="text-sm font-semibold opacity-50"> /{stampsRequired}</span>
-                </p>
-              </div>
-              {rewardText && (
-                <div className="flex-1 rounded-[14px] px-3.5 py-2.5 overflow-hidden"
-                  style={{ background: hexToRgba(accent, isLight ? 0.06 : 0.1), border: `1px solid ${hexToRgba(accent, 0.15)}` }}>
-                  <p className="text-[8px] font-black uppercase tracking-widest mb-0.5" style={{ color: tMuted }}>Belohnung</p>
-                  <p className="text-[11px] font-bold leading-tight line-clamp-2" style={{ color: tPrim }}>{rewardText}</p>
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {/* Progress bar */}
-          {progress !== null && (
-            <div className="mb-3">
-              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(accent, 0.18) }}>
-                <motion.div className="h-full rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress * 100}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  style={{ background: `linear-gradient(90deg, ${accent}, ${hexToRgba(accent, 0.7)})` }} />
-              </div>
-            </div>
+        {/* Header */}
+        <div className="relative px-6 pt-7 pb-6 overflow-hidden"
+          style={{ background: `linear-gradient(135deg, ${hexToRgba(accent, 0.28)} 0%, ${hexToRgba(accent, 0.06)} 100%)` }}>
+          <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full" style={{ background: hexToRgba(accent, 0.08) }} />
+          <div className="absolute top-3 -right-5 w-20 h-20 rounded-full" style={{ background: hexToRgba(accent, 0.05) }} />
+          <p className="relative z-10 text-[9px] font-bold uppercase tracking-[0.25em] mb-1.5" style={{ color: hexToRgba(accent, 0.75) }}>
+            Stempelkarte
+          </p>
+          {shopName && (
+            <h2 className="relative z-10 text-[22px] font-bold leading-tight" style={{ color: tPrim }}>{shopName}</h2>
           )}
-        </div>
-
-        {/* ── Perforated tear line ── */}
-        <div className="relative flex items-center px-1 my-1">
-          <div className="w-5 h-5 rounded-full shrink-0 -ml-2.5" style={{ background: isLight ? "#f0f0f0" : "#111113" }} />
-          <div className="flex-1 border-t-2 border-dashed mx-1" style={{ borderColor: hexToRgba(accent, 0.2) }} />
-          <div className="w-5 h-5 rounded-full shrink-0 -mr-2.5" style={{ background: isLight ? "#f0f0f0" : "#111113" }} />
-        </div>
-
-        {/* ── QR section ── */}
-        <div className="px-5 pt-3 pb-5 flex flex-col items-center gap-3">
-          <div className="rounded-2xl overflow-hidden p-3"
-            style={{ background: "#fff", boxShadow: "0 4px 20px rgba(0,0,0,0.12)" }}>
-            <canvas ref={canvasRef} className="block" />
+          <div className="relative z-10 flex items-center gap-1.5 mt-3">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
+            <p className="text-[10px] font-semibold" style={{ color: hexToRgba(accent, 0.8) }}>Bereit zum Scannen</p>
           </div>
+        </div>
 
+        {/* Perforated Divider */}
+        <div className="mx-5 border-t border-dashed" style={{ borderColor: hexToRgba(accent, 0.22) }} />
+
+        {/* QR + Identity */}
+        <div className="px-6 pt-6 pb-7 flex flex-col items-center gap-5">
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: "#fff", boxShadow: "inset 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 3px rgba(0,0,0,0.08)" }}>
+            <div className="p-3">
+              <canvas ref={canvasRef} className="block" />
+            </div>
+          </div>
           <div className="text-center">
-            <p className="text-[8px] font-black uppercase tracking-[0.28em] mb-0.5" style={{ color: tMuted }}>Karteninhaber</p>
-            <p className="text-base font-bold" style={{ color: tPrim }}>{customerName}</p>
-            <p className="text-[9px] mt-1 font-medium" style={{ color: hexToRgba(accent, 0.7) }}>
-              Im Laden vorzeigen · Stempel sammeln
-            </p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.22em] mb-0.5" style={{ color: tMuted }}>Inhaber</p>
+            <p className="text-xl font-bold" style={{ color: tPrim }}>{customerName}</p>
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 pb-5 border-t text-center" style={{ borderColor: hexToRgba(accent, 0.12) }}>
+          <p className="text-[10px] font-medium pt-4" style={{ color: tMuted }}>Im Laden vorzeigen · Stempel sammeln</p>
         </div>
 
       </div>
