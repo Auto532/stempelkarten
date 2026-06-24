@@ -277,36 +277,29 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
               {nextTier ? nextTier.text : highestTier.text}
             </span>
           </div>
-          <span className="text-[11px] font-bold tabular-nums shrink-0" style={{ color: accent }}>
-            {nextTier ? `noch ${stepsLeft}` : "✓ fertig"}
-          </span>
+          <div className="shrink-0 text-right">
+            <div className="text-[11px] font-bold tabular-nums" style={{ color: accent }}>
+              {nextTier ? `noch ${stepsLeft}` : "✓ fertig"}
+            </div>
+            {membership.rewardsRedeemed > 0 && (
+              <div className="text-[9px] font-medium mt-0.5 tabular-nums" style={{ color: hexToRgba(accent, 0.35) }}>
+                {membership.rewardsRedeemed}× eingelöst
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Rewards redeemed + Milestones */}
-        {(membership.rewardsRedeemed > 0 || reachedMilestones.length > 0) && (
+        {/* Milestones */}
+        {reachedMilestones.length > 0 && (
           <div className="mt-3 pt-2.5 flex items-center gap-2 flex-wrap"
             style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-            {membership.rewardsRedeemed > 0 && (
-              <span className="flex items-center gap-1 text-[10px] font-medium"
-                style={{ color: hexToRgba(accent, 0.38) }}>
-                <Gift size={10} style={{ color: hexToRgba(accent, 0.35) }} />
-                {membership.rewardsRedeemed}× eingelöst
+            <Trophy size={10} style={{ color: hexToRgba(accent, 0.38) }} className="shrink-0" />
+            {reachedMilestones.map((m, i) => (
+              <span key={i} className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: hexToRgba(accent, 0.08), color: hexToRgba(accent, 0.6) }}>
+                {m.text}
               </span>
-            )}
-            {membership.rewardsRedeemed > 0 && reachedMilestones.length > 0 && (
-              <span style={{ color: "rgba(255,255,255,0.08)", fontSize: 10 }}>·</span>
-            )}
-            {reachedMilestones.length > 0 && (
-              <>
-                <Trophy size={10} style={{ color: hexToRgba(accent, 0.38) }} className="shrink-0" />
-                {reachedMilestones.map((m, i) => (
-                  <span key={i} className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
-                    style={{ background: hexToRgba(accent, 0.08), color: hexToRgba(accent, 0.6) }}>
-                    {m.text}
-                  </span>
-                ))}
-              </>
-            )}
+            ))}
           </div>
         )}
       </div>
