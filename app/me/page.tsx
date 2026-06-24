@@ -276,6 +276,9 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
             <span className="text-[11px] text-zinc-500 truncate block">
               {nextTier ? nextTier.text : highestTier.text}
             </span>
+            <span className="text-[9px] font-medium mt-0.5 block tabular-nums" style={{ color: hexToRgba(accent, 0.35) }}>
+              {membership.totalStampsEver} Stempel insgesamt
+            </span>
           </div>
           <div className="shrink-0 text-right">
             <div className="text-[11px] font-bold tabular-nums" style={{ color: accent }}>
