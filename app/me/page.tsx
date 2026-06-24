@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutGrid, Gift, Settings, X, Check, ChevronRight,
-  Trophy, Pencil, AlertCircle,
+  Trophy, Pencil, AlertCircle, Info,
 } from "lucide-react";
 import { StampOverlay, getActiveTiers, hexToRgba, getStampIcon } from "./components";
 
@@ -40,6 +40,8 @@ const COLOR_PRESETS = [
   { name: "Orange",  value: "#f97316" },
   { name: "Cyan",    value: "#06b6d4" },
   { name: "Lime",    value: "#84cc16" },
+  { name: "Sand",    value: "#b8a98a" },
+  { name: "Slate",   value: "#94a3b8" },
 ];
 
 // ─── Level System ────────────────────────────────────────────────────────────
@@ -298,6 +300,51 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
   );
 }
 
+// ─── Info Panel ───────────────────────────────────────────────────────────────
+
+function InfoPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex flex-col justify-end"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 28, stiffness: 300 }}
+        className="relative bg-zinc-900 rounded-t-3xl px-6 pt-5 pb-10 max-w-sm w-full mx-auto"
+        style={{ border: "1px solid #27272a", borderBottom: "none" }}
+      >
+        <div className="w-10 h-1 bg-zinc-700 rounded-full mx-auto mb-6" />
+
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-bold text-zinc-100">Über die App</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-zinc-800 flex items-center justify-center">
+            <X size={14} className="text-zinc-400" />
+          </button>
+        </div>
+
+        <div className="space-y-4 mb-8">
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            <span className="text-zinc-200 font-semibold">LoyaltyCard</span> ist deine digitale Stempelkarten-Wallet.
+          </p>
+          <p className="text-sm text-zinc-500 leading-relaxed">
+            Lass dich beim Einkaufen scannen, sammel Stempel bei deinen Lieblingsläden und löse deine Belohnungen direkt vor Ort ein — alles ohne App-Download.
+          </p>
+          <p className="text-sm text-zinc-500 leading-relaxed">
+            Dein QR-Code ist dein Ausweis. Zeig ihn einfach an der Kasse vor.
+          </p>
+        </div>
+
+        <div className="border-t border-zinc-800 pt-5 flex items-center justify-between">
+          <span className="text-[11px] font-bold tracking-widest uppercase text-zinc-600">LoyaltyCard</span>
+          <span className="text-[11px] font-semibold text-zinc-700">v1.0</span>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 
 function SettingsPanel({
@@ -477,6 +524,7 @@ export default function MePage() {
   const [mounted, setMounted] = useState(false);
   const [showStampOverlay, setShowStampOverlay] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [personalAccent, setPersonalAccent] = useState("#fbbf24");
   const [bgId, setBgId] = useState("none");
   const [starsOn, setStarsOn] = useState(true);
@@ -644,16 +692,27 @@ export default function MePage() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {showInfo && <InfoPanel onClose={() => setShowInfo(false)} />}
+      </AnimatePresence>
+
       {/* Topbar */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        className="flex items-center justify-between mb-7">
+        className="relative flex items-center justify-center mb-7">
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setShowInfo(true)}
+          className="absolute left-0 w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center"
+        >
+          <Info size={15} className="text-zinc-500" />
+        </motion.button>
         <p className="text-xl font-black tracking-tight text-zinc-100">
           Loyalty<span className="text-zinc-600">Card</span>
         </p>
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setShowSettings(true)}
-          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center"
+          className="absolute right-0 w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center"
         >
           <Settings size={16} className="text-zinc-500" />
         </motion.button>
