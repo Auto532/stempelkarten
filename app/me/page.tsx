@@ -339,7 +339,7 @@ function InfoPanel({ onClose }: { onClose: () => void }) {
             <span className="text-zinc-200 font-semibold">LoyaltyCard</span> ist deine digitale Stempelkarten-Wallet.
           </p>
           <p className="text-sm text-zinc-500 leading-relaxed">
-            Lass dich beim Einkaufen scannen, sammel Stempel bei deinen Lieblingsläden und löse deine Belohnungen direkt vor Ort ein — alles ohne App-Download.
+            Lass dich beim Einkaufen scannen, sammel Stempel bei deinen Lieblingsläden und löse deine Belohnungen direkt vor Ort ein. Ganz ohne App-Download.
           </p>
           <p className="text-sm text-zinc-500 leading-relaxed">
             Dein QR-Code ist dein Ausweis. Zeig ihn einfach an der Kasse vor.

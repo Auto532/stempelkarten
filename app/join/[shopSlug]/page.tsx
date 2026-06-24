@@ -277,6 +277,12 @@ export default function JoinPage() {
 
             {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
             <div className="flex-1" />
+
+            <p className="text-[11px] leading-relaxed rounded-xl px-3 py-2.5"
+              style={{ color: c.accentDim, background: `${c.accent}09`, border: `1px solid ${c.accentFaint}44` }}>
+              Damit deine Karte wirklich dir gehört, gib bitte deine echte Nummer an. Pro Nummer gibt es eine Stempelkarte. Deine Daten bleiben bei uns.
+            </p>
+
             <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} c={c} shopName={shop.name} />
 
             <label className="flex items-start gap-3 cursor-pointer group">
