@@ -143,7 +143,7 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
 
 // ─── QRCard ───────────────────────────────────────────────────────────────────
 
-export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, textPrimary, textMuted, accentColor, currentStamps, stampsRequired, rewardText }: {
+export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, textPrimary, textMuted, accentColor, currentStamps, stampsRequired, rewardText, walletMode = true }: {
   qrToken: string;
   customerName: string;
   shopName?: string;
@@ -155,6 +155,7 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
   currentStamps?: number;
   stampsRequired?: number;
   rewardText?: string;
+  walletMode?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bg     = cardBg     ?? "#18181b";
@@ -163,15 +164,39 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
   const accent = accentColor ?? "#fbbf24";
   const isLight = cardBg ? /^#f|^#e|^rgb|rgba.*,\s*0\.[89]|white/.test(cardBg) : false;
 
+  const qrSize = walletMode ? 200 : 240;
+
   useEffect(() => {
     if (canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
-        width: 200, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
+        width: qrSize, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
       });
     }
-  }, [qrToken]);
+  }, [qrToken, qrSize]);
 
   const progress = (currentStamps != null && stampsRequired) ? Math.min(currentStamps / stampsRequired, 1) : null;
+
+  if (!walletMode) {
+    return (
+      <div className="relative mx-auto w-full max-w-[300px]"
+        style={{ filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.4)) drop-shadow(0 4px 12px rgba(0,0,0,0.2))" }}>
+        <div className="rounded-[32px] overflow-hidden flex flex-col items-center px-6 pt-6 pb-7 gap-5"
+          style={{ background: bg, border: cardBorder }}>
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.28em] text-center mb-0.5" style={{ color: hexToRgba(accent, 0.7) }}>Stempelkarte</p>
+            {shopName && <h2 className="text-xl font-black text-center" style={{ color: tPrim }}>{shopName}</h2>}
+          </div>
+          <div className="rounded-2xl overflow-hidden p-3" style={{ background: "#fff", boxShadow: "0 4px 20px rgba(0,0,0,0.12)" }}>
+            <canvas ref={canvasRef} className="block" />
+          </div>
+          <div className="text-center">
+            <p className="text-[8px] font-black uppercase tracking-[0.28em] mb-0.5" style={{ color: tMuted }}>Karteninhaber</p>
+            <p className="text-base font-bold" style={{ color: tPrim }}>{customerName}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative mx-auto w-full max-w-[300px]"

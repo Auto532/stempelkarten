@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Gift, Check, Banknote } from "lucide-react";
+import { ArrowLeft, Gift, Check, Banknote, CreditCard, QrCode } from "lucide-react";
 import { StampOverlay, QRCard, RedeemVoucher, LoyaltyCard, MilestonesSection, getActiveTiers, hexToRgba } from "../../components";
 import type { CardTier } from "../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
@@ -19,6 +19,9 @@ export default function MeShopPage() {
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [walletStyle, setWalletStyle] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("qrWalletStyle") !== "off" : true
+  );
   const [showRedeemConfirm, setShowRedeemConfirm] = useState(false);
   const [showRedeemQR, setShowRedeemQR] = useState(false);
   const [redeemedText, setRedeemedText] = useState("");
@@ -296,6 +299,24 @@ export default function MeShopPage() {
               </p>
               <h1 className="text-base font-bold text-zinc-100 leading-tight">{shop.name}</h1>
             </div>
+            {showQR && (
+              <button
+                onClick={() => {
+                  const next = !walletStyle;
+                  setWalletStyle(next);
+                  localStorage.setItem("qrWalletStyle", next ? "on" : "off");
+                }}
+                className="ml-auto w-9 h-9 rounded-xl border flex items-center justify-center transition-colors shrink-0"
+                style={walletStyle
+                  ? { background: hexToRgba(c.accent, 0.15), border: `1px solid ${hexToRgba(c.accent, 0.4)}` }
+                  : { background: "#27272a", border: "1px solid #3f3f46" }}
+                title={walletStyle ? "Einfache Ansicht" : "Wallet-Ansicht"}
+              >
+                {walletStyle
+                  ? <CreditCard size={16} style={{ color: c.accent }} />
+                  : <QrCode size={16} className="text-zinc-400" />}
+              </button>
+            )}
           </motion.div>
         );
       })()}
@@ -323,6 +344,7 @@ export default function MeShopPage() {
                 currentStamps={membership.currentStamps}
                 stampsRequired={shop.stampsRequired}
                 rewardText={shop.rewardText}
+                walletMode={walletStyle}
               />
               <button
                 onClick={() => setShowQR(false)}

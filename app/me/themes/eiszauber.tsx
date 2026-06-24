@@ -28,15 +28,15 @@ export function EiszauberBackground() {
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-[-1]">
       <div className="absolute inset-0" style={{
-        background: "radial-gradient(circle at 15% 18%, rgba(255,79,160,.18), transparent 25%), radial-gradient(circle at 82% 22%, rgba(255,183,213,.4), transparent 22%), radial-gradient(circle at 70% 80%, rgba(114,200,172,.14), transparent 26%), linear-gradient(180deg,#fff9fc 0%,#fff3f9 100%)"
+        background: "radial-gradient(circle at 15% 18%, rgba(255,79,160,.42), transparent 28%), radial-gradient(circle at 85% 12%, rgba(255,100,180,.55), transparent 24%), radial-gradient(circle at 50% 55%, rgba(255,150,200,.22), transparent 35%), radial-gradient(circle at 70% 88%, rgba(114,200,172,.18), transparent 26%), linear-gradient(180deg,#ffe8f5 0%,#ffd6ee 100%)"
       }} />
-      <svg className="absolute inset-0 w-full h-full opacity-40" xmlns="http://www.w3.org/2000/svg">
+      <svg className="absolute inset-0 w-full h-full opacity-70" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern id="eiszauber-pattern" x="0" y="0" width="180" height="180" patternUnits="userSpaceOnUse">
-            <path d="M48 40c10-12 28-12 38 0 6 8 6 18 0 26L67 88 48 66c-6-8-6-18 0-26Z" fill="#ffd8ea" />
-            <path d="M118 98c8-9 21-9 29 0 5 6 5 14 0 20l-15 18-14-18c-5-6-5-14 0-20Z" fill="#ffe8c6" />
-            <circle cx="129" cy="52" r="10" fill="#ffe5f2" />
-            <path d="M34 128c7-9 20-9 27 0 4 5 4 12 0 17l-13 16-14-16c-4-5-4-12 0-17Z" fill="#e4faf3" />
+            <path d="M48 40c10-12 28-12 38 0 6 8 6 18 0 26L67 88 48 66c-6-8-6-18 0-26Z" fill="#ffb8d8" />
+            <path d="M118 98c8-9 21-9 29 0 5 6 5 14 0 20l-15 18-14-18c-5-6-5-14 0-20Z" fill="#ffc8a0" />
+            <circle cx="129" cy="52" r="10" fill="#ffaad4" />
+            <path d="M34 128c7-9 20-9 27 0 4 5 4 12 0 17l-13 16-14-16c-4-5-4-12 0-17Z" fill="#c8f0e0" />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#eiszauber-pattern)" />
