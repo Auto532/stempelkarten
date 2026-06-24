@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Gift, Check, Banknote } from "lucide-react";
-import { StampOverlay, QRCard, LoyaltyCard, MilestonesSection, getActiveTiers, hexToRgba } from "../../components";
+import { StampOverlay, QRCard, RedeemVoucher, LoyaltyCard, MilestonesSection, getActiveTiers, hexToRgba } from "../../components";
 import type { CardTier } from "../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
@@ -20,7 +20,6 @@ export default function MeShopPage() {
   const [mounted, setMounted] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showRedeemConfirm, setShowRedeemConfirm] = useState(false);
-  const [showRedeemSuccess, setShowRedeemSuccess] = useState(false);
   const [showRedeemQR, setShowRedeemQR] = useState(false);
   const [redeemedText, setRedeemedText] = useState("");
   const [redeeming, setRedeeming] = useState(false);
@@ -74,10 +73,9 @@ export default function MeShopPage() {
     const prev = prevStampsRef.current ?? current;
     const wasPending = prevPendingRef.current;
 
-    // Redemption confirmed by shop: pending was true, now false, stamps decreased
+    // Redemption confirmed by shop: close overlay, card updates automatically
     if (wasPending && !hasPending && current < prev) {
       setShowRedeemQR(false);
-      setShowRedeemSuccess(true);
     }
     // Normal stamp added
     else if (current > prev && !wasPending) {
@@ -164,45 +162,34 @@ export default function MeShopPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/98 backdrop-blur-md px-6"
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/98 backdrop-blur-md px-6 gap-5"
           >
             <motion.div
-              initial={{ scale: 0.3, rotate: -8 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5"
-              style={{ background: `${c.accent}18`, border: `2px solid ${c.accent}40` }}
+              initial={{ scale: 0.85, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 280, damping: 22 }}
+              className="w-full max-w-xs"
             >
-              <Gift size={38} style={{ color: c.accent }} />
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-              className="text-center mb-6"
-            >
-              <p className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: `${c.accent}99` }}>
-                Belohnung ausstehend
-              </p>
-              <h2 className="text-xl font-black text-white leading-tight mb-1">{redeemedText}</h2>
-              <p className="text-zinc-500 text-sm">bei {shop.name}</p>
-            </motion.div>
-            <div className="bg-white rounded-2xl p-3 mb-4">
-              <QRCard
+              <RedeemVoucher
                 qrToken={qrToken}
-                customerName={data.customer.name}
                 shopName={shop.name}
+                rewardText={redeemedText}
                 accentColor={c.accent}
               />
-            </div>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              className="text-center mb-6"
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+              className="text-center"
             >
               <div className="flex items-center gap-2 justify-center mb-1">
                 <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                 <span className="text-amber-400 text-xs font-semibold">Warte auf Bestätigung</span>
               </div>
-              <p className="text-zinc-500 text-sm">Zeig den QR-Code dem Mitarbeiter zum Scannen</p>
+              <p className="text-zinc-500 text-sm">Mitarbeiter scannt den Code</p>
             </motion.div>
+
             <motion.button
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}
               onClick={handleCancelRedemption}
               className="text-zinc-600 text-sm hover:text-zinc-400 transition-colors"
             >
@@ -212,58 +199,6 @@ export default function MeShopPage() {
         )}
       </AnimatePresence>
 
-      {/* Erfolgs-Overlay: Belohnung eingelöst */}
-      <AnimatePresence>
-        {showRedeemSuccess && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/96 backdrop-blur-md px-6"
-          >
-            <motion.div
-              initial={{ scale: 0.3, rotate: -8 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6"
-              style={{ background: `${c.accent}18`, border: `2px solid ${c.accent}40` }}
-            >
-              <Gift size={48} style={{ color: c.accent }} />
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-              className="text-center"
-            >
-              <p className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: `${c.accent}99` }}>
-                Belohnung eingelöst
-              </p>
-              <h2 className="text-2xl font-black text-white leading-tight mb-1">{redeemedText}</h2>
-              <p className="text-zinc-500 text-sm">bei {shop.name}</p>
-            </motion.div>
-
-            <div className="w-16 h-px bg-zinc-800 my-8" />
-
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              className="text-center mb-10"
-            >
-              <div className="flex items-center gap-2 justify-center mb-2">
-                <div className="w-2 h-2 rounded-full bg-green-400" />
-                <span className="text-green-400 text-xs font-semibold">Aktiv</span>
-              </div>
-              <p className="text-zinc-500 text-sm">Zeig diesen Bildschirm dem Mitarbeiter im Laden</p>
-            </motion.div>
-
-            <motion.button
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-              onClick={() => setShowRedeemSuccess(false)}
-              className="w-full max-w-xs py-4 rounded-2xl text-base font-bold text-zinc-900"
-              style={{ background: c.accent }}
-            >
-              Fertig
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Bestätigungs-Sheet */}
       <AnimatePresence>

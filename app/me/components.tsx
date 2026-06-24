@@ -256,6 +256,73 @@ export function QRMini({ qrToken }: { qrToken: string }) {
   );
 }
 
+// ─── RedeemVoucher ────────────────────────────────────────────────────────────
+
+export function RedeemVoucher({
+  qrToken, shopName, rewardText, accentColor,
+}: {
+  qrToken: string;
+  shopName: string;
+  rewardText: string;
+  accentColor?: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const accent = accentColor ?? "#fbbf24";
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
+        width: 200, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
+      });
+    }
+  }, [qrToken]);
+
+  return (
+    <div style={{
+      background: "#ffffff",
+      borderRadius: "20px",
+      overflow: "hidden",
+      boxShadow: "0 24px 64px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.3)",
+      width: "100%",
+      maxWidth: "280px",
+      margin: "0 auto",
+    }}>
+      {/* Colored header */}
+      <div style={{ background: accent, padding: "18px 20px 16px" }}>
+        <p style={{
+          color: "rgba(0,0,0,0.55)", fontSize: "9px", fontWeight: "800",
+          letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: "6px",
+        }}>
+          Gutschein · {shopName}
+        </p>
+        <p style={{ color: "#000", fontSize: "20px", fontWeight: "900", lineHeight: "1.15" }}>
+          {rewardText}
+        </p>
+        <p style={{ color: "rgba(0,0,0,0.45)", fontSize: "10px", marginTop: "6px" }}>
+          Einmalig einlösbar
+        </p>
+      </div>
+
+      {/* Perforated divider */}
+      <div style={{ position: "relative", height: "0", display: "flex", alignItems: "center" }}>
+        <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "#0a0a0a", marginLeft: "-9px", flexShrink: 0 }} />
+        <div style={{ flex: 1, borderTop: "2px dashed #d4d4d8", margin: "0 6px" }} />
+        <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "#0a0a0a", marginRight: "-9px", flexShrink: 0 }} />
+      </div>
+
+      {/* QR section */}
+      <div style={{ background: "#f5f5f5", padding: "20px 20px 18px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+        <div style={{ background: "#fff", borderRadius: "12px", padding: "10px", boxShadow: "0 2px 10px rgba(0,0,0,0.08)" }}>
+          <canvas ref={canvasRef} style={{ display: "block" }} />
+        </div>
+        <p style={{ fontSize: "10px", color: "#a1a1aa", textAlign: "center", letterSpacing: "0.05em" }}>
+          Mitarbeiter zum Scannen zeigen
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── MilestonesSection (außerhalb der Karte) ──────────────────────────────────
 
 export function MilestonesSection({
