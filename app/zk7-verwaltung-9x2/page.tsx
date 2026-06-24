@@ -8,7 +8,7 @@ import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy,
-  Sliders, LayoutDashboard, type LucideIcon,
+  Sliders, LayoutDashboard, User, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -1170,20 +1170,27 @@ function ShopAnalytics({ shop }: { shop: Doc<"shops">; adminSecret: string }) {
   );
 }
 
-// ─── StempelTab (veraltet – Analytics ersetzt diesen Tab) ─────────────────────
+// ─── SettingsTab ──────────────────────────────────────────────────────────────
 
-function StempelTab({ shops, adminSecret }: { shops: Doc<"shops">[] | undefined; adminSecret: string }) {
-  const adminStamp          = useMutation(api.memberships.adminStampForCustomer);
-  const createTestCustomer  = useMutation(api.admin.adminCreateTestCustomer);
-  const [selectedShopId, setSelectedShopId] = useState<Id<"shops"> | null>(null);
+function SettingsTab({ adminSecret }: { adminSecret: string }) {
+  const clearAllData       = useMutation(api.admin.clearAllData);
+  const clearCustomerData  = useMutation(api.admin.clearCustomerData);
+  const createTestCustomer = useMutation(api.admin.adminCreateTestCustomer);
+  const [showDangerZone, setShowDangerZone] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
+  const [pinInput, setPinInput] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleted, setDeleted] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [customerResetPin, setCustomerResetPin] = useState("");
+  const [resettingCustomers, setResettingCustomers] = useState(false);
+  const [customersReset, setCustomersReset] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [registered, setRegistered] = useState(false);
   const [qrToken, setQrToken] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("adminTestQrToken") ?? "" : ""
   );
-  const [stamping, setStamping] = useState(false);
-  const [result, setResult] = useState<{ rewardReached: boolean; currentStamps: number; stampsRequired: number; customerName: string } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [registering, setRegistering] = useState(false);
-  const [registered, setRegistered] = useState(false);
 
   const saveQrToken = (token: string) => {
     setQrToken(token);
@@ -1201,124 +1208,6 @@ function StempelTab({ shops, adminSecret }: { shops: Doc<"shops">[] | undefined;
       setRegistered(true);
     } finally { setRegistering(false); }
   };
-
-  const handleStamp = async () => {
-    if (!selectedShopId || !qrToken.trim()) return;
-    setStamping(true); setError(null); setResult(null);
-    try {
-      const raw = qrToken.trim();
-      const token = raw.includes("/stamp/") ? raw.split("/stamp/")[1].split("?")[0] : raw;
-      const res = await adminStamp({ adminSecret, shopId: selectedShopId, qrToken: token });
-      setResult(res);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Fehler");
-    } finally { setStamping(false); }
-  };
-
-  return (
-    <motion.div key="stempel" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-
-      {/* Registrierung */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
-        <p className="text-sm font-semibold text-zinc-200">Mein Account</p>
-        {registered ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
-            <div className="flex items-center gap-2 text-green-400 text-sm">
-              <Check size={14} /> Registriert! /me ist jetzt aktiv.
-            </div>
-            <p className="text-[11px] text-zinc-500">QR-Token gespeichert — kannst jetzt /me öffnen.</p>
-          </motion.div>
-        ) : (
-          <>
-            <p className="text-[11px] text-zinc-500">Erstellt deinen Kunden-Account und verbindet ihn mit /me — einmalig nach jedem Reset.</p>
-            <button onClick={handleRegister} disabled={registering}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 bg-zinc-700 hover:bg-zinc-600 text-zinc-100">
-              {registering ? "Erstelle..." : "Als Admin-Kunde registrieren"}
-            </button>
-          </>
-        )}
-      </div>
-
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
-        <p className="text-sm font-semibold text-zinc-200">Shop</p>
-        {!shops || shops.length === 0 ? (
-          <p className="text-xs text-zinc-600">Noch keine Shops vorhanden.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {shops.map(shop => (
-              <button key={shop._id}
-                onClick={() => { setSelectedShopId(shop._id); setResult(null); setError(null); }}
-                className="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
-                style={selectedShopId === shop._id
-                  ? { background: "#fbbf2433", border: "1px solid #fbbf2488", color: "#fbbf24" }
-                  : { background: "#27272a", border: "1px solid #3f3f46", color: "#71717a" }
-                }
-              >
-                {shop.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-zinc-200">QR-Token</p>
-          <span className="text-[10px] text-zinc-600">wird gespeichert</span>
-        </div>
-        <input
-          value={qrToken}
-          onChange={e => saveQrToken(e.target.value)}
-          placeholder="Token oder /stamp/... URL einfügen"
-          className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-200 text-xs font-mono placeholder-zinc-600 focus:outline-none focus:border-amber-400/50"
-        />
-        <p className="text-[10px] text-zinc-600">/me öffnen → QR anzeigen → URL scannen → /stamp/<span className="text-zinc-400">TOKEN</span></p>
-      </div>
-
-      <button onClick={handleStamp} disabled={!selectedShopId || !qrToken.trim() || stamping}
-        className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-colors disabled:opacity-40 bg-amber-400 text-zinc-900 hover:bg-amber-300">
-        {stamping ? "Stempelt..." : "Stempel geben"}
-      </button>
-
-      {error && (
-        <div className="bg-red-950/40 border border-red-900/50 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>
-      )}
-
-      <AnimatePresence>
-        {result && (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-            className="bg-zinc-900 border border-green-900/40 rounded-2xl p-4 space-y-1">
-            <div className="flex items-center gap-2">
-              <Check size={15} className="text-green-400" />
-              <p className="text-sm font-semibold text-zinc-100">
-                {result.rewardReached ? "Belohnung erreicht! 🎉" : "Gestempelt!"}
-              </p>
-            </div>
-            <p className="text-xs text-zinc-500 pl-5">
-              {result.customerName} · {result.currentStamps}/{result.stampsRequired} Stempel
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
-
-// ─── SettingsTab ──────────────────────────────────────────────────────────────
-
-function SettingsTab() {
-  const clearAllData       = useMutation(api.admin.clearAllData);
-  const clearCustomerData  = useMutation(api.admin.clearCustomerData);
-  const [showDangerZone, setShowDangerZone] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleteText, setDeleteText] = useState("");
-  const [pinInput, setPinInput] = useState("");
-  const [deleting, setDeleting] = useState(false);
-  const [deleted, setDeleted] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [customerResetPin, setCustomerResetPin] = useState("");
-  const [resettingCustomers, setResettingCustomers] = useState(false);
-  const [customersReset, setCustomersReset] = useState(false);
 
   const base = typeof window !== "undefined" ? window.location.origin : "";
   const adminUrl = `${base}/zk7-verwaltung-9x2`;
@@ -1386,6 +1275,31 @@ function SettingsTab() {
         }} className="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors">
           Lokalen Speicher löschen & neu laden
         </button>
+      </div>
+
+      {/* Mein Account */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <User size={14} className="text-zinc-400 shrink-0" />
+          <p className="text-sm font-medium text-zinc-200">Mein Account</p>
+        </div>
+        <p className="text-[11px] text-zinc-500">Erstellt deinen Kunden-Account und verbindet ihn mit /me — einmalig nach jedem Gerät-Reset.</p>
+        {registered ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-1">
+            <div className="flex items-center gap-2 text-green-400 text-sm">
+              <Check size={14} /> Registriert! /me ist jetzt aktiv.
+            </div>
+            <p className="text-[11px] text-zinc-500">QR-Token gespeichert — öffne /me um deine Karte zu sehen.</p>
+          </motion.div>
+        ) : (
+          <button onClick={handleRegister} disabled={registering}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 bg-zinc-800 hover:bg-zinc-700 text-zinc-100">
+            {registering ? "Erstelle..." : "Als Admin-Kunde registrieren"}
+          </button>
+        )}
+        {qrToken && !registered && (
+          <p className="text-[10px] text-zinc-600">Token vorhanden: <span className="text-zinc-500 font-mono">{qrToken.slice(0, 8)}…</span></p>
+        )}
       </div>
 
       {/* Kunden-Reset */}
@@ -1586,7 +1500,7 @@ export default function SuperAdminPage() {
           {activeTab === "overview"  && <OverviewTab   key="overview"   adminSecret={adminSecret} onGoToShops={() => setActiveTab("shops")} />}
           {activeTab === "shops"     && <ShopsTab      key="shops"      shops={allShops} adminSecret={adminSecret} onSelectShop={id => { setSelectedShopId(id); }} />}
           {activeTab === "analytics" && <AnalyticsTab  key="analytics"  adminSecret={adminSecret} />}
-          {activeTab === "settings"  && <SettingsTab   key="settings" />}
+          {activeTab === "settings"  && <SettingsTab   key="settings" adminSecret={adminSecret} />}
         </AnimatePresence>
       </div>
 
