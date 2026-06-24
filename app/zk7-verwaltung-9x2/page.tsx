@@ -577,11 +577,12 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
 
 // ─── ShopWorkspace ───────────────────────────────────────────────────────────
 
-type SubView = "dashboard" | "einstellungen";
+type SubView = "dashboard" | "analytics" | "einstellungen";
 
 const SUB_TABS: { id: SubView; label: string; icon: LucideIcon }[] = [
   { id: "dashboard",     label: "Dashboard",     icon: LayoutDashboard },
-  { id: "einstellungen", label: "Einstellungen", icon: Sliders },
+  { id: "analytics",     label: "Analytics",     icon: BarChart2       },
+  { id: "einstellungen", label: "Einstellungen", icon: Sliders         },
 ];
 
 function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops">; adminSecret: string; onBack: () => void }) {
@@ -610,6 +611,7 @@ function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops">; admi
       <div className="flex-1 px-4 pt-5 pb-28 overflow-y-auto">
         <AnimatePresence mode="wait">
           {subView === "dashboard"     && <ShopDashboard     key={`${shop._id}-dash`}  shop={shop} adminSecret={adminSecret} />}
+          {subView === "analytics"     && <ShopAnalytics     key={`${shop._id}-anal`}  shop={shop} adminSecret={adminSecret} />}
           {subView === "einstellungen" && <ShopEinstellungen key={`${shop._id}-einst`} shop={shop} adminSecret={adminSecret} />}
         </AnimatePresence>
       </div>
@@ -822,142 +824,216 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
   );
 }
 
-// ─── AnalyticsTab ─────────────────────────────────────────────────────────────
+// ─── PeriodSelector ───────────────────────────────────────────────────────────
 
-function AnalyticsTab({ shops, adminSecret }: { shops: Doc<"shops">[] | undefined; adminSecret: string }) {
-  const [selectedShopId, setSelectedShopId] = useState<Id<"shops"> | null>(null);
-  const selectedShop = shops?.find(s => s._id === selectedShopId) ?? null;
-  const customers = useQuery(
-    api.shops.listCustomersForShop,
-    selectedShop?.adminLoginToken
-      ? { shopId: selectedShop._id, adminToken: selectedShop.adminLoginToken }
+type Period = "7d" | "30d" | "90d" | "365d" | "all";
+
+const PERIODS: { id: Period; label: string }[] = [
+  { id: "7d",   label: "7T"  },
+  { id: "30d",  label: "1M"  },
+  { id: "90d",  label: "3M"  },
+  { id: "365d", label: "1J"  },
+  { id: "all",  label: "Alle" },
+];
+
+function periodToSince(p: Period): number | undefined {
+  if (p === "all") return undefined;
+  const days = p === "7d" ? 7 : p === "30d" ? 30 : p === "90d" ? 90 : 365;
+  return Date.now() - days * 24 * 60 * 60 * 1000;
+}
+
+function PeriodSelector({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
+  return (
+    <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+      {PERIODS.map(p => (
+        <button key={p.id} onClick={() => onChange(p.id)}
+          className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+          style={value === p.id
+            ? { background: "#fbbf24", color: "#18181b" }
+            : { color: "#71717a" }}>
+          {p.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── AnalyticsTab (globale Gesamt-Auswertung) ─────────────────────────────────
+
+function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
+  const [period, setPeriod] = useState<Period>("30d");
+  const data = useQuery(api.shops.getGlobalAnalyticsByPeriod, {
+    adminSecret,
+    since: periodToSince(period),
+  });
+
+  return (
+    <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+
+      <PeriodSelector value={period} onChange={setPeriod} />
+
+      {data === undefined ? (
+        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
+          className="text-zinc-500 text-sm text-center py-10">Laden...</motion.div>
+      ) : (
+        <>
+          {/* Gesamt-Stats */}
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "Stempel",      value: data.stamps,         color: "text-amber-400"  },
+              { label: "Einlösungen",  value: data.redeems,        color: "text-purple-400" },
+              { label: "Aktive Shops", value: data.activeShops,    color: "text-green-400"  },
+              { label: "Kunden ges.",  value: data.totalCustomers, color: "text-blue-400"   },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                <p className={`text-3xl font-bold ${color}`}>{value}</p>
+                <p className="text-xs text-zinc-500 mt-1">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Pro-Shop-Ranking */}
+          {data.shops.length > 0 && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+                <TrendingUp size={14} className="text-zinc-400" />
+                <span className="text-sm font-medium text-zinc-200">Shops im Zeitraum</span>
+              </div>
+              <div className="divide-y divide-zinc-800/50">
+                {data.shops.map((shop, i) => (
+                  <div key={shop._id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="text-[11px] font-bold text-zinc-600 w-4 shrink-0">{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-zinc-200 font-medium truncate">{shop.name}</p>
+                      <p className="text-[11px] text-zinc-500">{shop.activeCustomers} aktive Kunden · {shop.redeems}× eingelöst</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-amber-400">{shop.stamps}</p>
+                      <p className="text-[10px] text-zinc-600">Stempel</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {data.shops.every(s => s.stamps === 0) && (
+            <p className="text-center text-zinc-600 text-sm py-4">Keine Aktivität im gewählten Zeitraum.</p>
+          )}
+        </>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── ShopAnalytics (pro Shop, wird in ShopWorkspace eingebettet) ──────────────
+
+function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
+  const [period, setPeriod] = useState<Period>("30d");
+  const resetCards = useMutation(api.shops.adminResetShopCards);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting]       = useState(false);
+  const [resetDone, setResetDone]       = useState(false);
+
+  const data = useQuery(
+    api.shops.getShopAnalyticsByPeriod,
+    shop.adminLoginToken
+      ? { shopId: shop._id, adminToken: shop.adminLoginToken, since: periodToSince(period) }
       : "skip"
   );
-  const resetCards = useMutation(api.shops.adminResetShopCards);
-  const [resetting, setResetting] = useState(false);
-  const [resetDone, setResetDone] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
 
   const handleReset = async () => {
-    if (!selectedShopId) return;
     setResetting(true);
     try {
-      await resetCards({ shopId: selectedShopId, adminSecret });
-      setResetDone(true);
-      setConfirmReset(false);
+      await resetCards({ shopId: shop._id, adminSecret });
+      setResetDone(true); setConfirmReset(false);
       setTimeout(() => setResetDone(false), 3000);
     } finally { setResetting(false); }
   };
 
   return (
-    <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+    <motion.div key="shop-analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
 
-      {/* Shop selector */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
-        <p className="text-sm font-semibold text-zinc-200">Shop auswählen</p>
-        {!shops || shops.length === 0 ? (
-          <p className="text-xs text-zinc-600">Noch keine Shops vorhanden.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {shops.map(shop => (
-              <button key={shop._id}
-                onClick={() => { setSelectedShopId(shop._id); setResetDone(false); setConfirmReset(false); }}
-                className="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
-                style={selectedShopId === shop._id
-                  ? { background: "#fbbf2433", border: "1px solid #fbbf2488", color: "#fbbf24" }
-                  : { background: "#27272a", border: "1px solid #3f3f46", color: "#71717a" }
-                }>
-                {shop.name}
-              </button>
+      <PeriodSelector value={period} onChange={setPeriod} />
+
+      {data === undefined ? (
+        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
+          className="text-zinc-500 text-sm text-center py-10">Laden...</motion.div>
+      ) : (
+        <>
+          {/* Stats im Zeitraum */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Stempel",     value: data.stamps,           color: "text-amber-400"  },
+              { label: "Einlösungen", value: data.redeems,          color: "text-purple-400" },
+              { label: "Kunden aktiv",value: data.customers.length, color: "text-blue-400"   },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 flex flex-col items-center gap-1">
+                <p className={`text-xl font-bold ${color}`}>{value}</p>
+                <p className="text-[10px] text-zinc-500">{label}</p>
+              </div>
             ))}
           </div>
-        )}
-      </div>
 
-      {selectedShop && (
-        <>
-          {/* Stats */}
-          {customers !== undefined && (
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: "Kunden", value: customers.length, color: "text-blue-400" },
-                { label: "Stempel ges.", value: customers.reduce((s, c) => s + c.membership.totalStampsEver, 0), color: "text-amber-400" },
-                { label: "Belohnungen", value: customers.reduce((s, c) => s + c.membership.rewardsRedeemed, 0), color: "text-purple-400" },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 flex flex-col items-center gap-1">
-                  <p className={`text-xl font-bold ${color}`}>{value}</p>
-                  <p className="text-[10px] text-zinc-500">{label}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Customer list */}
+          {/* Kunden-Ranking im Zeitraum */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
               <Users size={14} className="text-zinc-500" />
-              <span className="text-sm font-medium text-zinc-200">Kunden – {selectedShop.name}</span>
+              <span className="text-sm font-medium text-zinc-200">Kunden im Zeitraum</span>
             </div>
             <div className="divide-y divide-zinc-800/50">
-              {customers === undefined && (
-                <div className="px-4 py-6 text-center text-zinc-600 text-sm">Laden...</div>
+              {data.customers.length === 0 && (
+                <div className="px-4 py-6 text-center text-zinc-600 text-sm">Keine Aktivität im Zeitraum.</div>
               )}
-              {customers?.length === 0 && (
-                <div className="px-4 py-6 text-center text-zinc-600 text-sm">Noch keine Kunden.</div>
-              )}
-              {customers?.map(({ customer, membership }) => customer && (
-                <div key={membership._id} className="flex items-center gap-3 px-4 py-3">
+              {data.customers.map((c, i) => (
+                <div key={c.membershipId} className="flex items-center gap-3 px-4 py-3">
                   <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-bold shrink-0">
-                    {customer.name?.[0]?.toUpperCase() ?? "?"}
+                    {c.customerName[0]?.toUpperCase() ?? "?"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-zinc-200 truncate">{customer.name}</p>
+                    <p className="text-sm text-zinc-200 truncate">{c.customerName}</p>
                     <p className="text-[11px] text-zinc-500">
-                      Gesamt: {membership.totalStampsEver} Stempel · {membership.rewardsRedeemed}× eingelöst
+                      +{c.stamps} Stempel{c.redeems > 0 ? ` · ${c.redeems}× eingelöst` : ""}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-xs font-semibold text-amber-400">{membership.currentStamps}/{selectedShop.stampsRequired}</p>
+                    <p className="text-xs font-semibold text-amber-400">{c.currentStamps}/{shop.stampsRequired}</p>
                     <p className="text-[10px] text-zinc-600">aktuell</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Card reset */}
-          <div className="bg-zinc-900 border border-orange-900/40 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Trash2 size={14} className="text-orange-400 shrink-0" />
-              <p className="text-sm font-medium text-orange-400">Karten zurücksetzen</p>
-            </div>
-            <p className="text-[11px] text-zinc-500">
-              Setzt alle aktuellen Stempel für <span className="text-zinc-400 font-medium">{selectedShop.name}</span> auf 0 zurück. Kunden & Gesamthistorie bleiben erhalten.
-            </p>
-            {resetDone ? (
-              <div className="flex items-center gap-2 text-green-400 text-sm">
-                <Check size={14} /> Karten zurückgesetzt.
-              </div>
-            ) : !confirmReset ? (
-              <button onClick={() => setConfirmReset(true)}
-                className="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-orange-900/30 text-zinc-400 hover:text-orange-400 transition-colors">
-                Karten zurücksetzen
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                <button onClick={handleReset} disabled={resetting}
-                  className="flex-1 py-2.5 bg-orange-700 hover:bg-orange-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
-                  {resetting ? "..." : "Wirklich zurücksetzen"}
-                </button>
-                <button onClick={() => setConfirmReset(false)}
-                  className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-sm rounded-xl transition-colors">
-                  Abbrechen
-                </button>
-              </div>
-            )}
-          </div>
         </>
       )}
+
+      {/* Card reset */}
+      <div className="bg-zinc-900 border border-orange-900/40 rounded-2xl p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Trash2 size={14} className="text-orange-400 shrink-0" />
+          <p className="text-sm font-medium text-orange-400">Karten zurücksetzen</p>
+        </div>
+        <p className="text-[11px] text-zinc-500">Setzt alle aktuellen Stempel auf 0. Kunden & Gesamthistorie bleiben erhalten.</p>
+        {resetDone ? (
+          <div className="flex items-center gap-2 text-green-400 text-sm"><Check size={14} /> Zurückgesetzt.</div>
+        ) : !confirmReset ? (
+          <button onClick={() => setConfirmReset(true)}
+            className="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-orange-900/30 text-zinc-400 hover:text-orange-400 transition-colors">
+            Karten zurücksetzen
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button onClick={handleReset} disabled={resetting}
+              className="flex-1 py-2.5 bg-orange-700 hover:bg-orange-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
+              {resetting ? "..." : "Wirklich zurücksetzen"}
+            </button>
+            <button onClick={() => setConfirmReset(false)}
+              className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-sm rounded-xl transition-colors">
+              Abbrechen
+            </button>
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }
@@ -1377,7 +1453,7 @@ export default function SuperAdminPage() {
         <AnimatePresence mode="wait">
           {activeTab === "overview"  && <OverviewTab   key="overview"   adminSecret={adminSecret} onGoToShops={() => setActiveTab("shops")} />}
           {activeTab === "shops"     && <ShopsTab      key="shops"      shops={allShops} adminSecret={adminSecret} onSelectShop={id => { setSelectedShopId(id); }} />}
-          {activeTab === "analytics" && <AnalyticsTab  key="analytics"  shops={allShops} adminSecret={adminSecret} />}
+          {activeTab === "analytics" && <AnalyticsTab  key="analytics"  adminSecret={adminSecret} />}
           {activeTab === "settings"  && <SettingsTab   key="settings" />}
         </AnimatePresence>
       </div>

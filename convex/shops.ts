@@ -219,6 +219,96 @@ export const getGlobalStats = query({
   },
 });
 
+export const getGlobalAnalyticsByPeriod = query({
+  args: { adminSecret: v.string(), since: v.optional(v.number()) },
+  handler: async (ctx, { adminSecret, since }) => {
+    requireAdmin({ secret: adminSecret });
+    const shops = await ctx.db.query("shops").collect();
+    const customers = await ctx.db.query("customers").collect();
+
+    let events = await ctx.db.query("stampEvents").order("desc").collect();
+    if (since !== undefined) events = events.filter(e => e.timestamp >= since);
+
+    const stamps   = events.filter(e => e.type === "stamp").length;
+    const redeems  = events.filter(e => e.type === "redeem").length;
+    const activeShopIds = new Set(events.map(e => e.shopId.toString()));
+
+    const shopsData = await Promise.all(
+      shops.map(async (shop) => {
+        const shopEvents = events.filter(e => e.shopId === shop._id);
+        const shopStamps  = shopEvents.filter(e => e.type === "stamp").length;
+        const shopRedeems = shopEvents.filter(e => e.type === "redeem").length;
+        const activeMemberIds = new Set(
+          (await Promise.all(shopEvents.map(e => ctx.db.get(e.membershipId))))
+            .filter(Boolean)
+            .map(m => m!.customerId.toString())
+        );
+        return {
+          _id: shop._id,
+          name: shop.name,
+          slug: shop.slug,
+          stamps: shopStamps,
+          redeems: shopRedeems,
+          activeCustomers: activeMemberIds.size,
+        };
+      })
+    );
+
+    return {
+      totalShops: shops.length,
+      totalCustomers: customers.length,
+      stamps,
+      redeems,
+      activeShops: activeShopIds.size,
+      shops: shopsData.sort((a, b) => b.stamps - a.stamps),
+    };
+  },
+});
+
+export const getShopAnalyticsByPeriod = query({
+  args: { shopId: v.id("shops"), adminToken: v.string(), since: v.optional(v.number()) },
+  handler: async (ctx, { shopId, adminToken, since }) => {
+    await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
+
+    let events = await ctx.db
+      .query("stampEvents")
+      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
+      .order("desc")
+      .collect();
+    if (since !== undefined) events = events.filter(e => e.timestamp >= since);
+
+    const stamps  = events.filter(e => e.type === "stamp").length;
+    const redeems = events.filter(e => e.type === "redeem").length;
+
+    // Group by membership → customer
+    const membershipIds = Array.from(new Set(events.map(e => e.membershipId.toString())));
+    const customerRows = await Promise.all(
+      membershipIds.map(async (mid) => {
+        const mevents = events.filter(e => e.membershipId.toString() === mid);
+        const membership = await ctx.db.get(mevents[0].membershipId);
+        if (!membership) return null;
+        const customer = await ctx.db.get(membership.customerId);
+        if (!customer) return null;
+        return {
+          customerName: customer.name,
+          stamps: mevents.filter(e => e.type === "stamp").length,
+          redeems: mevents.filter(e => e.type === "redeem").length,
+          currentStamps: membership.currentStamps,
+          totalStampsEver: membership.totalStampsEver,
+          lastEvent: mevents[0].timestamp,
+          membershipId: membership._id,
+        };
+      })
+    );
+
+    return {
+      stamps,
+      redeems,
+      customers: customerRows.filter(Boolean).sort((a, b) => b!.stamps - a!.stamps) as NonNullable<typeof customerRows[0]>[],
+    };
+  },
+});
+
 // ─── Inhaber-Queries ──────────────────────────────────────────────────────────
 
 export const listCustomersForShop = query({
