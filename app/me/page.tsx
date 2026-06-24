@@ -63,29 +63,37 @@ function LevelCard({ totalStamps, accent }: { totalStamps: number; accent: strin
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="rounded-xl px-3.5 py-2.5 mb-5 flex items-center gap-3"
-      style={{ background: hexToRgba(accent, 0.04), border: `1px solid ${hexToRgba(accent, 0.12)}` }}
+      className="relative rounded-2xl px-5 py-4 mb-5 overflow-hidden"
+      style={{
+        background: "#161412",
+        border: `1px solid ${hexToRgba(accent, 0.28)}`,
+        boxShadow: `0 2px 8px rgba(0,0,0,0.4), 0 0 24px ${hexToRgba(accent, 0.06)}`,
+      }}
     >
-      <span className="text-[9px] font-bold uppercase tracking-widest shrink-0" style={{ color: hexToRgba(accent, 0.45) }}>
-        Lvl {idx + 1}
-      </span>
-      <div className="flex-1 min-w-0">
-        <div className="h-1 rounded-full overflow-hidden" style={{ background: hexToRgba(accent, 0.1) }}>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${progress * 100}%` }}
-            transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
-            className="h-full rounded-full"
-            style={{ background: hexToRgba(accent, 0.5) }}
-          />
+      <div className="absolute top-0 left-0 right-0 h-[2px]"
+        style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)`, opacity: 0.6 }} />
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded"
+            style={{ background: accent, color: "#0e0d0b", letterSpacing: "0.06em" }}>
+            LVL {idx + 1}
+          </span>
+          <span className="text-[11px] text-zinc-500">Aktuelles Level</span>
         </div>
+        <span className="text-[11px] font-semibold" style={{ color: accent }}>{level.label}</span>
       </div>
-      <span className="text-[9px] font-semibold shrink-0" style={{ color: hexToRgba(accent, 0.4) }}>
-        {level.label}
-      </span>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#252320", border: "1px solid rgba(255,255,255,0.04)" }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${progress * 100}%` }}
+          transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
+          className="h-full rounded-full"
+          style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.7)}, ${accent})`, boxShadow: `0 0 8px ${hexToRgba(accent, 0.4)}` }}
+        />
+      </div>
     </motion.div>
   );
 }
@@ -179,59 +187,71 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
     <motion.button
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.07, duration: 0.35 }}
+      transition={{ delay: index * 0.07 + 0.08, duration: 0.35 }}
       whileTap={{ scale: 0.975 }}
       onClick={onClick}
       className="w-full text-left rounded-2xl overflow-hidden"
       style={{
-        background: "#1e1e22",
-        border: `1px solid ${hexToRgba(accent, 0.18)}`,
-        boxShadow: "0 2px 20px rgba(0,0,0,0.35)",
+        background: isReady
+          ? `linear-gradient(135deg, #161412, ${hexToRgba(accent, 0.07)})`
+          : "#161412",
+        border: `1px solid ${hexToRgba(accent, isReady ? 0.3 : 0.12)}`,
+        boxShadow: "0 2px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03)",
       }}
     >
-      {/* Accent stripe */}
-      <div style={{ height: 3, background: accent }} />
+      {isReady && (
+        <div style={{ height: 2, background: `linear-gradient(90deg, transparent, ${accent}, transparent)`, opacity: 0.8 }} />
+      )}
 
       <div className="p-4">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: hexToRgba(accent, 0.13), border: `1px solid ${hexToRgba(accent, 0.2)}` }}>
-            <StampIcon size={20} style={{ color: accent }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-bold text-zinc-100 leading-tight truncate">{shop.name}</h2>
-            <p className="text-[10px] mt-0.5 truncate" style={{ color: hexToRgba(accent, 0.45) }}>
-              {shop.stampValue ? `€${shop.stampValue} = 1 Stempel` : "Stempelkarte"}
-            </p>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-[14px] flex items-center justify-center shrink-0"
+              style={{ background: hexToRgba(accent, 0.1), border: `1px solid ${hexToRgba(accent, 0.25)}` }}>
+              <StampIcon size={22} style={{ color: accent }} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-zinc-100 leading-tight truncate">{shop.name}</h2>
+              <p className="text-[11px] mt-0.5 truncate" style={{ color: hexToRgba(accent, 0.45) }}>
+                {shop.stampValue ? `€${shop.stampValue} = 1 Stempel` : "Stempelkarte"}
+              </p>
+            </div>
           </div>
           {isReady ? (
-            <span className="text-[9px] font-bold px-2.5 py-1 rounded-full shrink-0"
-              style={{ background: hexToRgba(accent, 0.18), border: `1px solid ${hexToRgba(accent, 0.35)}`, color: accent }}>
-              BEREIT ✓
+            <span className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg shrink-0"
+              style={{ background: hexToRgba(accent, 0.12), border: `1px solid ${hexToRgba(accent, 0.3)}`, color: accent }}>
+              <Check size={11} strokeWidth={3} />
+              BEREIT
             </span>
           ) : (
-            <ChevronRight size={15} style={{ color: hexToRgba(accent, 0.3) }} className="shrink-0" />
+            <ChevronRight size={15} style={{ color: hexToRgba(accent, 0.3) }} className="shrink-0 mt-1" />
           )}
         </div>
 
-        {/* Mini stamp dots */}
-        <div className="flex flex-wrap gap-[5px] mb-3">
+        {/* Stamp dots */}
+        <div className="flex flex-wrap gap-[6px] mb-4">
           {Array.from({ length: Math.min(totalSlots, 32) }).map((_, i) => {
             const filled = i < membership.currentStamps;
             const isCheckpoint = tierCheckpoints.has(i + 1);
             return (
-              <div key={i} className="rounded-full"
+              <div key={i}
+                className="rounded-full flex items-center justify-center shrink-0"
                 style={{
-                  width: 10, height: 10,
+                  width: 20, height: 20,
                   background: filled
-                    ? isCheckpoint ? accent : hexToRgba(accent, 0.6)
-                    : hexToRgba(accent, 0.1),
-                  boxShadow: filled && isCheckpoint ? `0 0 5px ${hexToRgba(accent, 0.55)}` : undefined,
+                    ? isCheckpoint ? accent : hexToRgba(accent, 0.65)
+                    : hexToRgba(accent, 0.08),
+                  border: filled ? "none" : `1.5px solid ${hexToRgba(accent, 0.15)}`,
+                  boxShadow: filled && isCheckpoint ? `0 0 7px ${hexToRgba(accent, 0.5)}` : undefined,
                   outline: !filled && isCheckpoint ? `1.5px dashed ${hexToRgba(accent, 0.3)}` : undefined,
                   outlineOffset: !filled && isCheckpoint ? "1px" : undefined,
                 }}
-              />
+              >
+                {filled && (
+                  <StampIcon size={11} style={{ color: isCheckpoint ? "#0e0d0b" : "rgba(255,255,255,0.75)" }} />
+                )}
+              </div>
             );
           })}
           {totalSlots > 32 && (
@@ -239,21 +259,22 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
           )}
         </div>
 
-        {/* Progress bar */}
-        <div className="h-1.5 rounded-full overflow-hidden mb-2.5" style={{ background: hexToRgba(accent, 0.1) }}>
-          <motion.div
-            initial={{ width: 0 }} animate={{ width: `${barProgress * 100}%` }}
-            transition={{ duration: 0.7, delay: index * 0.07 + 0.2 }}
-            className="h-full rounded-full"
-            style={{ background: accent }}
-          />
-        </div>
-
-        {/* Reward + counter */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] text-zinc-500 truncate flex-1">
-            {nextTier ? nextTier.text : highestTier.text}
-          </span>
+        {/* Footer: progress + reward + counter */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="h-[5px] rounded-full overflow-hidden mb-2"
+              style={{ background: hexToRgba(accent, 0.1), border: "1px solid rgba(255,255,255,0.04)" }}>
+              <motion.div
+                initial={{ width: 0 }} animate={{ width: `${barProgress * 100}%` }}
+                transition={{ duration: 0.7, delay: index * 0.07 + 0.2 }}
+                className="h-full rounded-full"
+                style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.7)}, ${accent})`, boxShadow: `0 0 6px ${hexToRgba(accent, 0.4)}` }}
+              />
+            </div>
+            <span className="text-[11px] text-zinc-500 truncate block">
+              {nextTier ? nextTier.text : highestTier.text}
+            </span>
+          </div>
           <span className="text-[11px] font-bold tabular-nums shrink-0" style={{ color: accent }}>
             {nextTier ? `noch ${stepsLeft}` : "✓ fertig"}
           </span>
@@ -262,7 +283,7 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
         {/* Milestones */}
         {reachedMilestones.length > 0 && (
           <div className="mt-3 pt-2.5 flex items-center gap-1.5 flex-wrap"
-            style={{ borderTop: `1px solid #1e1e1e` }}>
+            style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
             <Trophy size={10} style={{ color: accent }} className="shrink-0" />
             {reachedMilestones.map((m, i) => (
               <span key={i} className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
@@ -602,7 +623,7 @@ export default function MePage() {
 
   // 2+ Shops → Übersicht
   return (
-    <div className="min-h-screen px-5 pt-12 pb-10 max-w-sm mx-auto">
+    <div className="min-h-screen px-5 pt-6 pb-10 max-w-sm mx-auto">
       <AnimatePresence>
         {showStampOverlay && <StampOverlay onDone={() => setShowStampOverlay(false)} />}
       </AnimatePresence>
@@ -623,27 +644,26 @@ export default function MePage() {
         )}
       </AnimatePresence>
 
-      {/* App name */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.0 }}
-        className="relative flex items-center justify-center mb-8">
+      {/* Topbar */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        className="flex items-center justify-between mb-7">
         <p className="text-xl font-black tracking-tight text-zinc-100">
           Loyalty<span className="text-zinc-600">Card</span>
         </p>
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setShowSettings(true)}
-          className="absolute right-0 w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center"
+          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center"
         >
           <Settings size={16} className="text-zinc-500" />
         </motion.button>
       </motion.div>
 
-      {/* Header */}
+      {/* Greeting */}
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-        className="mb-7">
-        <p className="text-neutral-500 text-sm">Hallo,</p>
-        <h1 className="text-2xl font-bold mt-0.5 bg-clip-text text-transparent"
-          style={{ backgroundImage: `linear-gradient(90deg, ${personalAccent}, ${hexToRgba(personalAccent, 0.6)})` }}>
+        className="mb-6">
+        <p className="text-[11px] uppercase tracking-[0.1em] font-medium text-zinc-500">Hallo,</p>
+        <h1 className="text-3xl font-bold tracking-tight mt-0.5" style={{ color: personalAccent }}>
           {customer.name}
         </h1>
       </motion.div>
@@ -652,19 +672,24 @@ export default function MePage() {
       <LevelCard totalStamps={totalStamps} accent={personalAccent} />
 
       {/* Shop list */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-600 ml-1 mb-2">
-          Deine Karten
-        </p>
-        {allMemberships.map((entry, i) => (
-          <ShopCard
-            key={entry.membership._id}
-            entry={entry}
-            index={i}
-            personalAccent={personalAccent}
-            onClick={() => router.push(`/me/shop/${entry.shop?.slug ?? ""}`)}
-          />
-        ))}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">
+            Deine Karten
+          </p>
+          <p className="text-[10px] text-zinc-600">{allMemberships.length} aktiv</p>
+        </div>
+        <div className="space-y-3">
+          {allMemberships.map((entry, i) => (
+            <ShopCard
+              key={entry.membership._id}
+              entry={entry}
+              index={i}
+              personalAccent={personalAccent}
+              onClick={() => router.push(`/me/shop/${entry.shop?.slug ?? ""}`)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
