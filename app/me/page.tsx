@@ -55,12 +55,23 @@ const LEVELS = [
   { min: 200, max: Infinity, label: "Legende"     },
 ];
 
-function LevelCard({ totalStamps, accent }: { totalStamps: number; accent: string }) {
-  const idx = LEVELS.findIndex(l => totalStamps <= l.max);
-  const level = LEVELS[idx];
-  const nextLevel = LEVELS[idx + 1] ?? null;
+const GLOBAL_LEVELS = [
+  { min: 1,  max: 1,         label: "Neuling"    },
+  { min: 2,  max: 2,         label: "Entdecker"  },
+  { min: 3,  max: 4,         label: "Stammgast"  },
+  { min: 5,  max: 7,         label: "Loyaler"    },
+  { min: 8,  max: 12,        label: "VIP"        },
+  { min: 13, max: Infinity,  label: "Legende"    },
+];
+
+function LevelCard({ shopCount, accent }: { shopCount: number; accent: string }) {
+  const count = Math.max(shopCount, 1);
+  const idx = GLOBAL_LEVELS.findIndex(l => count <= l.max);
+  const safeIdx = idx === -1 ? GLOBAL_LEVELS.length - 1 : idx;
+  const level = GLOBAL_LEVELS[safeIdx];
+  const nextLevel = GLOBAL_LEVELS[safeIdx + 1] ?? null;
   const progress = nextLevel
-    ? (totalStamps - level.min) / (nextLevel.min - level.min)
+    ? (count - level.min) / (nextLevel.min - level.min)
     : 1;
 
   return (
@@ -81,9 +92,9 @@ function LevelCard({ totalStamps, accent }: { totalStamps: number; accent: strin
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold px-2 py-0.5 rounded"
             style={{ background: accent, color: "#0e0d0b", letterSpacing: "0.06em" }}>
-            LVL {idx + 1}
+            LVL {safeIdx + 1}
           </span>
-          <span className="text-[11px] text-zinc-500">Aktuelles Level</span>
+          <span className="text-[11px] text-zinc-500">{count} {count === 1 ? "Laden" : "Läden"}</span>
         </div>
         <span className="text-[11px] font-semibold" style={{ color: accent }}>{level.label}</span>
       </div>
@@ -96,6 +107,11 @@ function LevelCard({ totalStamps, accent }: { totalStamps: number; accent: strin
           style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.7)}, ${accent})`, boxShadow: `0 0 8px ${hexToRgba(accent, 0.4)}` }}
         />
       </div>
+      {nextLevel && (
+        <p className="text-[9px] mt-1.5 tabular-nums" style={{ color: hexToRgba(accent, 0.3) }}>
+          Nächstes Level bei {nextLevel.min} Läden
+        </p>
+      )}
     </motion.div>
   );
 }
@@ -184,6 +200,9 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
 
   const StampIcon = getStampIcon(shop.stampIcon);
   const stepsLeft = nextTier ? nextTier.stamps - membership.currentStamps : 0;
+
+  const shopLvlIdx = LEVELS.findIndex(l => membership.totalStampsEver <= l.max);
+  const safeShopLvlIdx = shopLvlIdx === -1 ? LEVELS.length - 1 : shopLvlIdx;
 
   return (
     <motion.button
@@ -277,7 +296,7 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
               {nextTier ? nextTier.text : highestTier.text}
             </span>
             <span className="text-[9px] font-medium mt-0.5 block tabular-nums" style={{ color: hexToRgba(accent, 0.35) }}>
-              {membership.totalStampsEver} Stempel insgesamt
+              {membership.totalStampsEver} Stempel · LVL {safeShopLvlIdx + 1}
             </span>
           </div>
           <div className="shrink-0 text-right">
@@ -343,6 +362,9 @@ function InfoPanel({ onClose }: { onClose: () => void }) {
           </p>
           <p className="text-sm text-zinc-500 leading-relaxed">
             Dein QR-Code ist dein Ausweis. Zeig ihn einfach an der Kasse vor.
+          </p>
+          <p className="text-sm text-zinc-500 leading-relaxed">
+            Sobald du Karten von <span className="text-zinc-300 font-medium">2 verschiedenen Läden</span> gesammelt hast, ist die App vollständig freigeschaltet.
           </p>
         </div>
 
@@ -659,7 +681,6 @@ export default function MePage() {
   }
 
   const { customer } = data;
-  const totalStamps = allMemberships.reduce((s, e) => s + e.membership.totalStampsEver, 0);
 
   if (allMemberships.length === 0) {
     return (
@@ -738,7 +759,7 @@ export default function MePage() {
       </motion.div>
 
       {/* Level */}
-      <LevelCard totalStamps={totalStamps} accent={personalAccent} />
+      <LevelCard shopCount={allMemberships.length} accent={personalAccent} />
 
       {/* Shop list */}
       <div>

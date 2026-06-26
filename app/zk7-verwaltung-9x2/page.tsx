@@ -8,13 +8,29 @@ import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy,
-  Sliders, LayoutDashboard, User, type LucideIcon,
+  Sliders, LayoutDashboard, LayoutGrid, User, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
+
+// ─── Global Level System (spiegelt me/page.tsx) ───────────────────────────────
+
+const GLOBAL_LEVELS = [
+  { min: 1,  max: 1,         label: "Neuling"   },
+  { min: 2,  max: 2,         label: "Entdecker" },
+  { min: 3,  max: 4,         label: "Stammgast" },
+  { min: 5,  max: 7,         label: "Loyaler"   },
+  { min: 8,  max: 12,        label: "VIP"       },
+  { min: 13, max: Infinity,  label: "Legende"   },
+];
+
+function globalLevelIdx(shopCount: number): number {
+  const idx = GLOBAL_LEVELS.findIndex(l => shopCount <= l.max);
+  return idx === -1 ? GLOBAL_LEVELS.length - 1 : idx;
+}
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
@@ -882,6 +898,7 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
     since: periodToSince(period),
     prevSince: periodToPrevSince(period),
   });
+  const appStats = useQuery(api.shops.getAppUsageStats, { adminSecret });
 
   return (
     <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
@@ -980,6 +997,44 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
 
           {!data.stamps && !data.redeems && (
             <p className="text-center text-zinc-600 text-sm py-4">Keine Aktivität im gewählten Zeitraum.</p>
+          )}
+
+          {/* App Details: Kunden mit 2+ Shops */}
+          {appStats && appStats.filter(c => c.shopCount >= 2).length > 0 && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+                <LayoutGrid size={14} className="text-amber-400" />
+                <span className="text-sm font-medium text-zinc-200">App Details</span>
+                <span className="ml-auto text-[10px] text-zinc-500">
+                  {appStats.filter(c => c.shopCount >= 2).length} freigeschaltet
+                </span>
+              </div>
+              <div className="divide-y divide-zinc-800/50">
+                {appStats.filter(c => c.shopCount >= 2).map((c, i) => {
+                  const lvlIdx = globalLevelIdx(c.shopCount);
+                  return (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3">
+                      <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-bold shrink-0">
+                        {c.name[0]?.toUpperCase() ?? "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-zinc-200 truncate">{c.name}</p>
+                        <p className="text-[11px] text-zinc-500">
+                          {c.shopCount} {c.shopCount === 1 ? "Laden" : "Läden"} · {c.totalStamps} Stempel
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded"
+                          style={{ background: "#fbbf2420", color: "#fbbf24" }}>
+                          LVL {lvlIdx + 1}
+                        </span>
+                        <p className="text-[9px] text-zinc-600 mt-0.5">{GLOBAL_LEVELS[lvlIdx].label}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </>
       )}

@@ -363,6 +363,25 @@ export const getShopAnalyticsByPeriod = query({
   },
 });
 
+export const getAppUsageStats = query({
+  args: { adminSecret: v.string() },
+  handler: async (ctx, { adminSecret }) => {
+    requireAdmin({ secret: adminSecret });
+    const customers = await ctx.db.query("customers").collect();
+    const memberships = await ctx.db.query("memberships").collect();
+    return customers
+      .map(c => {
+        const mems = memberships.filter(m => m.customerId.toString() === c._id.toString());
+        return {
+          name: c.name,
+          shopCount: mems.length,
+          totalStamps: mems.reduce((s, m) => s + m.totalStampsEver, 0),
+        };
+      })
+      .sort((a, b) => b.shopCount - a.shopCount || b.totalStamps - a.totalStamps);
+  },
+});
+
 // ─── Inhaber-Queries ──────────────────────────────────────────────────────────
 
 export const listCustomersForShop = query({
