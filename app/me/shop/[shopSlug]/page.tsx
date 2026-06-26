@@ -11,6 +11,15 @@ import type { CardTier } from "../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
+const SHOP_LEVELS = [
+  { min: 0,   max: 9,        label: "Neuling"     },
+  { min: 10,  max: 24,       label: "Stammgast"   },
+  { min: 25,  max: 49,       label: "Treue-Kunde" },
+  { min: 50,  max: 99,       label: "Loyaler"     },
+  { min: 100, max: 199,      label: "VIP"         },
+  { min: 200, max: Infinity, label: "Legende"     },
+];
+
 export default function MeShopPage() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const router = useRouter();
@@ -112,6 +121,14 @@ export default function MeShopPage() {
     rewardTiers: shop.bonusProgramEnabled ? shop.rewardTiers : undefined,
   });
   const availableRewards = activeTiers.filter(t => membership.currentStamps >= t.stamps);
+
+  const shopLvlIdx = SHOP_LEVELS.findIndex(l => membership.totalStampsEver <= l.max);
+  const safeShopLvlIdx = shopLvlIdx === -1 ? SHOP_LEVELS.length - 1 : shopLvlIdx;
+  const shopLvlData = SHOP_LEVELS[safeShopLvlIdx];
+  const shopLvlNext = SHOP_LEVELS[safeShopLvlIdx + 1] ?? null;
+  const shopLvlProgress = shopLvlNext
+    ? (membership.totalStampsEver - shopLvlData.min) / (shopLvlNext.min - shopLvlData.min)
+    : 1;
 
   const openRedeemSheet = () => {
     setSelectedReward(availableRewards[0] ?? null);
@@ -442,6 +459,42 @@ export default function MeShopPage() {
                   )}
                 </>
               )}
+
+              {/* Shop-Level */}
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="rounded-2xl px-5 py-4"
+                style={{ background: hexToRgba(c.accent, 0.04), border: `1px solid ${hexToRgba(c.accent, 0.12)}` }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded"
+                      style={{ background: c.accent, color: "#0e0d0b", letterSpacing: "0.06em" }}>
+                      LVL {safeShopLvlIdx + 1}
+                    </span>
+                    <span className="text-[11px]" style={{ color: hexToRgba(c.accent, 0.5) }}>
+                      {membership.totalStampsEver} Stempel
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-semibold" style={{ color: c.accent }}>{shopLvlData.label}</span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.1) }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${shopLvlProgress * 100}%` }}
+                    transition={{ duration: 0.8, delay: 0.35, ease: "easeOut" }}
+                    className="h-full rounded-full"
+                    style={{ background: c.accent, boxShadow: `0 0 8px ${hexToRgba(c.accent, 0.4)}` }}
+                  />
+                </div>
+                {shopLvlNext && (
+                  <p className="text-[9px] mt-1.5" style={{ color: hexToRgba(c.accent, 0.3) }}>
+                    Nächstes Level bei {shopLvlNext.min} Stempeln
+                  </p>
+                )}
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

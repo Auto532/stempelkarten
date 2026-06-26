@@ -64,7 +64,7 @@ const GLOBAL_LEVELS = [
   { min: 13, max: Infinity,  label: "Legende"    },
 ];
 
-function LevelCard({ shopCount, accent }: { shopCount: number; accent: string }) {
+function LevelCard({ shopCount, totalStamps, accent }: { shopCount: number; totalStamps: number; accent: string }) {
   const count = Math.max(shopCount, 1);
   const idx = GLOBAL_LEVELS.findIndex(l => count <= l.max);
   const safeIdx = idx === -1 ? GLOBAL_LEVELS.length - 1 : idx;
@@ -107,11 +107,16 @@ function LevelCard({ shopCount, accent }: { shopCount: number; accent: string })
           style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.7)}, ${accent})`, boxShadow: `0 0 8px ${hexToRgba(accent, 0.4)}` }}
         />
       </div>
-      {nextLevel && (
-        <p className="text-[9px] mt-1.5 tabular-nums" style={{ color: hexToRgba(accent, 0.3) }}>
-          Nächstes Level bei {nextLevel.min} Läden
+      <div className="flex items-center justify-between mt-1.5">
+        {nextLevel ? (
+          <p className="text-[9px] tabular-nums" style={{ color: hexToRgba(accent, 0.3) }}>
+            Nächstes Level bei {nextLevel.min} Läden
+          </p>
+        ) : <span />}
+        <p className="text-[9px] tabular-nums" style={{ color: hexToRgba(accent, 0.22) }}>
+          {totalStamps} Stempel gesamt
         </p>
-      )}
+      </div>
     </motion.div>
   );
 }
@@ -681,6 +686,7 @@ export default function MePage() {
   }
 
   const { customer } = data;
+  const totalStamps = allMemberships.reduce((s, e) => s + e.membership.totalStampsEver, 0);
 
   if (allMemberships.length === 0) {
     return (
@@ -759,7 +765,7 @@ export default function MePage() {
       </motion.div>
 
       {/* Level */}
-      <LevelCard shopCount={allMemberships.length} accent={personalAccent} />
+      <LevelCard shopCount={allMemberships.length} totalStamps={totalStamps} accent={personalAccent} />
 
       {/* Shop list */}
       <div>
