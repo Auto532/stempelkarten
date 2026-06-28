@@ -425,10 +425,6 @@ export function LoyaltyCard({
                 #{String(cardNumber).padStart(3, "0")}
               </span>
             )}
-          </div>
-          <h2 className="text-2xl font-bold text-neutral-100 leading-tight">{shopName}</h2>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <p className="text-neutral-500 text-sm">{currentStamps} von {maxStamps} Stempel</p>
             {milestoneBadge && (
               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
                 style={{ background: hexToRgba(accent, 0.15), color: accent }}>
@@ -436,6 +432,8 @@ export function LoyaltyCard({
               </span>
             )}
           </div>
+          <h2 className="text-2xl font-bold text-neutral-100 leading-tight">{shopName}</h2>
+          <p className="text-neutral-500 text-sm mt-1">{currentStamps} von {maxStamps} Stempel</p>
         </div>
         {!hideQR && (
           <button onClick={onShowQR} className="shrink-0 flex flex-col items-center gap-1.5 group mt-0.5">

@@ -92,6 +92,10 @@ export function BeatesGrillLoyaltyCard({ shopName, stampsRequired, currentStamps
                   #{String(cardNumber).padStart(3, "0")}
                 </span>
               )}
+              {milestoneBadge && (
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
+                  style={{ background: `${accent}20`, color: accent }}>{milestoneBadge}</span>
+              )}
             </div>
             <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
           </div>
@@ -124,13 +128,7 @@ export function BeatesGrillLoyaltyCard({ shopName, stampsRequired, currentStamps
         </div>
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5">
-              <span style={{ color: AD }}>{currentStamps} / {maxStamps} Stempel</span>
-              {milestoneBadge && (
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
-                  style={{ background: `${accent}20`, color: accent }}>{milestoneBadge}</span>
-              )}
-            </div>
+            <span style={{ color: AD }}>{currentStamps} / {maxStamps} Stempel</span>
             <span style={{ color: accent }}>{Math.round(Math.min(currentStamps / maxStamps, 1) * 100)}%</span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: BG }}>
