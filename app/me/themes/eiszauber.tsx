@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 import { Gift, Award, QrCode } from "lucide-react";
 import type { ThemeCardProps, ThemeBannerProps, ThemeMilestonesProps } from "./registry";
 
-const PINK   = "#f0006e";
-const BERRY  = "#a8004d";
+const PINK   = "#ff4fa0";
+const BERRY  = "#c93d82";
 const PINK3  = "#ffd6e9";
 const MINT   = "#72c8ac";
 const GOLD   = "#efb84d";

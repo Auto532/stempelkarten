@@ -384,13 +384,13 @@ export default function MeShopPage() {
                       initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 }}
                       className="rounded-2xl overflow-hidden flex items-stretch"
-                      style={{ background: c.sub.background, border: `1px solid ${hexToRgba(c.accent, 0.25)}` }}
+                      style={{ background: hexToRgba(c.accent, 0.1), border: `1px solid ${hexToRgba(c.accent, 0.4)}` }}
                     >
-                      <div className="w-1 shrink-0" style={{ background: c.accent }} />
+                      <div className="w-1.5 shrink-0" style={{ background: c.accent }} />
                       <div className="flex items-center gap-3 px-4 py-3">
                         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: hexToRgba(c.accent, 0.18), border: `1px solid ${hexToRgba(c.accent, 0.3)}` }}>
-                          <Banknote size={16} style={{ color: c.accent }} />
+                          style={{ background: c.accent }}>
+                          <Banknote size={16} style={{ color: c.cardBg }} />
                         </div>
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: c.accent }}>Stempelwert</p>
@@ -441,13 +441,13 @@ export default function MeShopPage() {
                         initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
                         className="rounded-2xl overflow-hidden flex items-stretch"
-                        style={{ background: "#18181b", border: `1px solid ${hexToRgba(sa, 0.25)}` }}
+                        style={{ background: hexToRgba(sa, 0.1), border: `1px solid ${hexToRgba(sa, 0.4)}` }}
                       >
-                        <div className="w-1 shrink-0" style={{ background: sa }} />
+                        <div className="w-1.5 shrink-0" style={{ background: sa }} />
                         <div className="flex items-center gap-3 px-4 py-3">
                           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                            style={{ background: hexToRgba(sa, 0.18), border: `1px solid ${hexToRgba(sa, 0.3)}` }}>
-                            <Banknote size={16} style={{ color: sa }} />
+                            style={{ background: sa }}>
+                            <Banknote size={16} style={{ color: "#0e0d0b" }} />
                           </div>
                           <div>
                             <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: sa }}>Stempelwert</p>
