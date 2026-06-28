@@ -730,7 +730,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
 
 // ─── OverviewTab ──────────────────────────────────────────────────────────────
 
-function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSelectShop: (id: Id<"shops">) => void }) {
+function OverviewTab({ adminSecret }: { adminSecret: string }) {
   const globalStats = useQuery(api.shops.getGlobalStats, adminSecret ? { adminSecret } : "skip");
 
   if (!globalStats) {
@@ -760,36 +760,6 @@ function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSel
         ))}
       </div>
 
-      {globalStats.shops.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800">
-            <TrendingUp size={15} className="text-zinc-400" />
-            <span className="text-sm font-medium text-zinc-200">Shops nach Kunden</span>
-          </div>
-          <div className="divide-y divide-zinc-800/50">
-            {[...globalStats.shops].sort((a, b) => b.customerCount - a.customerCount).map((shop, i) => (
-              <motion.button key={shop._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 + i * 0.05 }}
-                onClick={() => onSelectShop(shop._id)}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-zinc-800/40 transition-colors text-left">
-                <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
-                  <Store size={13} className="text-amber-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-zinc-200 font-medium truncate">{shop.name}</p>
-                  <p className="text-[11px] text-zinc-600">{shop.stampsRequired} Stempel · {shop.rewardText}</p>
-                </div>
-                <div className="text-right shrink-0 flex items-center gap-2">
-                  <div>
-                    <p className="text-sm font-bold text-zinc-200">{shop.customerCount}</p>
-                    <p className="text-[10px] text-zinc-600">Kunden</p>
-                  </div>
-                  <ChevronRight size={14} className="text-zinc-600" />
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      )}
     </motion.div>
   );
 }
@@ -1732,7 +1702,7 @@ export default function SuperAdminPage() {
 
       <div className="flex-1 px-5 pt-5 pb-28 overflow-y-auto">
         <AnimatePresence mode="wait">
-          {activeTab === "overview"  && <OverviewTab   key="overview"   adminSecret={adminSecret} onSelectShop={id => setSelectedShopId(id)} />}
+          {activeTab === "overview"  && <OverviewTab   key="overview"   adminSecret={adminSecret} />}
           {activeTab === "shops"     && <ShopsTab      key="shops"      shops={allShops} adminSecret={adminSecret} onSelectShop={id => { setSelectedShopId(id); }} />}
           {activeTab === "analytics" && <AnalyticsTab  key="analytics"  adminSecret={adminSecret} />}
           {activeTab === "settings"  && <SettingsTab   key="settings" adminSecret={adminSecret} />}
