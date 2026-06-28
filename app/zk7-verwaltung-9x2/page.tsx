@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
 
@@ -1617,7 +1616,6 @@ const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
 ];
 
 export default function SuperAdminPage() {
-  const router = useRouter();
   const checkPinMutation = useMutation(api.admin.checkPin);
   const [pin, setPin]               = useState("");
   const [adminSecret, setAdminSecret] = useState("");
@@ -1629,6 +1627,22 @@ export default function SuperAdminPage() {
 
   const allShops = useQuery(api.shops.listAllShops, authed && adminSecret ? { adminSecret } : "skip");
   const selectedShop = selectedShopId ? allShops?.find(s => s._id === selectedShopId) : null;
+
+  // Hardware-Back-Button: ShopWorkspace schließen oder App nicht verlassen
+  const selectedShopIdRef = useRef<Id<"shops"> | null>(null);
+  useEffect(() => { selectedShopIdRef.current = selectedShopId; }, [selectedShopId]);
+  useEffect(() => {
+    if (!authed) return;
+    window.history.pushState({ adminBack: true }, "");
+    const handlePop = () => {
+      if (selectedShopIdRef.current) {
+        setSelectedShopId(null);
+      }
+      window.history.pushState({ adminBack: true }, "");
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-login from localStorage
   const [didTryAutoLogin, setDidTryAutoLogin] = useState(false);
@@ -1706,10 +1720,6 @@ export default function SuperAdminPage() {
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
       <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur border-b border-zinc-800/60 px-4 py-3 flex items-center gap-3">
-        <button onClick={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors">
-          <ArrowLeft size={18} />
-        </button>
         <AnimatePresence mode="wait">
           <motion.span key={activeTab} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.15 }}
             className="font-semibold text-zinc-100 text-base">
