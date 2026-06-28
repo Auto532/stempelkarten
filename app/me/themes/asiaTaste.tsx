@@ -157,6 +157,10 @@ export function AsiaTasteLoyaltyCard({ shopName, stampsRequired, currentStamps, 
                   #{String(cardNumber).padStart(3, "0")}
                 </span>
               )}
+              {milestoneBadge && (
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
+                  style={{ background: `${accent}20`, color: accent }}>{milestoneBadge}</span>
+              )}
             </div>
             <h2 className="text-lg font-bold leading-tight" style={{ color: CREAM }}>{shopName}</h2>
           </div>
@@ -215,10 +219,6 @@ export function AsiaTasteLoyaltyCard({ shopName, stampsRequired, currentStamps, 
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5">
               <span style={{ color: MUTED }}>{currentStamps} / {maxStamps} Stempel</span>
-              {milestoneBadge && (
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
-                  style={{ background: `${accent}20`, color: accent }}>{milestoneBadge}</span>
-              )}
             </div>
             <span style={{ color: TERRAB }}>{Math.round(Math.min(currentStamps / maxStamps, 1) * 100)}%</span>
           </div>

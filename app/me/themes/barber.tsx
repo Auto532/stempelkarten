@@ -77,6 +77,10 @@ export function BarberLoyaltyCard({
                 #{String(cardNumber).padStart(3, "0")}
               </span>
             )}
+            {milestoneBadge && (
+              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
+                style={{ background: `${GOLD}20`, color: GOLD }}>{milestoneBadge}</span>
+            )}
           </div>
 
           <h2
@@ -142,10 +146,6 @@ export function BarberLoyaltyCard({
             {currentStamps} von {maxStamps} Stempel
             {stampValue ? <> · €{stampValue} pro Stempel</> : null}
           </p>
-          {milestoneBadge && (
-            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
-              style={{ background: `${GOLD}20`, color: GOLD }}>{milestoneBadge}</span>
-          )}
         </div>
 
         {/* QR-Button */}

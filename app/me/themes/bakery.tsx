@@ -43,6 +43,10 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
                   #{String(cardNumber).padStart(3, "0")}
                 </span>
               )}
+              {milestoneBadge && (
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
+                  style={{ background: `${accent}20`, color: accent }}>{milestoneBadge}</span>
+              )}
             </div>
             <h2 className="text-xl font-black leading-tight" style={{ color: T }}>{shopName}</h2>
           </div>
@@ -80,10 +84,6 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
           <div className="flex items-center justify-between text-xs font-semibold">
             <div className="flex items-center gap-1.5">
               <span style={{ color: TB }}>{currentStamps} / {maxStamps} Stempel</span>
-              {milestoneBadge && (
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
-                  style={{ background: `${accent}20`, color: accent }}>{milestoneBadge}</span>
-              )}
             </div>
             <span style={{ color: accent }}>{Math.round(Math.min(currentStamps / maxStamps, 1) * 100)}%</span>
           </div>

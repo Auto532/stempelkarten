@@ -75,6 +75,10 @@ export function EiszauberLoyaltyCard({
               {cardNumber !== undefined && (
                 <span className="text-[10px] font-bold opacity-60">#{String(cardNumber).padStart(3, "0")}</span>
               )}
+              {milestoneBadge && (
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
+                  style={{ background: `${accent}20`, color: accent }}>{milestoneBadge}</span>
+              )}
             </div>
             <h2 className="text-2xl font-black leading-tight tracking-tight" style={{ color: TEXT }}>
               {shopName.includes(" ") ? (
@@ -130,10 +134,6 @@ export function EiszauberLoyaltyCard({
           <div className="flex items-center justify-between text-xs font-bold">
             <div className="flex items-center gap-1.5">
               <span style={{ color: MUTED }}>{currentStamps} / {maxStamps} Stempel</span>
-              {milestoneBadge && (
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
-                  style={{ background: `${accent}20`, color: accent }}>{milestoneBadge}</span>
-              )}
             </div>
             <span style={{ color: accent }}>{Math.round(Math.min(currentStamps / maxStamps, 1) * 100)}%</span>
           </div>
