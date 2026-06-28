@@ -730,7 +730,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
 
 // ─── OverviewTab ──────────────────────────────────────────────────────────────
 
-function OverviewTab({ adminSecret }: { adminSecret: string }) {
+function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSelectShop: (id: Id<"shops">) => void }) {
   const globalStats = useQuery(api.shops.getGlobalStats, adminSecret ? { adminSecret } : "skip");
 
   if (!globalStats) {
@@ -760,6 +760,28 @@ function OverviewTab({ adminSecret }: { adminSecret: string }) {
         ))}
       </div>
 
+      {globalStats.shops.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3.5 border-b border-zinc-800">
+            <Store size={14} className="text-zinc-500" />
+            <span className="text-sm font-medium text-zinc-200">Shops</span>
+            <span className="ml-auto text-xs text-zinc-600">{globalStats.shops.length}</span>
+          </div>
+          <div className="divide-y divide-zinc-800/50">
+            {[...globalStats.shops].sort((a, b) => a.name.localeCompare(b.name)).map((shop, i) => (
+              <motion.button key={shop._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 + i * 0.04 }}
+                onClick={() => onSelectShop(shop._id)}
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-zinc-800/40 transition-colors text-left">
+                <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
+                  <Store size={13} className="text-amber-400" />
+                </div>
+                <span className="flex-1 text-sm text-zinc-200 font-medium truncate">{shop.name}</span>
+                <ChevronRight size={14} className="text-zinc-600 shrink-0" />
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -1702,7 +1724,7 @@ export default function SuperAdminPage() {
 
       <div className="flex-1 px-5 pt-5 pb-28 overflow-y-auto">
         <AnimatePresence mode="wait">
-          {activeTab === "overview"  && <OverviewTab   key="overview"   adminSecret={adminSecret} />}
+          {activeTab === "overview"  && <OverviewTab   key="overview"   adminSecret={adminSecret} onSelectShop={id => setSelectedShopId(id)} />}
           {activeTab === "shops"     && <ShopsTab      key="shops"      shops={allShops} adminSecret={adminSecret} onSelectShop={id => { setSelectedShopId(id); }} />}
           {activeTab === "analytics" && <AnalyticsTab  key="analytics"  adminSecret={adminSecret} />}
           {activeTab === "settings"  && <SettingsTab   key="settings" adminSecret={adminSecret} />}
