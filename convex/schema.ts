@@ -75,4 +75,15 @@ export default defineSchema({
     rewardText: v.optional(v.string()),
     timestamp: v.number(),
   }).index("by_membership", ["membershipId"]).index("by_shop", ["shopId"]),
+
+  messages: defineTable({
+    shopId: v.id("shops"),
+    membershipId: v.id("memberships"),
+    customerId: v.id("customers"),
+    text: v.string(),
+    read: v.optional(v.boolean()),
+    createdAt: v.number(),
+  })
+    .index("by_shop", ["shopId"])
+    .index("by_membership", ["membershipId"]),
 });

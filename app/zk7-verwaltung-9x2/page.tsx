@@ -8,7 +8,7 @@ import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy,
-  Sliders, LayoutDashboard, LayoutGrid, User, Gift, type LucideIcon,
+  Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -110,6 +110,9 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
     api.shops.listCustomersForShop,
     shop.adminLoginToken ? { shopId: shop._id, adminToken: shop.adminLoginToken } : "skip"
   );
+  const messages = useQuery(api.messages.getMessagesForShop, { shopId: shop._id, adminSecret });
+  const markRead = useMutation(api.messages.markMessagesRead);
+  const [messagesOpen, setMessagesOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
   const totalStamps  = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
@@ -196,6 +199,45 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
           )}
         </div>
       </div>
+
+      {/* Nachrichten */}
+      {messages !== undefined && messages.length > 0 && (() => {
+        const unread = messages.filter(m => !m.read).length;
+        return (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            <button
+              onClick={() => {
+                setMessagesOpen(o => !o);
+                if (!messagesOpen && unread > 0) markRead({ shopId: shop._id, adminSecret }).catch(() => {});
+              }}
+              className="w-full flex items-center gap-2 px-4 py-3 border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors"
+            >
+              <MessageSquare size={14} className="text-purple-400" />
+              <span className="text-sm font-medium text-zinc-200">Nachrichten</span>
+              {unread > 0 && (
+                <span className="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500 text-white">{unread}</span>
+              )}
+              <span className="ml-auto text-xs text-zinc-600">{messages.length}</span>
+              <ChevronRight size={13} className={`text-zinc-600 transition-transform ${messagesOpen ? "rotate-90" : ""}`} />
+            </button>
+            {messagesOpen && (
+              <div className="divide-y divide-zinc-800/50 max-h-80 overflow-y-auto">
+                {messages.map(msg => (
+                  <div key={msg._id} className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-zinc-300">{msg.customerName}</span>
+                      <span className="text-[10px] text-zinc-600">
+                        {new Date(msg.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-zinc-400 whitespace-pre-wrap">{msg.text}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Customer list */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">

@@ -12,6 +12,7 @@ import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as customers from "../customers.js";
 import type * as memberships from "../memberships.js";
+import type * as messages from "../messages.js";
 import type * as seed from "../seed.js";
 import type * as shops from "../shops.js";
 
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   customers: typeof customers;
   memberships: typeof memberships;
+  messages: typeof messages;
   seed: typeof seed;
   shops: typeof shops;
 }>;

@@ -473,12 +473,14 @@ export default function MeShopPage() {
                 </>
               )}
 
-              {/* Shop-Level */}
-              <motion.div
+              {/* Shop-Level — klickbar → Mein Bereich */}
+              <motion.button
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="rounded-2xl px-5 py-4"
+                whileTap={{ scale: 0.98 }}
+                onClick={() => router.push(`/me/shop/${shopSlug}/mein-bereich`)}
+                className="w-full rounded-2xl px-5 py-4 text-left"
                 style={{ background: hexToRgba(c.accent, 0.04), border: `1px solid ${hexToRgba(c.accent, 0.12)}` }}
               >
                 <div className="flex items-center justify-between mb-3">
@@ -491,7 +493,10 @@ export default function MeShopPage() {
                       {membership.totalStampsEver} Stempel
                     </span>
                   </div>
-                  <span className="text-[11px] font-semibold" style={{ color: c.accent }}>{shopLvlData.label}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold" style={{ color: c.accent }}>{shopLvlData.label}</span>
+                    <span className="text-[10px]" style={{ color: hexToRgba(c.accent, 0.4) }}>→</span>
+                  </div>
                 </div>
                 <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.1) }}>
                   <motion.div
@@ -504,10 +509,10 @@ export default function MeShopPage() {
                 </div>
                 {shopLvlNext && (
                   <p className="text-[9px] mt-1.5" style={{ color: hexToRgba(c.accent, 0.3) }}>
-                    Nächstes Level bei {shopLvlNext.min} Stempeln
+                    Nächstes Level bei {shopLvlNext.min} · Mein Bereich öffnen
                   </p>
                 )}
-              </motion.div>
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
