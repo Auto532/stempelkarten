@@ -1139,7 +1139,7 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
     doc.setTextColor(...mid);
     doc.text("Belohnung", 15, y);
     doc.text("Anzahl", 148, y, { align: "right" });
-    if (data.stampValue) doc.text("Wert gesamt", W - 15, y, { align: "right" });
+    if (data.stampValue) doc.text("Ø Umsatz", W - 15, y, { align: "right" });
     y += 6;
 
     doc.setFont("helvetica", "normal");
@@ -1321,7 +1321,7 @@ function ShopAnalytics({ shop }: { shop: Doc<"shops">; adminSecret: string }) {
                       {totalValue != null && (
                         <div className="text-right shrink-0">
                           <p className="text-sm font-bold text-amber-400">€{totalValue.toLocaleString("de-DE")}</p>
-                          <p className="text-[10px] text-zinc-600">Wert</p>
+                          <p className="text-[10px] text-zinc-600">Ø Umsatz</p>
                         </div>
                       )}
                     </div>
@@ -1333,7 +1333,7 @@ function ShopAnalytics({ shop }: { shop: Doc<"shops">; adminSecret: string }) {
                 const total = data.rewardBreakdown.reduce((s, r) => s + (r.valuePerRedemption ?? 0) * r.count, 0);
                 return total > 0 ? (
                   <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800 bg-zinc-800/30">
-                    <span className="text-xs font-semibold text-zinc-400">Gesamtwert aller Belohnungen</span>
+                    <span className="text-xs font-semibold text-zinc-400">Ø Kundenumsatz (Einlösungszyklen)</span>
                     <span className="text-sm font-bold text-amber-400">€{total.toLocaleString("de-DE")}</span>
                   </div>
                 ) : null;

@@ -32,6 +32,7 @@ export default function MeShopPage() {
   const [showRedeemQR, setShowRedeemQR] = useState(false);
   const [redeemedText, setRedeemedText] = useState("");
   const [redeeming, setRedeeming] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
   const [selectedReward, setSelectedReward] = useState<CardTier | null>(null);
   const setPending = useMutation(api.memberships.setPendingRedemption);
   const cancelPending = useMutation(api.memberships.cancelPendingRedemption);
@@ -144,6 +145,7 @@ export default function MeShopPage() {
   const handleRedeem = async () => {
     if (!qrToken || !selectedReward) return;
     setRedeeming(true);
+    setRedeemError(null);
     try {
       await setPending({
         qrToken,
@@ -154,7 +156,7 @@ export default function MeShopPage() {
       setShowRedeemConfirm(false);
       setShowRedeemQR(true);
     } catch {
-      // server validation handles edge cases
+      setRedeemError("Einlösen fehlgeschlagen. Bitte versuche es erneut.");
     } finally {
       setRedeeming(false);
     }
@@ -280,6 +282,9 @@ export default function MeShopPage() {
               <p className="text-zinc-600 text-xs mb-5">
                 Deine Stempel werden abgezogen. Zeig den nächsten Bildschirm dem Mitarbeiter.
               </p>
+              {redeemError && (
+                <p className="text-red-400 text-xs mb-3 text-center">{redeemError}</p>
+              )}
               <button
                 onClick={handleRedeem}
                 disabled={redeeming || !selectedReward}

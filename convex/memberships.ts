@@ -234,7 +234,7 @@ export const setPendingRedemption = mutation({
     const shop = await ctx.db.get(membership.shopId);
     if (!shop) throw new Error("Shop nicht gefunden");
 
-    const activeTiers = (shop.rewardTiers ?? [])
+    const activeTiers = (shop.bonusProgramEnabled ? (shop.rewardTiers ?? []) : [])
       .filter((t) => t.enabled)
       .sort((a, b) => a.stamps - b.stamps);
     const baseTier = { stamps: shop.stampsRequired, text: shop.rewardText };
