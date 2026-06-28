@@ -383,16 +383,19 @@ export default function MeShopPage() {
                     <motion.div
                       initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 }}
-                      className="rounded-2xl p-4 flex items-center gap-3"
-                      style={{ background: hexToRgba(c.accent, 0.06), border: `1px solid ${hexToRgba(c.accent, 0.15)}` }}
+                      className="rounded-2xl overflow-hidden flex items-stretch"
+                      style={{ background: c.sub.background, border: `1px solid ${hexToRgba(c.accent, 0.25)}` }}
                     >
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: hexToRgba(c.accent, 0.12) }}>
-                        <Banknote size={16} style={{ color: c.accent }} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: c.accent }}>Stempelwert</p>
-                        <p className="text-sm font-medium" style={{ color: c.text }}>1 Stempel = €{shop.stampValue} Einkauf</p>
+                      <div className="w-1 shrink-0" style={{ background: c.accent }} />
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ background: hexToRgba(c.accent, 0.18), border: `1px solid ${hexToRgba(c.accent, 0.3)}` }}>
+                          <Banknote size={16} style={{ color: c.accent }} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: c.accent }}>Stempelwert</p>
+                          <p className="text-sm font-semibold" style={{ color: c.text }}>1 Stempel = €{shop.stampValue} Einkauf</p>
+                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -437,16 +440,19 @@ export default function MeShopPage() {
                       <motion.div
                         initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="rounded-2xl p-4 flex items-center gap-3"
-                        style={{ background: hexToRgba(sa, 0.06), border: `1px solid ${hexToRgba(sa, 0.15)}` }}
+                        className="rounded-2xl overflow-hidden flex items-stretch"
+                        style={{ background: "#18181b", border: `1px solid ${hexToRgba(sa, 0.25)}` }}
                       >
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: hexToRgba(sa, 0.12) }}>
-                          <Banknote size={16} style={{ color: sa }} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: sa }}>Stempelwert</p>
-                          <p className="text-sm font-medium text-zinc-300">1 Stempel = €{shop.stampValue} Einkauf</p>
+                        <div className="w-1 shrink-0" style={{ background: sa }} />
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                            style={{ background: hexToRgba(sa, 0.18), border: `1px solid ${hexToRgba(sa, 0.3)}` }}>
+                            <Banknote size={16} style={{ color: sa }} />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: sa }}>Stempelwert</p>
+                            <p className="text-sm font-semibold text-zinc-200">1 Stempel = €{shop.stampValue} Einkauf</p>
+                          </div>
                         </div>
                       </motion.div>
                     );
@@ -480,35 +486,45 @@ export default function MeShopPage() {
                 transition={{ delay: 0.2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => router.push(`/me/shop/${shopSlug}/mein-bereich`)}
-                className="w-full rounded-2xl px-5 py-4 text-left"
-                style={{ background: hexToRgba(c.accent, 0.04), border: `1px solid ${hexToRgba(c.accent, 0.12)}` }}
+                className="w-full rounded-2xl px-5 py-4 text-left relative overflow-hidden"
+                style={{
+                  background: `linear-gradient(135deg, ${hexToRgba(c.accent, 0.13)}, ${hexToRgba(c.accent, 0.05)})`,
+                  border: `1px solid ${hexToRgba(c.accent, 0.28)}`,
+                  boxShadow: `0 0 24px ${hexToRgba(c.accent, 0.07)}`,
+                }}
               >
+                {/* Topline Glow */}
+                <div className="absolute top-0 left-0 right-0 h-[2px]"
+                  style={{ background: `linear-gradient(90deg, transparent, ${c.accent}, transparent)`, opacity: 0.7 }} />
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded"
                       style={{ background: c.accent, color: "#0e0d0b", letterSpacing: "0.06em" }}>
                       LVL {safeShopLvlIdx + 1}
                     </span>
-                    <span className="text-[11px]" style={{ color: hexToRgba(c.accent, 0.5) }}>
+                    <span className="text-[11px]" style={{ color: hexToRgba(c.accent, 0.6) }}>
                       {membership.totalStampsEver} Stempel
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-semibold" style={{ color: c.accent }}>{shopLvlData.label}</span>
-                    <span className="text-[10px]" style={{ color: hexToRgba(c.accent, 0.4) }}>→</span>
+                    <span className="text-[10px]" style={{ color: hexToRgba(c.accent, 0.5) }}>→</span>
                   </div>
                 </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.1) }}>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.12) }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${shopLvlProgress * 100}%` }}
                     transition={{ duration: 0.8, delay: 0.35, ease: "easeOut" }}
                     className="h-full rounded-full"
-                    style={{ background: c.accent, boxShadow: `0 0 8px ${hexToRgba(c.accent, 0.4)}` }}
+                    style={{
+                      background: `linear-gradient(90deg, ${hexToRgba(c.accent, 0.7)}, ${c.accent})`,
+                      boxShadow: `0 0 8px ${hexToRgba(c.accent, 0.5)}`,
+                    }}
                   />
                 </div>
                 {shopLvlNext && (
-                  <p className="text-[9px] mt-1.5" style={{ color: hexToRgba(c.accent, 0.3) }}>
+                  <p className="text-[9px] mt-1.5" style={{ color: hexToRgba(c.accent, 0.4) }}>
                     Nächstes Level bei {shopLvlNext.min} · Mein Bereich öffnen
                   </p>
                 )}
