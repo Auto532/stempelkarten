@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Gift, Check, Banknote } from "lucide-react";
+import { ArrowLeft, Gift, Check, Banknote, Trophy } from "lucide-react";
 import { StampOverlay, QRCard, RedeemVoucher, LoyaltyCard, MilestonesSection, getActiveTiers, hexToRgba } from "../../components";
 import type { CardTier } from "../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
@@ -129,6 +129,12 @@ export default function MeShopPage() {
   const shopLvlProgress = shopLvlNext
     ? (membership.totalStampsEver - shopLvlData.min) / (shopLvlNext.min - shopLvlData.min)
     : 1;
+
+  const currentMilestone = (shop.milestonesEnabled && shop.milestones)
+    ? [...shop.milestones]
+        .filter(m => m.enabled && membership.totalStampsEver >= m.stamps)
+        .sort((a, b) => b.stamps - a.stamps)[0] ?? null
+    : null;
 
   const openRedeemSheet = () => {
     setSelectedReward(availableRewards[0] ?? null);
@@ -396,6 +402,25 @@ export default function MeShopPage() {
                       {availableRewards.length > 1 ? `${availableRewards.length} Belohnungen wählen` : "Belohnung einlösen"}
                     </motion.button>
                   )}
+                  {currentMilestone && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.92 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.18 }}
+                      className="flex items-center gap-3 rounded-2xl px-4 py-3"
+                      style={{ background: hexToRgba(c.accent, 0.08), border: `1.5px solid ${hexToRgba(c.accent, 0.28)}` }}
+                    >
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: hexToRgba(c.accent, 0.16) }}>
+                        <Trophy size={16} style={{ color: c.accent }} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
+                          style={{ color: hexToRgba(c.accent, 0.55) }}>Dein Status hier</p>
+                        <p className="text-sm font-bold" style={{ color: c.accent }}>{currentMilestone.text}</p>
+                      </div>
+                    </motion.div>
+                  )}
                   <theme.Banner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined} />
                   {shop.milestonesEnabled && shop.milestones && (
                     <theme.Milestones milestones={shop.milestones} totalStampsEver={membership.totalStampsEver} />
@@ -450,6 +475,28 @@ export default function MeShopPage() {
                       {availableRewards.length > 1 ? `${availableRewards.length} Belohnungen wählen` : "Belohnung einlösen"}
                     </motion.button>
                   )}
+                  {currentMilestone && (() => {
+                    const ba = (shop.customDesignEnabled && shop.accentColor) ? shop.accentColor : "#fbbf24";
+                    return (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.92 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.18 }}
+                        className="flex items-center gap-3 rounded-2xl px-4 py-3"
+                        style={{ background: hexToRgba(ba, 0.08), border: `1.5px solid ${hexToRgba(ba, 0.28)}` }}
+                      >
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ background: hexToRgba(ba, 0.16) }}>
+                          <Trophy size={16} style={{ color: ba }} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
+                            style={{ color: hexToRgba(ba, 0.55) }}>Dein Status hier</p>
+                          <p className="text-sm font-bold" style={{ color: ba }}>{currentMilestone.text}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  })()}
                   {shop.milestonesEnabled && shop.milestones && (
                     <MilestonesSection
                       milestones={shop.milestones}

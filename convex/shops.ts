@@ -324,6 +324,8 @@ export const getShopAnalyticsByPeriod = query({
   handler: async (ctx, { shopId, adminToken, since }) => {
     await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
 
+    const shop = await ctx.db.get(shopId);
+
     let events = await ctx.db
       .query("stampEvents")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
@@ -333,6 +335,24 @@ export const getShopAnalyticsByPeriod = query({
 
     const stamps  = events.filter(e => e.type === "stamp").length;
     const redeems = events.filter(e => e.type === "redeem").length;
+
+    // Reward breakdown
+    const redeemEvents = events.filter(e => e.type === "redeem");
+    const rewardMap = new Map<string, number>();
+    for (const e of redeemEvents) {
+      const text = e.rewardText ?? shop?.rewardText ?? "";
+      if (text) rewardMap.set(text, (rewardMap.get(text) ?? 0) + 1);
+    }
+    const allTiers = [
+      ...(shop ? [{ stamps: shop.stampsRequired, text: shop.rewardText }] : []),
+      ...(shop?.rewardTiers?.filter(t => t.enabled) ?? []),
+    ];
+    const rewardBreakdown = Array.from(rewardMap.entries()).map(([text, count]) => {
+      const tier = allTiers.find(t => t.text === text);
+      const tierStamps = tier?.stamps ?? shop?.stampsRequired ?? 0;
+      const valuePerRedemption = shop?.stampValue != null ? tierStamps * shop.stampValue : null;
+      return { rewardText: text, count, valuePerRedemption };
+    }).sort((a, b) => b.count - a.count);
 
     // Group by membership → customer
     const membershipIds = Array.from(new Set(events.map(e => e.membershipId.toString())));
@@ -358,6 +378,8 @@ export const getShopAnalyticsByPeriod = query({
     return {
       stamps,
       redeems,
+      stampValue: shop?.stampValue ?? null,
+      rewardBreakdown,
       customers: customerRows.filter(Boolean).sort((a, b) => b!.stamps - a!.stamps) as NonNullable<typeof customerRows[0]>[],
     };
   },

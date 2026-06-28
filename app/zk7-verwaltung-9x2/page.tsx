@@ -8,7 +8,7 @@ import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy,
-  Sliders, LayoutDashboard, LayoutGrid, User, type LucideIcon,
+  Sliders, LayoutDashboard, LayoutGrid, User, Gift, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -1045,86 +1045,190 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
 // ─── ShopAnalytics (pro Shop, wird in ShopWorkspace eingebettet) ──────────────
 
 async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
-  stamps: number; redeems: number;
+  stamps: number; redeems: number; stampValue: number | null;
+  rewardBreakdown: { rewardText: string; count: number; valuePerRedemption: number | null }[];
   customers: { customerName: string; stamps: number; redeems: number; currentStamps: number }[];
 }) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const accent = [251, 191, 36] as [number, number, number];
   const W = 210;
+  const amber: [number, number, number] = [251, 191, 36];
+  const dark: [number, number, number]  = [18, 18, 18];
+  const mid: [number, number, number]   = [80, 80, 80];
+  const light: [number, number, number] = [245, 245, 245];
 
-  // Header bar
-  doc.setFillColor(...accent);
-  doc.rect(0, 0, W, 28, "F");
-  doc.setTextColor(24, 24, 27);
-  doc.setFontSize(18);
+  const periodLabel = period === "all" ? "Gesamt"
+    : period === "7d" ? "Letzte 7 Tage"
+    : period === "30d" ? "Letzter Monat"
+    : period === "90d" ? "Letzte 3 Monate"
+    : "Letztes Jahr";
+
+  // ── Header ──────────────────────────────────────────────────────────────────
+  doc.setFillColor(...amber);
+  doc.rect(0, 0, W, 36, "F");
+  doc.setFillColor(...dark);
+  doc.rect(0, 0, 5, 36, "F");
+
+  doc.setTextColor(...dark);
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text(shop.name, 14, 12);
+  doc.text(shop.name, 13, 16);
+
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  const periodLabel = period === "all" ? "Gesamt" : period === "7d" ? "Letzte 7 Tage" : period === "30d" ? "Letzter Monat" : period === "90d" ? "Letzte 3 Monate" : "Letztes Jahr";
-  doc.text(`Bericht · ${periodLabel} · ${new Date().toLocaleDateString("de-DE")}`, 14, 20);
+  doc.text(`Stempel-Bericht  ·  ${periodLabel}  ·  ${new Date().toLocaleDateString("de-DE")}`, 13, 26);
 
-  // Stats block
-  let y = 38;
-  doc.setTextColor(30, 30, 30);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Zusammenfassung", 14, y); y += 7;
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(60, 60, 60);
-
-  const stats = [
-    ["Stempel vergeben:", String(data.stamps)],
-    ["Belohnungen eingelöst:", String(data.redeems)],
-    ["Aktive Kunden:", String(data.customers.length)],
-    ...(shop.stampValue ? [["Mindestumsatz (geschätzt):", `€${(data.stamps * shop.stampValue).toFixed(0)} (bei €${shop.stampValue} / Stempel)`]] : []),
+  // ── Stat-Boxen ──────────────────────────────────────────────────────────────
+  let y = 50;
+  const bx = [13, 77, 141] as const;
+  const bw = 60;
+  const bh = 22;
+  const statData = [
+    { label: "Stempel vergeben", value: String(data.stamps) },
+    { label: "Belohnungen eingelöst", value: String(data.redeems) },
+    { label: "Aktive Kunden", value: String(data.customers.length) },
   ];
-  for (const [label, val] of stats) {
-    doc.text(label, 14, y);
+  statData.forEach(({ label, value }, i) => {
+    doc.setFillColor(...light);
+    doc.rect(bx[i], y, bw, bh, "F");
+    doc.setDrawColor(220, 220, 220);
+    doc.rect(bx[i], y, bw, bh, "S");
+    doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text(val, 90, y);
+    doc.setTextColor(...amber);
+    doc.text(value, bx[i] + bw / 2, y + 12, { align: "center" });
+    doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    y += 6;
+    doc.setTextColor(...mid);
+    doc.text(label, bx[i] + bw / 2, y + 19, { align: "center" });
+  });
+  y += bh + 8;
+
+  if (data.stampValue && data.stamps > 0) {
+    const est = (data.stamps * data.stampValue).toLocaleString("de-DE");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...mid);
+    doc.text(`Geschätzter Mindestumsatz: `, 13, y);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...dark);
+    doc.text(`€${est}`, 80, y);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...mid);
+    doc.text(` (€${data.stampValue} pro Stempel)`, 95, y);
+    y += 8;
   }
 
-  // Divider
-  y += 4;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(14, y, W - 14, y); y += 8;
+  // ── Belohnungs-Breakdown ─────────────────────────────────────────────────────
+  if (data.rewardBreakdown.length > 0) {
+    y += 4;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(13, y, W - 13, y);
+    y += 8;
 
-  // Customer table header
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...dark);
+    doc.text("Belohnungen", 13, y);
+    y += 7;
+
+    doc.setFillColor(...light);
+    doc.rect(13, y - 4, W - 26, 6, "F");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...mid);
+    doc.text("Belohnung", 15, y);
+    doc.text("Anzahl", 148, y, { align: "right" });
+    if (data.stampValue) doc.text("Wert gesamt", W - 15, y, { align: "right" });
+    y += 6;
+
+    doc.setFont("helvetica", "normal");
+    let rewardTotal = 0;
+    for (const r of data.rewardBreakdown) {
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.setTextColor(...dark);
+      doc.text(r.rewardText.slice(0, 55), 15, y);
+      doc.setTextColor(...mid);
+      doc.text(String(r.count), 148, y, { align: "right" });
+      if (r.valuePerRedemption != null && data.stampValue) {
+        const tv = r.count * r.valuePerRedemption;
+        rewardTotal += tv;
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(160, 100, 0);
+        doc.text(`€${tv.toLocaleString("de-DE")}`, W - 15, y, { align: "right" });
+        doc.setFont("helvetica", "normal");
+      }
+      y += 5.5;
+    }
+
+    if (data.stampValue && rewardTotal > 0) {
+      y += 2;
+      doc.setDrawColor(200, 200, 200);
+      doc.line(130, y, W - 13, y);
+      y += 5;
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...mid);
+      doc.text("Gesamt Belohnungswert:", 130, y);
+      doc.setTextColor(...amber);
+      doc.text(`€${rewardTotal.toLocaleString("de-DE")}`, W - 15, y, { align: "right" });
+      y += 5;
+    }
+  }
+
+  // ── Kunden-Tabelle ──────────────────────────────────────────────────────────
+  y += 4;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(13, y, W - 13, y);
+  y += 8;
+
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(30, 30, 30);
-  doc.text("Kunden im Zeitraum", 14, y); y += 7;
+  doc.setTextColor(...dark);
+  doc.text("Kunden im Zeitraum", 13, y);
+  y += 7;
 
+  doc.setFillColor(...light);
+  doc.rect(13, y - 4, W - 26, 6, "F");
   doc.setFontSize(8);
-  doc.setFillColor(245, 245, 245);
-  doc.rect(14, y - 4, W - 28, 6, "F");
-  doc.setTextColor(80, 80, 80);
-  doc.text("Name", 16, y);
-  doc.text("Stempel", 110, y);
-  doc.text("Eingelöst", 140, y);
-  doc.text("Aktuell", 170, y);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...mid);
+  doc.text("Name", 15, y);
+  doc.text("Stempel", 122, y, { align: "right" });
+  doc.text("Eingelöst", 148, y, { align: "right" });
+  doc.text("Aktuell", W - 15, y, { align: "right" });
   y += 6;
 
   doc.setFont("helvetica", "normal");
-  for (const c of data.customers) {
-    if (y > 270) { doc.addPage(); y = 20; }
-    doc.setTextColor(30, 30, 30);
-    doc.text(c.customerName.slice(0, 38), 16, y);
-    doc.text(String(c.stamps),            112, y);
-    doc.text(c.redeems > 0 ? String(c.redeems) : "—", 142, y);
-    doc.text(`${c.currentStamps}/${shop.stampsRequired}`, 172, y);
+  for (let i = 0; i < data.customers.length; i++) {
+    const c = data.customers[i];
+    if (y > 272) { doc.addPage(); y = 20; }
+    if (i % 2 === 0) {
+      doc.setFillColor(250, 250, 250);
+      doc.rect(13, y - 3.5, W - 26, 5.5, "F");
+    }
+    doc.setTextColor(...dark);
+    doc.text(c.customerName.slice(0, 42), 15, y);
+    doc.setTextColor(...mid);
+    doc.text(String(c.stamps), 122, y, { align: "right" });
+    doc.text(c.redeems > 0 ? String(c.redeems) : "—", 148, y, { align: "right" });
+    doc.text(`${c.currentStamps}/${shop.stampsRequired}`, W - 15, y, { align: "right" });
     y += 5.5;
   }
 
-  // Footer
-  doc.setFontSize(7);
-  doc.setTextColor(150, 150, 150);
-  doc.text("Erstellt von Stempelkarten App", 14, 287);
+  // ── Footer (jede Seite) ──────────────────────────────────────────────────────
+  const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFillColor(...amber);
+    doc.rect(0, 289, W, 8, "F");
+    doc.setFillColor(...dark);
+    doc.rect(0, 289, 5, 8, "F");
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...dark);
+    doc.text("Stempelkarten App", 13, 294);
+    doc.text(`Seite ${p} / ${pageCount}`, W - 13, 294, { align: "right" });
+  }
 
   const blob = doc.output("blob");
   const file = new File([blob], `${shop.slug}-bericht.pdf`, { type: "application/pdf" });
@@ -1191,6 +1295,51 @@ function ShopAnalytics({ shop }: { shop: Doc<"shops">; adminSecret: string }) {
               </div>
             ))}
           </div>
+
+          {/* Belohnungs-Breakdown */}
+          {data.rewardBreakdown.length > 0 && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+                <Gift size={14} className="text-purple-400" />
+                <span className="text-sm font-medium text-zinc-200">Belohnungen</span>
+                {data.stampValue && (
+                  <span className="ml-auto text-[10px] text-zinc-500">€{data.stampValue}/Stempel</span>
+                )}
+              </div>
+              <div className="divide-y divide-zinc-800/50">
+                {data.rewardBreakdown.map((r) => {
+                  const totalValue = r.valuePerRedemption != null ? r.count * r.valuePerRedemption : null;
+                  return (
+                    <div key={r.rewardText} className="flex items-center gap-3 px-4 py-3">
+                      <div className="w-7 h-7 rounded-lg bg-purple-400/10 flex items-center justify-center shrink-0">
+                        <Gift size={12} className="text-purple-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-zinc-200 truncate">{r.rewardText}</p>
+                        <p className="text-[11px] text-zinc-500">{r.count}× eingelöst</p>
+                      </div>
+                      {totalValue != null && (
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-amber-400">€{totalValue.toLocaleString("de-DE")}</p>
+                          <p className="text-[10px] text-zinc-600">Wert</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Gesamtsumme */}
+              {data.stampValue && data.rewardBreakdown.some(r => r.valuePerRedemption != null) && (() => {
+                const total = data.rewardBreakdown.reduce((s, r) => s + (r.valuePerRedemption ?? 0) * r.count, 0);
+                return total > 0 ? (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800 bg-zinc-800/30">
+                    <span className="text-xs font-semibold text-zinc-400">Gesamtwert aller Belohnungen</span>
+                    <span className="text-sm font-bold text-amber-400">€{total.toLocaleString("de-DE")}</span>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          )}
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
