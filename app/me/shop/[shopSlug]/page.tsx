@@ -488,9 +488,9 @@ export default function MeShopPage() {
                 onClick={() => router.push(`/me/shop/${shopSlug}/mein-bereich`)}
                 className="w-full rounded-2xl px-5 py-4 text-left relative overflow-hidden"
                 style={{
-                  background: `linear-gradient(135deg, ${hexToRgba(c.accent, 0.13)}, ${hexToRgba(c.accent, 0.05)})`,
-                  border: `1px solid ${hexToRgba(c.accent, 0.28)}`,
-                  boxShadow: `0 0 24px ${hexToRgba(c.accent, 0.07)}`,
+                  background: c.cardBg,
+                  border: `1px solid ${hexToRgba(c.accent, 0.4)}`,
+                  boxShadow: `0 0 20px ${hexToRgba(c.accent, 0.1)}`,
                 }}
               >
                 {/* Topline Glow */}
@@ -511,15 +511,15 @@ export default function MeShopPage() {
                     <span className="text-[10px]" style={{ color: hexToRgba(c.accent, 0.5) }}>→</span>
                   </div>
                 </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.12) }}>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.18) }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${shopLvlProgress * 100}%` }}
                     transition={{ duration: 0.8, delay: 0.35, ease: "easeOut" }}
                     className="h-full rounded-full"
                     style={{
-                      background: `linear-gradient(90deg, ${hexToRgba(c.accent, 0.7)}, ${c.accent})`,
-                      boxShadow: `0 0 8px ${hexToRgba(c.accent, 0.5)}`,
+                      background: `linear-gradient(90deg, ${hexToRgba(c.accent, 0.8)}, ${c.accent})`,
+                      boxShadow: `0 0 8px ${hexToRgba(c.accent, 0.6)}`,
                     }}
                   />
                 </div>
