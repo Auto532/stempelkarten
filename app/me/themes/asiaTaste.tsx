@@ -115,7 +115,7 @@ export function AsiaTasteBackground() {
   );
 }
 
-export function AsiaTasteLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor, stampValue, cardNumber }: ThemeCardProps) {
+export function AsiaTasteLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
   const accent = accentColor ?? TERRA;
   const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
   const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
@@ -213,7 +213,13 @@ export function AsiaTasteLoyaltyCard({ shopName, stampsRequired, currentStamps, 
         {/* Fortschritt */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
-            <span style={{ color: MUTED }}>{currentStamps} / {maxStamps} Stempel</span>
+            <div className="flex items-center gap-1.5">
+              <span style={{ color: MUTED }}>{currentStamps} / {maxStamps} Stempel</span>
+              {milestoneBadge && (
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
+                  style={{ background: `${accent}20`, color: accent }}>{milestoneBadge}</span>
+              )}
+            </div>
             <span style={{ color: TERRAB }}>{Math.round(Math.min(currentStamps / maxStamps, 1) * 100)}%</span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: BG }}>

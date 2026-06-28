@@ -44,7 +44,7 @@ export function BarberBackground() {
 // ─── Loyalty Card ─────────────────────────────────────────────────────────────
 export function BarberLoyaltyCard({
   shopName, stampsRequired, currentStamps, animateIndex,
-  onShowQR, hideQR, rewardTiers, stampValue, cardNumber,
+  onShowQR, hideQR, rewardTiers, stampValue, cardNumber, milestoneBadge,
 }: ThemeCardProps) {
   const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
   const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
@@ -137,10 +137,16 @@ export function BarberLoyaltyCard({
         </div>
 
         {/* Zähler + Stempelwert */}
-        <p className="text-center text-[11px] mb-5" style={{ color: MUTED }}>
-          {currentStamps} von {maxStamps} Stempel
-          {stampValue ? <> · €{stampValue} pro Stempel</> : null}
-        </p>
+        <div className="flex items-center justify-center gap-1.5 mb-5 flex-wrap">
+          <p className="text-[11px]" style={{ color: MUTED }}>
+            {currentStamps} von {maxStamps} Stempel
+            {stampValue ? <> · €{stampValue} pro Stempel</> : null}
+          </p>
+          {milestoneBadge && (
+            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
+              style={{ background: `${GOLD}20`, color: GOLD }}>{milestoneBadge}</span>
+          )}
+        </div>
 
         {/* QR-Button */}
         {!hideQR && onShowQR && (

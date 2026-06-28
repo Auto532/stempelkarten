@@ -374,7 +374,7 @@ export function MilestonesSection({
 
 export function LoyaltyCard({
   shopName, rewardText, stampsRequired, currentStamps, rewardsRedeemed,
-  animateIndex, onShowQR, qrToken, rewardTiers, accentColor, stampIcon, hideQR, stampValue, cardNumber,
+  animateIndex, onShowQR, qrToken, rewardTiers, accentColor, stampIcon, hideQR, stampValue, cardNumber, milestoneBadge,
 }: {
   shopName: string;
   rewardText: string;
@@ -390,6 +390,7 @@ export function LoyaltyCard({
   hideQR?: boolean;
   stampValue?: number | null;
   cardNumber?: number;
+  milestoneBadge?: string | null;
 }) {
   const accent = accentColor ?? "#fbbf24";
   const StampIconComponent = getStampIcon(stampIcon);
@@ -426,7 +427,15 @@ export function LoyaltyCard({
             )}
           </div>
           <h2 className="text-2xl font-bold text-neutral-100 leading-tight">{shopName}</h2>
-          <p className="text-neutral-500 text-sm mt-1">{currentStamps} von {maxStamps} Stempel</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <p className="text-neutral-500 text-sm">{currentStamps} von {maxStamps} Stempel</p>
+            {milestoneBadge && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                style={{ background: hexToRgba(accent, 0.15), color: accent }}>
+                {milestoneBadge}
+              </span>
+            )}
+          </div>
         </div>
         {!hideQR && (
           <button onClick={onShowQR} className="shrink-0 flex flex-col items-center gap-1.5 group mt-0.5">

@@ -92,6 +92,7 @@ export interface ThemeCardProps {
   accentColor?: string;
   stampValue?: number | null;
   cardNumber?: number;
+  milestoneBadge?: string | null;
 }
 
 export interface ThemeBannerProps {

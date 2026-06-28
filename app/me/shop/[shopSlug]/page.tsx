@@ -372,6 +372,7 @@ export default function MeShopPage() {
                     accentColor={shop.accentColor}
                     stampValue={shop.stampValue}
                     cardNumber={cardNumber}
+                    milestoneBadge={currentMilestone?.text ?? null}
                   />
                   {shop.stampValue && (
                     <motion.div
@@ -402,25 +403,6 @@ export default function MeShopPage() {
                       {availableRewards.length > 1 ? `${availableRewards.length} Belohnungen wählen` : "Belohnung einlösen"}
                     </motion.button>
                   )}
-                  {currentMilestone && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.92 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.18 }}
-                      className="flex items-center gap-3 rounded-2xl px-4 py-3"
-                      style={{ background: hexToRgba(c.accent, 0.08), border: `1.5px solid ${hexToRgba(c.accent, 0.28)}` }}
-                    >
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: hexToRgba(c.accent, 0.16) }}>
-                        <Trophy size={16} style={{ color: c.accent }} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
-                          style={{ color: hexToRgba(c.accent, 0.55) }}>Dein Status hier</p>
-                        <p className="text-sm font-bold" style={{ color: c.accent }}>{currentMilestone.text}</p>
-                      </div>
-                    </motion.div>
-                  )}
                   <theme.Banner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined} />
                   {shop.milestonesEnabled && shop.milestones && (
                     <theme.Milestones milestones={shop.milestones} totalStampsEver={membership.totalStampsEver} />
@@ -442,6 +424,7 @@ export default function MeShopPage() {
                     stampIcon={shop.stampIcon}
                     stampValue={shop.stampValue}
                     cardNumber={cardNumber}
+                    milestoneBadge={currentMilestone?.text ?? null}
                   />
                   {shop.stampValue && (() => {
                     const sa = (shop.customDesignEnabled && shop.accentColor) ? shop.accentColor : "#fbbf24";
@@ -475,28 +458,6 @@ export default function MeShopPage() {
                       {availableRewards.length > 1 ? `${availableRewards.length} Belohnungen wählen` : "Belohnung einlösen"}
                     </motion.button>
                   )}
-                  {currentMilestone && (() => {
-                    const ba = (shop.customDesignEnabled && shop.accentColor) ? shop.accentColor : "#fbbf24";
-                    return (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.92 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.18 }}
-                        className="flex items-center gap-3 rounded-2xl px-4 py-3"
-                        style={{ background: hexToRgba(ba, 0.08), border: `1.5px solid ${hexToRgba(ba, 0.28)}` }}
-                      >
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: hexToRgba(ba, 0.16) }}>
-                          <Trophy size={16} style={{ color: ba }} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
-                            style={{ color: hexToRgba(ba, 0.55) }}>Dein Status hier</p>
-                          <p className="text-sm font-bold" style={{ color: ba }}>{currentMilestone.text}</p>
-                        </div>
-                      </motion.div>
-                    );
-                  })()}
                   {shop.milestonesEnabled && shop.milestones && (
                     <MilestonesSection
                       milestones={shop.milestones}
