@@ -73,7 +73,9 @@ export function BeatesGrillBackground() {
 
 export function BeatesGrillLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, accentColor, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
   const accent = accentColor ?? A;
-  const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
+  const activeTiers = rewardTiers?.some(t => t.enabled)
+    ? [{ stamps: stampsRequired, text: "", enabled: true }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
+    : [];
   const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
 
   return (

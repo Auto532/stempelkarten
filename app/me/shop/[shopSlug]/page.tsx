@@ -412,9 +412,6 @@ export default function MeShopPage() {
                     </motion.button>
                   )}
                   <theme.Banner rewardText={shop.rewardText} stampsRequired={shop.stampsRequired} rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined} />
-                  {shop.milestonesEnabled && shop.milestones && (
-                    <theme.Milestones milestones={shop.milestones} totalStampsEver={membership.totalStampsEver} />
-                  )}
                 </>
               ) : (
                 <>
@@ -468,13 +465,6 @@ export default function MeShopPage() {
                       <Gift size={18} />
                       {availableRewards.length > 1 ? `${availableRewards.length} Belohnungen wählen` : "Belohnung einlösen"}
                     </motion.button>
-                  )}
-                  {shop.milestonesEnabled && shop.milestones && (
-                    <MilestonesSection
-                      milestones={shop.milestones}
-                      totalStampsEver={membership.totalStampsEver}
-                      accent={shop.customDesignEnabled ? shop.accentColor : undefined}
-                    />
                   )}
                 </>
               )}

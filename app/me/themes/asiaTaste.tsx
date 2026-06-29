@@ -117,7 +117,9 @@ export function AsiaTasteLoyaltyCard({
   shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR,
   rewardTiers, stampValue, cardNumber, milestoneBadge,
 }: ThemeCardProps) {
-  const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
+  const activeTiers = rewardTiers?.some(t => t.enabled)
+    ? [{ stamps: stampsRequired, text: "", enabled: true }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
+    : [];
   const maxStamps   = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
   const tierSet     = new Set(activeTiers.map(t => t.stamps));
   const pct         = Math.round(Math.min(currentStamps / maxStamps, 1) * 100);

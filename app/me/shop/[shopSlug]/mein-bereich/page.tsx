@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion } from "framer-motion";
 import { ArrowLeft, Stamp, Gift, Send, Check, MessageSquare, Trophy } from "lucide-react";
-import { hexToRgba } from "../../../components";
+import { hexToRgba, MilestonesSection } from "../../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 
 const SHOP_LEVELS = [
@@ -169,8 +169,19 @@ export default function MeinBereichPage() {
         )}
       </motion.div>
 
+      {/* Milestones */}
+      {shop.milestonesEnabled && shop.milestones && (
+        <motion.div {...fade(4)} className="mb-4">
+          <MilestonesSection
+            milestones={shop.milestones}
+            totalStampsEver={membership.totalStampsEver}
+            accent={shop.customDesignEnabled ? shop.accentColor : undefined}
+          />
+        </motion.div>
+      )}
+
       {/* Message form */}
-      <motion.div {...fade(4)} className="rounded-2xl px-4 py-4"
+      <motion.div {...fade(5)} className="rounded-2xl px-4 py-4"
         style={{ background: hexToRgba(c.accent, 0.04), border: `1px solid ${hexToRgba(c.accent, 0.12)}` }}>
         <div className="flex items-center gap-2 mb-3">
           <MessageSquare size={14} style={{ color: c.accent }} />

@@ -50,7 +50,9 @@ export function EiszauberLoyaltyCard({
   rewardTiers, accentColor, stampValue, cardNumber, milestoneBadge,
 }: ThemeCardProps) {
   const accent = accentColor ?? PINK;
-  const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
+  const activeTiers = rewardTiers?.some(t => t.enabled)
+    ? [{ stamps: stampsRequired, text: "", enabled: true }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
+    : [];
   const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
 
   return (
