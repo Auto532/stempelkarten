@@ -116,6 +116,18 @@ export const updateShopConfig = mutation({
   },
 });
 
+export const updatePriceInfo = mutation({
+  args: {
+    shopId: v.id("shops"),
+    adminSecret: v.string(),
+    priceInfo: v.optional(v.string()),
+  },
+  handler: async (ctx, { shopId, adminSecret, priceInfo }) => {
+    requireAdmin({ secret: adminSecret });
+    await ctx.db.patch(shopId, { priceInfo });
+  },
+});
+
 // ─── Admin-Mutations (Freischalt-Flags) ──────────────────────────────────────
 
 export const adminUpdateShopContent = mutation({

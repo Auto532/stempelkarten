@@ -38,6 +38,7 @@ export default defineSchema({
     stampIcon: v.optional(v.string()),
     theme: v.optional(v.string()),
     stampValue: v.optional(v.number()),
+    priceInfo: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_slug", ["slug"])
