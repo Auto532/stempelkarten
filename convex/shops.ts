@@ -531,6 +531,10 @@ export const listCustomersForShop = query({
   args: { shopId: v.id("shops"), adminToken: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminToken, limit }) => {
     await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
+    const shop = await ctx.db.get(shopId);
+    if (!shop) throw new Error("Shop nicht gefunden");
+    const isMitarbeiter = adminToken === shop.mitarbeiterToken;
+
     const q = ctx.db
       .query("memberships")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
@@ -540,10 +544,14 @@ export const listCustomersForShop = query({
     const results = await Promise.all(
       memberships.map(async (m) => {
         const customer = await ctx.db.get(m.customerId);
-        return { membership: m, customer };
+        if (!customer) return null;
+        return {
+          membership: m,
+          customer: isMitarbeiter ? { ...customer, phone: "" } : customer,
+        };
       })
     );
-    return results.filter((r) => r.customer !== null);
+    return results.filter((r): r is NonNullable<typeof r> => r !== null);
   },
 });
 
