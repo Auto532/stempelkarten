@@ -306,21 +306,25 @@ export function RedeemVoucher({
 // ─── MilestonesSection (außerhalb der Karte) ──────────────────────────────────
 
 export function MilestonesSection({
-  milestones, totalStampsEver, accent,
+  milestones, totalStampsEver, accent, textColor,
 }: {
   milestones: CardTier[];
   totalStampsEver: number;
   accent?: string;
+  textColor?: string;
 }) {
   const active = milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);
   if (!active.length) return null;
-  const accentColor = accent ?? "#fbbf24";
+  const a = accent ?? "#fbbf24";
+  const tc = textColor ?? "#f4f4f5";
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
       <div className="flex items-center gap-2 mb-3">
-        <Star size={14} className="text-amber-500 fill-amber-500 shrink-0" />
-        <h3 className="text-xs font-bold text-neutral-400 tracking-wider uppercase">Treue-Meilensteine</h3>
+        <Star size={13} style={{ color: a }} />
+        <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: hexToRgba(a, 0.6) }}>
+          Treue-Meilensteine
+        </h3>
       </div>
       <div className="space-y-2">
         {active.map((m, i) => {
@@ -328,38 +332,47 @@ export function MilestonesSection({
           const isNext  = !reached && active.slice(0, i).every(prev => totalStampsEver >= prev.stamps);
           const progress = Math.min(totalStampsEver / m.stamps, 1);
           return (
-            <div key={i} className="bg-[#111111] border border-neutral-800 rounded-2xl p-4 flex items-center gap-4">
+            <div key={i}
+              className="rounded-2xl p-4 flex items-center gap-3 backdrop-blur-sm"
+              style={{
+                background: reached ? hexToRgba(a, 0.13) : hexToRgba(a, 0.05),
+                border: `1px solid ${hexToRgba(a, reached ? 0.35 : 0.15)}`,
+              }}>
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
                 style={reached
-                  ? { backgroundColor: hexToRgba(accentColor, 0.2), color: accentColor }
-                  : { backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", color: "#525252" }
+                  ? { background: hexToRgba(a, 0.22), color: a }
+                  : { background: hexToRgba(a, 0.07), color: hexToRgba(a, 0.4) }
                 }
               >
                 {reached ? "✓" : i + 1}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <p className={`text-sm truncate ${reached ? "text-neutral-200" : isNext ? "text-neutral-400" : "text-neutral-600"}`}>
+                  <p className="text-sm font-medium truncate"
+                    style={{ color: reached ? tc : hexToRgba(tc, isNext ? 0.65 : 0.38) }}>
                     {m.text}
                   </p>
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full shrink-0"
+                  <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
                     style={reached
-                      ? { backgroundColor: hexToRgba(accentColor, 0.15), color: accentColor }
-                      : { backgroundColor: "#1a1a1a", color: "#525252" }
+                      ? { background: hexToRgba(a, 0.15), color: a }
+                      : { background: hexToRgba(a, 0.07), color: hexToRgba(a, 0.5) }
                     }
                   >
-                    {totalStampsEver} / {m.stamps}
+                    {totalStampsEver}/{m.stamps}
                   </span>
                 </div>
-                <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                <div className="h-1.5 rounded-full overflow-hidden"
+                  style={{ background: hexToRgba(a, 0.1) }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress * 100}%` }}
                     transition={{ duration: 0.8, delay: 0.1 }}
                     className="h-full rounded-full"
-                    style={{ backgroundColor: reached ? accentColor : hexToRgba(accentColor, 0.5) }}
+                    style={{
+                      background: reached ? a : hexToRgba(a, 0.5),
+                      boxShadow: reached ? `0 0 6px ${hexToRgba(a, 0.45)}` : undefined,
+                    }}
                   />
                 </div>
               </div>

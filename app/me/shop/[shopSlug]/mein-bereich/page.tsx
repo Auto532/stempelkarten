@@ -103,18 +103,19 @@ export default function MeinBereichPage() {
       {/* Header */}
       <motion.div {...fade(0)} className="flex items-center gap-3 mb-7">
         <button onClick={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:border-zinc-700 transition-colors shrink-0">
-          <ArrowLeft size={16} className="text-zinc-400" />
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors shrink-0 backdrop-blur-sm"
+          style={{ background: hexToRgba(c.accent, 0.1), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}>
+          <ArrowLeft size={16} style={{ color: c.accent }} />
         </button>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: c.accentDim }}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: hexToRgba(c.accent, 0.6) }}>
             Mein Bereich
           </p>
           <h1 className="text-base font-bold leading-tight" style={{ color: c.text }}>{shop.name}</h1>
         </div>
         {cardNumber !== undefined && (
-          <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-md"
-            style={{ background: hexToRgba(c.accent, 0.1), color: hexToRgba(c.accent, 0.6) }}>
+          <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm"
+            style={{ background: hexToRgba(c.accent, 0.12), color: hexToRgba(c.accent, 0.7) }}>
             #{String(cardNumber).padStart(3, "0")}
           </span>
         )}
@@ -132,38 +133,38 @@ export default function MeinBereichPage() {
           { icon: Gift,  value: membership.rewardsRedeemed, label: "Eingelöst" },
           { icon: Trophy, value: monthsAgo(membership._creationTime), label: `Seit ${formatDate(membership._creationTime)}` },
         ].map(({ icon: Icon, value, label }) => (
-          <div key={label} className="rounded-2xl p-3 flex flex-col items-center gap-1.5 text-center"
-            style={{ background: hexToRgba(c.accent, 0.05), border: `1px solid ${hexToRgba(c.accent, 0.12)}` }}>
+          <div key={label} className="rounded-2xl p-3 flex flex-col items-center gap-1.5 text-center backdrop-blur-sm"
+            style={{ background: hexToRgba(c.accent, 0.09), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
             <Icon size={15} style={{ color: c.accent }} />
             <p className="text-xl font-bold leading-none" style={{ color: c.text }}>{value}</p>
-            <p className="text-[9px] leading-tight" style={{ color: c.accentDim }}>{label}</p>
+            <p className="text-[9px] leading-tight" style={{ color: hexToRgba(c.accent, 0.55) }}>{label}</p>
           </div>
         ))}
       </motion.div>
 
       {/* Level card */}
-      <motion.div {...fade(3)} className="rounded-2xl px-5 py-4 mb-4"
-        style={{ background: hexToRgba(c.accent, 0.04), border: `1px solid ${hexToRgba(c.accent, 0.12)}` }}>
+      <motion.div {...fade(3)} className="rounded-2xl px-5 py-4 mb-4 backdrop-blur-sm"
+        style={{ background: hexToRgba(c.accent, 0.08), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold px-2 py-0.5 rounded"
               style={{ background: c.accent, color: "#0e0d0b", letterSpacing: "0.06em" }}>
               LVL {safeIdx + 1}
             </span>
-            <span className="text-[11px]" style={{ color: hexToRgba(c.accent, 0.5) }}>
+            <span className="text-[11px]" style={{ color: hexToRgba(c.accent, 0.55) }}>
               {membership.totalStampsEver} Stempel
             </span>
           </div>
-          <span className="text-[11px] font-semibold" style={{ color: c.accent }}>{lvlData.label}</span>
+          <span className="text-[11px] font-bold" style={{ color: c.accent }}>{lvlData.label}</span>
         </div>
-        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.1) }}>
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.12) }}>
           <motion.div initial={{ width: 0 }} animate={{ width: `${lvlProgress * 100}%` }}
             transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
             className="h-full rounded-full"
-            style={{ background: c.accent, boxShadow: `0 0 8px ${hexToRgba(c.accent, 0.4)}` }} />
+            style={{ background: c.accent, boxShadow: `0 0 10px ${hexToRgba(c.accent, 0.5)}` }} />
         </div>
         {lvlNext && (
-          <p className="text-[9px] mt-1.5" style={{ color: hexToRgba(c.accent, 0.3) }}>
+          <p className="text-[9px] mt-1.5" style={{ color: hexToRgba(c.accent, 0.35) }}>
             Nächstes Level bei {lvlNext.min} Stempeln
           </p>
         )}
@@ -176,16 +177,17 @@ export default function MeinBereichPage() {
             milestones={shop.milestones}
             totalStampsEver={membership.totalStampsEver}
             accent={shop.customDesignEnabled ? shop.accentColor : undefined}
+            textColor={c.text}
           />
         </motion.div>
       )}
 
       {/* Message form */}
-      <motion.div {...fade(5)} className="rounded-2xl px-4 py-4"
-        style={{ background: hexToRgba(c.accent, 0.04), border: `1px solid ${hexToRgba(c.accent, 0.12)}` }}>
+      <motion.div {...fade(5)} className="rounded-2xl px-4 py-4 backdrop-blur-sm"
+        style={{ background: hexToRgba(c.accent, 0.08), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
         <div className="flex items-center gap-2 mb-3">
           <MessageSquare size={14} style={{ color: c.accent }} />
-          <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: c.accentDim }}>
+          <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: hexToRgba(c.accent, 0.6) }}>
             Nachricht an {shop.name}
           </p>
         </div>
@@ -206,8 +208,8 @@ export default function MeinBereichPage() {
               rows={4}
               className="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none mb-3"
               style={{
-                background: hexToRgba(c.accent, 0.06),
-                border: `1px solid ${hexToRgba(c.accent, 0.18)}`,
+                background: hexToRgba(c.accent, 0.08),
+                border: `1px solid ${hexToRgba(c.accent, 0.25)}`,
                 color: c.text,
               }}
             />
@@ -221,7 +223,7 @@ export default function MeinBereichPage() {
               <Send size={14} />
               {sending ? "Senden…" : "Nachricht senden"}
             </button>
-            <p className="text-[10px] text-center mt-2" style={{ color: hexToRgba(c.accent, 0.3) }}>
+            <p className="text-[10px] text-center mt-2" style={{ color: hexToRgba(c.accent, 0.35) }}>
               {messageText.length}/1000
             </p>
           </>
