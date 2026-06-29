@@ -197,7 +197,116 @@ export const listAllShops = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
     requireAdmin({ secret: adminSecret });
-    return await ctx.db.query("shops").order("desc").collect();
+    const shops = await ctx.db.query("shops").order("desc").collect();
+    return shops.map(sanitizeShop);
+  },
+});
+
+export const getLoginLinksForShop = query({
+  args: { shopId: v.id("shops"), adminSecret: v.string() },
+  handler: async (ctx, { shopId, adminSecret }) => {
+    requireAdmin({ secret: adminSecret });
+    const shop = await ctx.db.get(shopId);
+    if (!shop) return null;
+    return {
+      adminLoginToken: shop.adminLoginToken,
+      mitarbeiterToken: shop.mitarbeiterToken ?? null,
+    };
+  },
+});
+
+export const listCustomersForShopAsAdmin = query({
+  args: { shopId: v.id("shops"), adminSecret: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, { shopId, adminSecret, limit }) => {
+    requireAdmin({ secret: adminSecret });
+    const q = ctx.db
+      .query("memberships")
+      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
+      .order("desc");
+    const memberships = limit !== undefined ? await q.take(limit) : await q.collect();
+    const results = await Promise.all(
+      memberships.map(async (m) => {
+        const customer = await ctx.db.get(m.customerId);
+        return { membership: m, customer };
+      })
+    );
+    return results.filter((r) => r.customer !== null);
+  },
+});
+
+export const getShopAnalyticsByPeriodAsAdmin = query({
+  args: { shopId: v.id("shops"), adminSecret: v.string(), since: v.optional(v.number()) },
+  handler: async (ctx, { shopId, adminSecret, since }) => {
+    requireAdmin({ secret: adminSecret });
+    const shop = await ctx.db.get(shopId);
+
+    let events = await ctx.db
+      .query("stampEvents")
+      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
+      .order("desc")
+      .collect();
+    if (since !== undefined) events = events.filter(e => e.timestamp >= since);
+
+    const stamps  = events.filter(e => e.type === "stamp").length;
+    const redeems = events.filter(e => e.type === "redeem").length;
+
+    const redeemEvents = events.filter(e => e.type === "redeem");
+    const rewardMap = new Map<string, number>();
+    for (const e of redeemEvents) {
+      const text = e.rewardText ?? shop?.rewardText ?? "";
+      if (text) rewardMap.set(text, (rewardMap.get(text) ?? 0) + 1);
+    }
+    const allTiers = [
+      ...(shop ? [{ stamps: shop.stampsRequired, text: shop.rewardText }] : []),
+      ...(shop?.rewardTiers?.filter(t => t.enabled) ?? []),
+    ];
+    const rewardBreakdown = Array.from(rewardMap.entries()).map(([text, count]) => {
+      const tier = allTiers.find(t => t.text === text);
+      const tierStamps = tier?.stamps ?? shop?.stampsRequired ?? 0;
+      const valuePerRedemption = shop?.stampValue != null ? tierStamps * shop.stampValue : null;
+      return { rewardText: text, count, valuePerRedemption };
+    }).sort((a, b) => b.count - a.count);
+
+    const membershipIds = Array.from(new Set(events.map(e => e.membershipId.toString())));
+    const customerRows = await Promise.all(
+      membershipIds.map(async (mid) => {
+        const mevents = events.filter(e => e.membershipId.toString() === mid);
+        const membership = await ctx.db.get(mevents[0].membershipId);
+        if (!membership) return null;
+        const customer = await ctx.db.get(membership.customerId);
+        if (!customer) return null;
+        return {
+          customerName: customer.name,
+          stamps: mevents.filter(e => e.type === "stamp").length,
+          redeems: mevents.filter(e => e.type === "redeem").length,
+          currentStamps: membership.currentStamps,
+          totalStampsEver: membership.totalStampsEver,
+          lastEvent: mevents[0].timestamp,
+          membershipId: membership._id,
+        };
+      })
+    );
+    return {
+      stamps,
+      redeems,
+      stampValue: shop?.stampValue ?? null,
+      rewardBreakdown,
+      customers: customerRows.filter(Boolean).sort((a, b) => b!.stamps - a!.stamps) as NonNullable<typeof customerRows[0]>[],
+    };
+  },
+});
+
+export const adminUpdateLegalTexts = mutation({
+  args: {
+    shopId: v.id("shops"),
+    adminSecret: v.string(),
+    impressumText: v.optional(v.string()),
+    agbText: v.optional(v.string()),
+    datenschutzText: v.optional(v.string()),
+  },
+  handler: async (ctx, { shopId, adminSecret, impressumText, agbText, datenschutzText }) => {
+    requireAdmin({ secret: adminSecret });
+    await ctx.db.patch(shopId, { impressumText, agbText, datenschutzText });
   },
 });
 

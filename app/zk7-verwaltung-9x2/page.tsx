@@ -106,9 +106,10 @@ function ShopListItem({ shop, index, onSelect }: {
 
 function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const customers = useQuery(
-    api.shops.listCustomersForShop,
-    shop.adminLoginToken ? { shopId: shop._id, adminToken: shop.adminLoginToken } : "skip"
+    api.shops.listCustomersForShopAsAdmin,
+    { shopId: shop._id, adminSecret }
   );
+  const loginLinks = useQuery(api.shops.getLoginLinksForShop, { shopId: shop._id, adminSecret });
   const messages = useQuery(api.messages.getMessagesForShop, { shopId: shop._id, adminSecret });
   const markRead = useMutation(api.messages.markMessagesRead);
   const [messagesOpen, setMessagesOpen] = useState(false);
@@ -117,10 +118,10 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
   const totalStamps  = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
   const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
 
-  const base          = typeof window !== "undefined" ? window.location.origin : "";
-  const joinUrl       = `${base}/join/${shop.slug}`;
-  const loginUrl      = `${base}/betrieb/login/${shop.adminLoginToken}`;
-  const mitarbeiterUrl = shop.mitarbeiterToken ? `${base}/betrieb/login/${shop.mitarbeiterToken}` : null;
+  const base           = typeof window !== "undefined" ? window.location.origin : "";
+  const joinUrl        = `${base}/join/${shop.slug}`;
+  const loginUrl       = loginLinks ? `${base}/betrieb/login/${loginLinks.adminLoginToken}` : null;
+  const mitarbeiterUrl = loginLinks?.mitarbeiterToken ? `${base}/betrieb/login/${loginLinks.mitarbeiterToken}` : null;
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -178,12 +179,16 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
         <div className="p-4 space-y-3">
           <div>
             <p className="text-[11px] text-zinc-500 mb-1.5">Inhaber (Dashboard + Einstellungen)</p>
-            <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2">
-              <code className="text-[11px] text-amber-300 flex-1 truncate">{loginUrl}</code>
-              <button onClick={() => copy(loginUrl, "login")} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
-                {copied === "login" ? <Check size={13} className="text-green-400" /> : <Link size={13} />}
-              </button>
-            </div>
+            {loginUrl ? (
+              <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2">
+                <code className="text-[11px] text-amber-300 flex-1 truncate">{loginUrl}</code>
+                <button onClick={() => copy(loginUrl, "login")} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
+                  {copied === "login" ? <Check size={13} className="text-green-400" /> : <Link size={13} />}
+                </button>
+              </div>
+            ) : (
+              <div className="text-[11px] text-zinc-600 italic">Laden...</div>
+            )}
           </div>
           {mitarbeiterUrl && (
             <div>
@@ -295,7 +300,7 @@ type Tier = { stamps: number; text: string; enabled: boolean };
 function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const adminSetFeatures  = useMutation(api.shops.adminSetFeatures);
   const updateContent     = useMutation(api.shops.adminUpdateShopContent);
-  const updateLegalTexts  = useMutation(api.shops.updateLegalTexts);
+  const updateLegalTexts  = useMutation(api.shops.adminUpdateLegalTexts);
 
   // Program
   const [stampsRequired, setStampsRequired] = useState(shop.stampsRequired);
@@ -339,7 +344,7 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
     setSavingLegal(true);
     try {
       await updateLegalTexts({
-        shopId: shop._id, inhaberToken: shop.adminLoginToken,
+        shopId: shop._id, adminSecret,
         impressumText: impressumDraft || undefined,
         agbText: agbDraft || undefined,
         datenschutzText: datenschutzDraft || undefined,
@@ -1271,10 +1276,8 @@ function ShopAnalytics({ shop }: { shop: Doc<"shops">; adminSecret: string }) {
   const [exporting, setExporting] = useState(false);
 
   const data = useQuery(
-    api.shops.getShopAnalyticsByPeriod,
-    shop.adminLoginToken
-      ? { shopId: shop._id, adminToken: shop.adminLoginToken, since: periodToSince(period) }
-      : "skip"
+    api.shops.getShopAnalyticsByPeriodAsAdmin,
+    { shopId: shop._id, adminSecret, since: periodToSince(period) }
   );
 
   const handleExport = async () => {
