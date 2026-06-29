@@ -150,7 +150,9 @@ export function BeatesGrillLoyaltyCard({ shopName, stampsRequired, currentStamps
 }
 
 export function BeatesGrillRewardBanner({ rewardText, stampsRequired, rewardTiers }: ThemeBannerProps) {
-  const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
+  const activeTiers = rewardTiers?.some(t => t.enabled)
+    ? [{ stamps: stampsRequired, text: rewardText, enabled: true }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
+    : [];
   if (activeTiers.length > 0) {
     return (
       <div className="rounded-2xl px-4 py-3 space-y-2.5" style={{ background: C, border: `1px solid ${A}18` }}>

@@ -108,7 +108,9 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
 }
 
 export function BakeryRewardBanner({ rewardText, stampsRequired, rewardTiers }: ThemeBannerProps) {
-  const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
+  const activeTiers = rewardTiers?.some(t => t.enabled)
+    ? [{ stamps: stampsRequired, text: rewardText, enabled: true }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
+    : [];
   if (activeTiers.length > 0) {
     return (
       <div className="rounded-2xl px-4 py-3 space-y-2.5" style={{ background: C, border: `2px solid ${A}55`, boxShadow: `0 2px 8px rgba(0,0,0,0.06)` }}>

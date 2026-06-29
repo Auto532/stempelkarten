@@ -158,7 +158,9 @@ export function EiszauberLoyaltyCard({
 }
 
 export function EiszauberRewardBanner({ rewardText, stampsRequired, rewardTiers }: ThemeBannerProps) {
-  const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
+  const activeTiers = rewardTiers?.some(t => t.enabled)
+    ? [{ stamps: stampsRequired, text: rewardText, enabled: true }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
+    : [];
 
   if (activeTiers.length > 0) {
     return (

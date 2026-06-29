@@ -279,8 +279,9 @@ export function BarberLoyaltyCard({
 
 // ─── Reward Banner ────────────────────────────────────────────────────────────
 export function BarberRewardBanner({ rewardText, stampsRequired, rewardTiers }: ThemeBannerProps) {
-  const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
-  const tiers = activeTiers.length > 0 ? activeTiers : [{ stamps: stampsRequired, text: rewardText, enabled: true as const }];
+  const tiers = rewardTiers?.some(t => t.enabled)
+    ? [{ stamps: stampsRequired, text: rewardText, enabled: true as const }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
+    : [{ stamps: stampsRequired, text: rewardText, enabled: true as const }];
 
   return (
     <div style={{

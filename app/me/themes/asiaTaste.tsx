@@ -281,7 +281,9 @@ export function AsiaTasteLoyaltyCard({
 
 // ─── Reward Banner ────────────────────────────────────────────────────────────
 export function AsiaTasteRewardBanner({ rewardText, stampsRequired, rewardTiers }: ThemeBannerProps) {
-  const activeTiers = rewardTiers?.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps) ?? [];
+  const activeTiers = rewardTiers?.some(t => t.enabled)
+    ? [{ stamps: stampsRequired, text: rewardText, enabled: true }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
+    : [];
   const FF_BALOO  = "'Baloo 2', cursive";
   const FF_FREDKA = "'Fredoka', sans-serif";
 

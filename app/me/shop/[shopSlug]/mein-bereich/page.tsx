@@ -78,10 +78,6 @@ export default function MeinBereichPage() {
     ? (membership.totalStampsEver - lvlData.min) / (lvlNext.min - lvlData.min)
     : 1;
 
-  const activeMilestones = (shop.milestonesEnabled && shop.milestones)
-    ? shop.milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps)
-    : [];
-
   const handleSend = async () => {
     if (!messageText.trim() || !qrToken) return;
     setSending(true);
@@ -173,48 +169,8 @@ export default function MeinBereichPage() {
         )}
       </motion.div>
 
-      {/* Milestones */}
-      {activeMilestones.length > 0 && (
-        <motion.div {...fade(4)} className="rounded-2xl px-4 py-4 mb-4"
-          style={{ background: hexToRgba(c.accent, 0.04), border: `1px solid ${hexToRgba(c.accent, 0.12)}` }}>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: c.accentDim }}>
-            Meilensteine
-          </p>
-          <div className="space-y-3">
-            {activeMilestones.map((m, i) => {
-              const reached  = membership.totalStampsEver >= m.stamps;
-              const progress = Math.min(membership.totalStampsEver / m.stamps, 1);
-              return (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center text-[10px] font-bold"
-                    style={reached
-                      ? { background: hexToRgba(c.accent, 0.2), color: c.accent, border: `1px solid ${hexToRgba(c.accent, 0.4)}` }
-                      : { background: hexToRgba(c.accent, 0.05), color: c.accentDim, border: `1px solid ${hexToRgba(c.accent, 0.12)}` }}>
-                    {reached ? "✓" : i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-medium truncate" style={{ color: reached ? c.text : c.accentDim }}>{m.text}</p>
-                      <span className="text-[10px] ml-2 shrink-0 tabular-nums" style={{ color: c.accentDim }}>
-                        {Math.min(membership.totalStampsEver, m.stamps)}/{m.stamps}
-                      </span>
-                    </div>
-                    <div className="h-1 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.1) }}>
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }}
-                        transition={{ duration: 0.7, delay: 0.4 + i * 0.1, ease: "easeOut" }}
-                        className="h-full rounded-full"
-                        style={{ background: reached ? c.accent : hexToRgba(c.accent, 0.5) }} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
-
       {/* Message form */}
-      <motion.div {...fade(5)} className="rounded-2xl px-4 py-4"
+      <motion.div {...fade(4)} className="rounded-2xl px-4 py-4"
         style={{ background: hexToRgba(c.accent, 0.04), border: `1px solid ${hexToRgba(c.accent, 0.12)}` }}>
         <div className="flex items-center gap-2 mb-3">
           <MessageSquare size={14} style={{ color: c.accent }} />

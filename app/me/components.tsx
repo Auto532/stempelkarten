@@ -69,10 +69,11 @@ export function getActiveTiers(shop: {
   rewardText: string;
   rewardTiers?: CardTier[];
 }): CardTier[] {
+  const baseTier: CardTier = { stamps: shop.stampsRequired, text: shop.rewardText, enabled: true };
   if (shop.rewardTiers && shop.rewardTiers.some(t => t.enabled)) {
-    return shop.rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps);
+    return [baseTier, ...shop.rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps);
   }
-  return [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true }];
+  return [baseTier];
 }
 
 // ─── Particles ────────────────────────────────────────────────────────────────
@@ -394,9 +395,10 @@ export function LoyaltyCard({
 }) {
   const accent = accentColor ?? "#fbbf24";
   const StampIconComponent = getStampIcon(stampIcon);
+  const baseTier: CardTier = { stamps: stampsRequired, text: rewardText, enabled: true };
   const activeTiers: CardTier[] = rewardTiers && rewardTiers.some(t => t.enabled)
-    ? rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps)
-    : [{ stamps: stampsRequired, text: rewardText, enabled: true }];
+    ? [baseTier, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
+    : [baseTier];
   const maxStamps = activeTiers[activeTiers.length - 1].stamps;
   const tierThresholds = new Set(activeTiers.map(t => t.stamps));
   const cols = maxStamps <= 6 ? 3 : maxStamps <= 8 ? 4 : maxStamps <= 10 ? 5 : 4;
