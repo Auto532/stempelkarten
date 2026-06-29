@@ -1271,7 +1271,7 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-function ShopAnalytics({ shop }: { shop: Doc<"shops">; adminSecret: string }) {
+function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const [period, setPeriod] = useState<Period>("all");
   const [exporting, setExporting] = useState(false);
 
@@ -1630,7 +1630,7 @@ export default function SuperAdminPage() {
   const [activeTab, setActiveTab]   = useState<Tab>("overview");
   const [selectedShopId, setSelectedShopId] = useState<Id<"shops"> | null>(null);
 
-  const allShops = useQuery(api.shops.listAllShops, authed && adminSecret ? { adminSecret } : "skip");
+  const allShops = useQuery(api.shops.listAllShops, authed && adminSecret ? { adminSecret } : "skip") as Doc<"shops">[] | undefined;
   const selectedShop = selectedShopId ? allShops?.find(s => s._id === selectedShopId) : null;
 
   // Hardware-Back-Button: ShopWorkspace schließen oder App nicht verlassen
@@ -1715,7 +1715,7 @@ export default function SuperAdminPage() {
   if (selectedShopId && selectedShop) {
     return (
       <ShopWorkspace
-        shop={selectedShop}
+        shop={selectedShop as Doc<"shops">}
         adminSecret={adminSecret}
         onBack={() => setSelectedShopId(null)}
       />
