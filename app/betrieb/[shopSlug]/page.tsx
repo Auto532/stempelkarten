@@ -95,7 +95,9 @@ export default function BetriebDashboard() {
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
     const slug = localStorage.getItem("adminShopSlug");
+    const role = localStorage.getItem("adminRole");
     if (!token || slug !== shopSlug) { router.replace("/"); return; }
+    if (role === "mitarbeiter") { router.replace(`/betrieb/${shopSlug}/scan`); return; }
     setAdminToken(token);
     setAuthorized(true);
   }, [router, shopSlug]);
