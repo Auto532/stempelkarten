@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
+import { normalizePhone } from "./lib/phone";
 
 export const findCustomerByPhone = query({
   args: { phone: v.string(), adminToken: v.string() },
@@ -12,7 +13,7 @@ export const findCustomerByPhone = query({
 
     const customer = await ctx.db
       .query("customers")
-      .withIndex("by_phone", q => q.eq("phone", phone))
+      .withIndex("by_phone", q => q.eq("phone", normalizePhone(phone)))
       .first();
     if (!customer) return null;
 
@@ -98,8 +99,9 @@ export const registerCustomer = mutation({
     acquisitionType: v.optional(v.union(v.literal("new"), v.literal("returning"))),
   },
   handler: async (ctx, { name, phone, shopSlug, existingQrToken, acquisitionType }) => {
+    const normalized = normalizePhone(phone);
     const digits = phone.replace(/\D/g, "");
-    if (!/^[\+\d\s\-\(\)\/]+$/.test(phone.trim()) || digits.length < 7 || digits.length > 15) {
+    if (!normalized || !/^[\+\d\s\-\(\)\/]+$/.test(phone.trim()) || digits.length < 7 || digits.length > 15) {
       throw new Error("Ungültige Telefonnummer");
     }
 
@@ -118,7 +120,7 @@ export const registerCustomer = mutation({
         .withIndex("by_qrToken", (q) => q.eq("qrToken", existingQrToken))
         .unique();
       // Nur akzeptieren wenn Telefonnummer zum bestehenden Account passt
-      if (existing && existing.phone === phone) {
+      if (existing && existing.phone === normalized) {
         customerId = existing._id;
         qrToken = existingQrToken;
       }
@@ -128,7 +130,7 @@ export const registerCustomer = mutation({
       // Deduplicate by phone: returning customer gets their old card back
       const byPhone = await ctx.db
         .query("customers")
-        .withIndex("by_phone", (q) => q.eq("phone", phone))
+        .withIndex("by_phone", (q) => q.eq("phone", normalized))
         .first();
       if (byPhone) {
         customerId = byPhone._id;
@@ -137,7 +139,7 @@ export const registerCustomer = mutation({
         qrToken = crypto.randomUUID();
         customerId = await ctx.db.insert("customers", {
           name,
-          phone,
+          phone: normalized,
           qrToken: qrToken!,
           createdAt: Date.now(),
         });
@@ -164,5 +166,25 @@ export const registerCustomer = mutation({
     }
 
     return { qrToken: qrToken! };
+  },
+});
+
+export const migratePhones = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const customers = await ctx.db.query("customers").collect();
+    let migrated = 0, conflicts = 0;
+    for (const c of customers) {
+      const normalized = normalizePhone(c.phone);
+      if (!normalized || normalized === c.phone) continue;
+      const existing = await ctx.db
+        .query("customers")
+        .withIndex("by_phone", q => q.eq("phone", normalized))
+        .first();
+      if (existing && existing._id !== c._id) { conflicts++; continue; }
+      await ctx.db.patch(c._id, { phone: normalized });
+      migrated++;
+    }
+    return { migrated, conflicts, total: customers.length };
   },
 });
