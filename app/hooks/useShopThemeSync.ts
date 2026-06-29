@@ -18,5 +18,8 @@ export function useShopThemeSync(shop: ShopLike) {
       localStorage.removeItem(key);
       document.documentElement.removeAttribute("data-shop-theme");
     }
+    return () => {
+      document.documentElement.removeAttribute("data-shop-theme");
+    };
   }, [shop]);
 }
