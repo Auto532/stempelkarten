@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { ConvexClientProvider } from "./providers";
 import { StarField } from "./components/StarField";
@@ -17,8 +16,8 @@ export const metadata: Metadata = {
   description: "Deine digitale Treuekarte",
   manifest: "/manifest.json",
   icons: {
-    icon: "/Icon.png",
-    apple: "/Icon.png",
+    icon: "/icon-192.png",
+    apple: "/icon-192.png",
   },
   appleWebApp: {
     capable: true,
@@ -52,9 +51,6 @@ export default function RootLayout({
             {children}
           </div>
         </ConvexClientProvider>
-        <Script id="sw" strategy="afterInteractive"
-          dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js')` }}
-        />
       </body>
     </html>
   );

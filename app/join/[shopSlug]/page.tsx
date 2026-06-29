@@ -136,6 +136,20 @@ export default function JoinPage() {
     );
   }
 
+  if (!shop.impressumText || !shop.datenschutzText) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="text-center max-w-xs">
+          <div className="text-5xl mb-4">⚙️</div>
+          <h1 className="text-xl font-semibold text-zinc-100">Noch nicht eingerichtet</h1>
+          <p className="text-zinc-500 mt-2 text-sm">
+            Dieser Shop ist noch nicht vollständig eingerichtet. Bitte komm später wieder.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const theme = getShopTheme(shop);
   const c = theme?.colors ?? DEFAULT_COLORS;
   const customerName = existing?.customer?.name;
@@ -232,7 +246,8 @@ export default function JoinPage() {
               </div>
               <span className="text-xs leading-relaxed" style={{ color: c.accentDim }}>
                 Ich stimme zu, dass meine Daten für das Treueprogramm bei{" "}
-                <span style={{ color: c.textBody }}>{shop.name}</span> gespeichert werden.
+                <span style={{ color: c.textBody }}>{shop.name}</span> gespeichert und gemäß{" "}
+                <a href={`/me/datenschutz/${shopSlug}`} style={{ color: c.accent, textDecoration: "underline" }}>Datenschutzerklärung</a> genutzt werden.
               </span>
             </label>
 
@@ -297,7 +312,8 @@ export default function JoinPage() {
               </div>
               <span className="text-xs leading-relaxed" style={{ color: c.accentDim }}>
                 Ich stimme zu, dass meine Daten (Name, Telefonnummer) für das Treueprogramm bei{" "}
-                <span style={{ color: c.textBody }}>{shop.name}</span> gespeichert und genutzt werden.
+                <span style={{ color: c.textBody }}>{shop.name}</span> gespeichert und gemäß{" "}
+                <a href={`/me/datenschutz/${shopSlug}`} style={{ color: c.accent, textDecoration: "underline" }}>Datenschutzerklärung</a> genutzt werden.
               </span>
             </label>
 

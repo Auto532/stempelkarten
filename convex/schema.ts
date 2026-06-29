@@ -59,6 +59,7 @@ export default defineSchema({
     rewardsRedeemed: v.number(),
     lastStampAt: v.optional(v.number()),
     acquisitionType: v.optional(v.union(v.literal("new"), v.literal("returning"))),
+    consentedAt: v.optional(v.number()),
     pendingRedemption: v.optional(v.object({
       stamps: v.number(),
       rewardText: v.string(),

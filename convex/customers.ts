@@ -159,6 +159,7 @@ export const registerCustomer = mutation({
         totalStampsEver: 0,
         rewardsRedeemed: 0,
         acquisitionType,
+        consentedAt: Date.now(),
       });
     }
 

@@ -45,15 +45,10 @@ export default function StampPage() {
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
     const slug = localStorage.getItem("adminShopSlug");
-    const pin = localStorage.getItem("adminPin");
     if (token && slug) {
       setAdminToken(token);
       setShopSlug(slug);
       setAdminRole((localStorage.getItem("adminRole") as "inhaber" | "mitarbeiter") ?? "inhaber");
-      setReady(true);
-    } else if (pin) {
-      setAdminPin(pin);
-      setAdminMode(true);
       setReady(true);
     } else {
       setNoCredentials(true);
@@ -66,7 +61,6 @@ export default function StampPage() {
     setLoading(true); setAdminPinError(false);
     try {
       await checkPin({ pin: adminPinInput });
-      localStorage.setItem("adminPin", adminPinInput);
       setAdminPin(adminPinInput);
       setAdminMode(true);
       setNoCredentials(false);

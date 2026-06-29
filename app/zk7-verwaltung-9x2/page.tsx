@@ -1497,7 +1497,8 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
         </div>
         <p className="text-[11px] text-zinc-500">Löscht alle gespeicherten Tokens auf <span className="text-zinc-400 font-medium">diesem Gerät</span> (QR-Token, Admin-PIN, Shop-Login). Nur lokal — keine Daten in der Datenbank werden gelöscht.</p>
         <button onClick={() => {
-          ["qrToken","adminTestQrToken","adminPin","adminToken","adminShopSlug","adminRole","adminPinLS","meAccentColor","meBgPreset","meStarsOn"].forEach(k => localStorage.removeItem(k));
+          ["qrToken","adminTestQrToken","adminToken","adminShopSlug","adminRole","adminPinLS","meAccentColor","meBgPreset","meStarsOn"].forEach(k => localStorage.removeItem(k));
+          sessionStorage.removeItem("adminPin");
           window.location.reload();
         }} className="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors">
           Lokalen Speicher löschen & neu laden
@@ -1645,16 +1646,16 @@ export default function SuperAdminPage() {
     return () => window.removeEventListener("popstate", handlePop);
   }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-login from localStorage
+  // Auto-login from sessionStorage (cleared on tab close)
   const [didTryAutoLogin, setDidTryAutoLogin] = useState(false);
   if (typeof window !== "undefined" && !didTryAutoLogin && !authed && !checking) {
-    const saved = localStorage.getItem("adminPin");
+    const saved = sessionStorage.getItem("adminPin");
     if (saved) {
       setChecking(true);
       setDidTryAutoLogin(true);
       checkPinMutation({ pin: saved })
         .then(() => { setAdminSecret(saved); setAuthed(true); })
-        .catch(() => { localStorage.removeItem("adminPin"); })
+        .catch(() => { sessionStorage.removeItem("adminPin"); })
         .finally(() => setChecking(false));
     } else {
       setDidTryAutoLogin(true);
@@ -1666,7 +1667,7 @@ export default function SuperAdminPage() {
     setChecking(true); setPinError(null);
     try {
       await checkPinMutation({ pin });
-      localStorage.setItem("adminPin", pin);
+      sessionStorage.setItem("adminPin", pin);
       setAdminSecret(pin);
       setAuthed(true);
     } catch (err: unknown) {
