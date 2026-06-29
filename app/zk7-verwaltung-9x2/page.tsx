@@ -1650,20 +1650,16 @@ export default function SuperAdminPage() {
   }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-login from sessionStorage (cleared on tab close)
-  const [didTryAutoLogin, setDidTryAutoLogin] = useState(false);
-  if (typeof window !== "undefined" && !didTryAutoLogin && !authed && !checking) {
+  useEffect(() => {
     const saved = sessionStorage.getItem("adminPin");
     if (saved) {
       setChecking(true);
-      setDidTryAutoLogin(true);
       checkPinMutation({ pin: saved })
         .then(() => { setAdminSecret(saved); setAuthed(true); })
         .catch(() => { sessionStorage.removeItem("adminPin"); })
         .finally(() => setChecking(false));
-    } else {
-      setDidTryAutoLogin(true);
     }
-  }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogin = async () => {
     if (!pin) return;
