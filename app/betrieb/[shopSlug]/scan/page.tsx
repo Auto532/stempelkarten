@@ -327,20 +327,16 @@ export default function ScanPage() {
   const [adminToken, setAdminToken] = useState("");
   const [view, setView] = useState<"dashboard" | "scanning">("dashboard");
   const [scannedToken, setScannedToken] = useState<string | null>(null);
-  const [showAllCustomers, setShowAllCustomers] = useState(false);
   const [showAllRedemptions, setShowAllRedemptions] = useState(false);
   const customers = useQuery(
     api.shops.listCustomersForShop,
-    shop && adminToken ? { shopId: shop._id, adminToken, limit: showAllCustomers ? undefined : 10 } : "skip"
+    shop && adminToken ? { shopId: shop._id, adminToken } : "skip"
   );
   const redemptions = useQuery(
     api.memberships.getRedemptionsForShop,
     shop?.bonusProgramEnabled && shop && adminToken ? { shopId: shop._id, adminToken, limit: showAllRedemptions ? undefined : 10 } : "skip"
   );
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
   const [showGifts, setShowGifts] = useState(false);
-  const [showCustomers, setShowCustomers] = useState(true);
   const [openRedemptionId, setOpenRedemptionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -358,7 +354,6 @@ export default function ScanPage() {
   }
   if (!shop) return null;
 
-  const showLeads = false; // Mitarbeiter sehen nie Leads/Telefonnummern
   const theme = getShopTheme(shop);
   const c = theme?.colors ?? DEFAULT_COLORS;
   const totalStamps = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
@@ -366,13 +361,6 @@ export default function ScanPage() {
   const activeTiers = shop.bonusProgramEnabled && shop.rewardTiers && shop.rewardTiers.some(t => t.enabled)
     ? shop.rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps)
     : [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true }];
-  const lowestTierStamps = activeTiers[0].stamps;
-  const filteredCustomers = customers?.filter(({ customer }) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return customer?.name.toLowerCase().includes(q) || (showLeads && customer?.phone.includes(q));
-  }) ?? [];
-  const readyCount = customers?.filter(({ membership }) => membership.currentStamps >= lowestTierStamps).length ?? 0;
 
   // ── Scanner view ────────────────────────────────────────────────────────────
   if (view === "scanning") {
@@ -620,94 +608,6 @@ export default function ScanPage() {
         )}
       </AnimatePresence>
 
-      {/* Customer List */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-        className="rounded-2xl overflow-hidden" style={c.card}>
-        <button onClick={() => setShowCustomers(v => !v)}
-          className="w-full flex items-center gap-2 px-5 py-4 transition-colors">
-          <Users size={15} style={{ color: c.accentDim }} className="shrink-0" />
-          <span className="font-medium text-sm" style={{ color: c.text }}>Kunden</span>
-          <div className="ml-auto flex items-center gap-2">
-            {readyCount > 0 && (
-              <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold"
-                style={c.badge}>
-                <Gift size={9} /> {readyCount} bereit
-              </span>
-            )}
-            <span className="text-xs" style={{ color: c.accentDim }}>{customers?.length ?? "–"}</span>
-            <ChevronRight size={13} style={{ color: c.accentDim }} className={`transition-transform ${showCustomers ? "rotate-90" : ""}`} />
-          </div>
-        </button>
-
-        <AnimatePresence>
-          {showCustomers && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="px-5 pt-1 pb-3" style={{ borderBottom: `1px solid ${c.divider}` }}>
-                <div className="relative">
-                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: c.accentDim }} />
-                  <input
-                    value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="Suchen…"
-                    className="w-full pl-8 pr-3 py-2 rounded-xl text-sm placeholder-zinc-600 focus:outline-none"
-                    style={c.input}
-                  />
-                  {search && (
-                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: c.accentDim }}>
-                      <X size={13} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center px-4 py-2" style={{ borderBottom: `1px solid ${c.divider}` }}>
-                <div className="w-7 shrink-0 mr-3" />
-                <span className="flex-1 text-[10px] uppercase tracking-wider" style={{ color: c.accentDim }}>Kunde</span>
-                <span className="text-[10px] uppercase tracking-wider w-10 text-right mr-1" style={{ color: c.accentDim }}>Stand</span>
-              </div>
-
-              <div>
-                {customers === undefined && <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Laden...</div>}
-                {customers?.length === 0 && <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Noch keine Kunden</div>}
-                {customers !== undefined && filteredCustomers.length === 0 && search && (
-                  <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Keine Treffer für „{search}"</div>
-                )}
-                {filteredCustomers.map(({ customer, membership }, i) => {
-                  if (!customer) return null;
-                  const isReady = membership.currentStamps >= lowestTierStamps;
-                  return (
-                    <motion.div key={membership._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i * 0.02, 0.2) }}
-                      className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: `1px solid ${c.divider}` }}>
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                        style={isReady
-                          ? { background: c.accent, color: "#18181b" }
-                          : { background: c.dark, border: c.card.border, color: c.accent }}>
-                        {customer.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="flex-1 text-sm truncate" style={{ color: c.textBody }}>{customer.name}</span>
-                      {isReady && (
-                        <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                          style={c.badge}>
-                          BEREIT
-                        </span>
-                      )}
-                      <span className="text-xs shrink-0 w-10 text-right" style={{ color: c.accentDim }}>
-                        {membership.currentStamps}/{lowestTierStamps}
-                      </span>
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              {customers && customers.length >= 10 && (
-                <button onClick={() => setShowAllCustomers(v => !v)}
-                  className="w-full py-3 text-xs transition-colors" style={{ color: c.accentDim, borderTop: `1px solid ${c.divider}` }}>
-                  {showAllCustomers ? "Weniger anzeigen" : "Alle anzeigen"}
-                </button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
     </div>
   );
 }
