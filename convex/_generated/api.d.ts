@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as customers from "../customers.js";
+import type * as lib_phone from "../lib/phone.js";
 import type * as memberships from "../memberships.js";
 import type * as messages from "../messages.js";
 import type * as seed from "../seed.js";
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
   customers: typeof customers;
+  "lib/phone": typeof lib_phone;
   memberships: typeof memberships;
   messages: typeof messages;
   seed: typeof seed;

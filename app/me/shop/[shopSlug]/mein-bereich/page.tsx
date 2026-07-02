@@ -69,6 +69,7 @@ export default function MeinBereichPage() {
   const { membership, shop, cardNumber } = entry;
   const theme = getShopTheme(shop);
   const c = theme?.colors ?? DEFAULT_COLORS;
+  const cb = (a: number) => theme ? hexToRgba(c.accent, a) : hexToRgba(c.cardBg, 0.78);
 
   const shopLvlIdx = SHOP_LEVELS.findIndex(l => membership.totalStampsEver <= l.max);
   const safeIdx = shopLvlIdx === -1 ? SHOP_LEVELS.length - 1 : shopLvlIdx;
@@ -134,7 +135,7 @@ export default function MeinBereichPage() {
           { icon: Trophy, value: monthsAgo(membership._creationTime), label: `Seit ${formatDate(membership._creationTime)}` },
         ].map(({ icon: Icon, value, label }) => (
           <div key={label} className="rounded-2xl p-3 flex flex-col items-center gap-1.5 text-center backdrop-blur-sm"
-            style={{ background: hexToRgba(c.accent, 0.09), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
+            style={{ background: cb(0.09), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
             <Icon size={15} style={{ color: c.accent }} />
             <p className="text-xl font-bold leading-none" style={{ color: c.text }}>{value}</p>
             <p className="text-[9px] leading-tight" style={{ color: hexToRgba(c.accent, 0.55) }}>{label}</p>
@@ -144,7 +145,7 @@ export default function MeinBereichPage() {
 
       {/* Level card */}
       <motion.div {...fade(3)} className="rounded-2xl px-5 py-4 mb-4 backdrop-blur-sm"
-        style={{ background: hexToRgba(c.accent, 0.08), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
+        style={{ background: cb(0.08), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold px-2 py-0.5 rounded"
@@ -184,7 +185,7 @@ export default function MeinBereichPage() {
 
       {/* Message form */}
       <motion.div {...fade(5)} className="rounded-2xl px-4 py-4 backdrop-blur-sm"
-        style={{ background: hexToRgba(c.accent, 0.08), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
+        style={{ background: cb(0.08), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
         <div className="flex items-center gap-2 mb-3">
           <MessageSquare size={14} style={{ color: c.accent }} />
           <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: hexToRgba(c.accent, 0.6) }}>
@@ -208,7 +209,7 @@ export default function MeinBereichPage() {
               rows={4}
               className="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none mb-3"
               style={{
-                background: hexToRgba(c.accent, 0.08),
+                background: cb(0.08),
                 border: `1px solid ${hexToRgba(c.accent, 0.25)}`,
                 color: c.text,
               }}

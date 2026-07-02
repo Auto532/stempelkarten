@@ -196,7 +196,9 @@ export const setPendingRedemption = mutation({
       .filter((t) => t.enabled)
       .sort((a, b) => a.stamps - b.stamps);
     const baseTier = { stamps: shop.stampsRequired, text: shop.rewardText };
-    const tiers = activeTiers.length > 0 ? activeTiers : [baseTier];
+    const tiers = activeTiers.length > 0
+      ? [baseTier, ...activeTiers].sort((a, b) => a.stamps - b.stamps)
+      : [baseTier];
     const tier = tiers.find((t) => t.stamps === targetStamps && membership.currentStamps >= t.stamps);
     if (!tier) throw new Error("Keine Belohnung verfügbar");
 
