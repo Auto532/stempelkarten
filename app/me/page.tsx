@@ -219,22 +219,20 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
       className="w-full text-left rounded-2xl overflow-hidden"
       style={{
         background: isReady
-          ? `linear-gradient(135deg, #161412, ${hexToRgba(accent, 0.07)})`
-          : "#161412",
-        border: `1px solid ${hexToRgba(accent, isReady ? 0.3 : 0.12)}`,
-        boxShadow: "0 2px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03)",
+          ? `linear-gradient(135deg, #242220, ${hexToRgba(accent, 0.12)})`
+          : "#242220",
+        border: `1px solid ${hexToRgba(accent, isReady ? 0.45 : 0.22)}`,
+        boxShadow: `0 2px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)${isReady ? `, 0 0 20px ${hexToRgba(accent, 0.08)}` : ""}`,
       }}
     >
-      {isReady && (
-        <div style={{ height: 2, background: `linear-gradient(90deg, transparent, ${accent}, transparent)`, opacity: 0.8 }} />
-      )}
+      <div style={{ height: 2, background: `linear-gradient(90deg, transparent, ${hexToRgba(accent, isReady ? 0.8 : 0.3)}, transparent)` }} />
 
       <div className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-11 h-11 rounded-[14px] flex items-center justify-center shrink-0"
-              style={{ background: hexToRgba(accent, 0.1), border: `1px solid ${hexToRgba(accent, 0.25)}` }}>
+              style={{ background: hexToRgba(accent, 0.18), border: `1px solid ${hexToRgba(accent, 0.4)}` }}>
               <StampIcon size={22} style={{ color: accent }} />
             </div>
             <div className="min-w-0">
@@ -267,8 +265,8 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
                   width: 20, height: 20,
                   background: filled
                     ? isCheckpoint ? accent : hexToRgba(accent, 0.65)
-                    : hexToRgba(accent, 0.08),
-                  border: filled ? "none" : `1.5px solid ${hexToRgba(accent, 0.15)}`,
+                    : hexToRgba(accent, 0.14),
+                  border: filled ? "none" : `1.5px solid ${hexToRgba(accent, 0.3)}`,
                   boxShadow: filled && isCheckpoint ? `0 0 7px ${hexToRgba(accent, 0.5)}` : undefined,
                   outline: !filled && isCheckpoint ? `1.5px dashed ${hexToRgba(accent, 0.3)}` : undefined,
                   outlineOffset: !filled && isCheckpoint ? "1px" : undefined,
@@ -289,7 +287,7 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <div className="h-[5px] rounded-full overflow-hidden mb-2"
-              style={{ background: hexToRgba(accent, 0.1), border: "1px solid rgba(255,255,255,0.04)" }}>
+              style={{ background: hexToRgba(accent, 0.15), border: "1px solid rgba(255,255,255,0.06)" }}>
               <motion.div
                 initial={{ width: 0 }} animate={{ width: `${barProgress * 100}%` }}
                 transition={{ duration: 0.7, delay: index * 0.07 + 0.2 }}
