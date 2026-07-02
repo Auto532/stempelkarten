@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Phone, Gift, ArrowRight, CheckCircle, Stamp } from "lucide-react";
 import { getShopTheme, DEFAULT_COLORS, type ThemeColors } from "@/app/me/themes/registry";
+import { hexToRgba } from "@/app/me/components";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 
 function AcquisitionPicker({
@@ -213,15 +214,18 @@ export default function JoinPage() {
 
         ) : isReturning ? (
           <motion.div key="returning" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.4 }} className="flex flex-col gap-4 flex-1 relative z-10">
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="relative z-10 rounded-2xl p-5 backdrop-blur-sm flex flex-col gap-4"
+            style={{ background: hexToRgba(c.cardBg, 0.92), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}>
 
-            <div className="flex items-center gap-3 rounded-2xl px-5 py-4" style={c.card}>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: `${c.accent}18` }}>
-                <Stamp size={18} style={{ color: c.accent }} />
+            <div className="flex items-center gap-3 rounded-xl px-4 py-3"
+              style={{ background: hexToRgba(c.accent, 0.1), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: hexToRgba(c.accent, 0.18) }}>
+                <Stamp size={16} style={{ color: c.accent }} />
               </div>
               <div>
-                <p className="font-semibold" style={{ color: c.text }}>
+                <p className="font-semibold text-sm" style={{ color: c.text }}>
                   Willkommen zurück{customerName ? `, ${customerName}` : ""}!
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: c.accentDim }}>
@@ -231,7 +235,6 @@ export default function JoinPage() {
             </div>
 
             {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
-            <div className="flex-1" />
             <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} c={c} shopName={shop.name} />
 
             <label className="flex items-start gap-3 cursor-pointer">
@@ -263,7 +266,8 @@ export default function JoinPage() {
         ) : (
           <motion.form key="form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.4 }} onSubmit={handleNewSubmit}
-            className="flex flex-col gap-4 flex-1 relative z-10">
+            className="relative z-10 rounded-2xl p-5 backdrop-blur-sm flex flex-col gap-4"
+            style={{ background: hexToRgba(c.cardBg, 0.92), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}>
 
             <div className="group">
               <label className="block text-xs font-medium mb-2 ml-1" style={{ color: c.accentDim }}>Dein Name</label>
@@ -291,10 +295,9 @@ export default function JoinPage() {
             </div>
 
             {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
-            <div className="flex-1" />
 
             <p className="text-[11px] leading-relaxed rounded-xl px-3 py-2.5"
-              style={{ color: c.accentDim, background: `${c.accent}09`, border: `1px solid ${c.accentFaint}44` }}>
+              style={{ color: c.accentDim, background: hexToRgba(c.accent, 0.08), border: `1px solid ${hexToRgba(c.accent, 0.15)}` }}>
               Damit deine Karte wirklich dir gehört, gib bitte deine echte Nummer an. Pro Nummer gibt es eine Stempelkarte. Deine Daten bleiben bei uns.
             </p>
 
