@@ -179,6 +179,7 @@ export default function MeinBereichPage() {
             totalStampsEver={membership.totalStampsEver}
             accent={shop.customDesignEnabled ? shop.accentColor : undefined}
             textColor={c.text}
+            cardBg={cb()}
           />
         </motion.div>
       )}

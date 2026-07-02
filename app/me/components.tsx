@@ -306,12 +306,13 @@ export function RedeemVoucher({
 // ─── MilestonesSection (außerhalb der Karte) ──────────────────────────────────
 
 export function MilestonesSection({
-  milestones, totalStampsEver, accent, textColor,
+  milestones, totalStampsEver, accent, textColor, cardBg,
 }: {
   milestones: CardTier[];
   totalStampsEver: number;
   accent?: string;
   textColor?: string;
+  cardBg?: string;
 }) {
   const active = milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);
   if (!active.length) return null;
@@ -335,7 +336,7 @@ export function MilestonesSection({
             <div key={i}
               className="rounded-2xl p-4 flex items-center gap-3 backdrop-blur-sm"
               style={{
-                background: reached ? hexToRgba(a, 0.13) : hexToRgba(a, 0.05),
+                background: cardBg ?? (reached ? hexToRgba(a, 0.13) : hexToRgba(a, 0.05)),
                 border: `1px solid ${hexToRgba(a, reached ? 0.35 : 0.15)}`,
               }}>
               <div
