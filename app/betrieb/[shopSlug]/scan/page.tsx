@@ -327,14 +327,13 @@ export default function ScanPage() {
   const [adminToken, setAdminToken] = useState("");
   const [view, setView] = useState<"dashboard" | "scanning">("dashboard");
   const [scannedToken, setScannedToken] = useState<string | null>(null);
-  const [showAllRedemptions, setShowAllRedemptions] = useState(false);
   const customers = useQuery(
     api.shops.listCustomersForShop,
     shop && adminToken ? { shopId: shop._id, adminToken } : "skip"
   );
   const redemptions = useQuery(
     api.memberships.getRedemptionsForShop,
-    shop?.bonusProgramEnabled && shop && adminToken ? { shopId: shop._id, adminToken, limit: showAllRedemptions ? undefined : 10 } : "skip"
+    shop?.bonusProgramEnabled && shop && adminToken ? { shopId: shop._id, adminToken, limit: 20 } : "skip"
   );
   const [showGifts, setShowGifts] = useState(false);
   const [openRedemptionId, setOpenRedemptionId] = useState<string | null>(null);
@@ -595,12 +594,6 @@ export default function ScanPage() {
                       );
                     })}
                   </div>
-                  {redemptions && redemptions.length >= 10 && (
-                    <button onClick={() => setShowAllRedemptions(v => !v)}
-                      className="w-full py-3 text-xs transition-colors" style={{ color: c.accentDim, borderTop: `1px solid ${c.divider}` }}>
-                      {showAllRedemptions ? "Weniger anzeigen" : "Alle anzeigen"}
-                    </button>
-                  )}
                 </motion.div>
               )}
             </AnimatePresence>

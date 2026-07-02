@@ -15,15 +15,6 @@ export const getBySlug = query({
   },
 });
 
-export const getByAdminToken = query({
-  args: { token: v.string() },
-  handler: async (ctx, { token }) => {
-    return await ctx.db
-      .query("shops")
-      .withIndex("by_adminLoginToken", (q) => q.eq("adminLoginToken", token))
-      .unique();
-  },
-});
 
 export const resolveLoginToken = query({
   args: { token: v.string() },
