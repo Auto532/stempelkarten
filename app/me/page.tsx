@@ -32,14 +32,14 @@ function containsProfanity(text: string): boolean {
 // ─── Color presets ────────────────────────────────────────────────────────────
 
 const COLOR_PRESETS = [
-  { name: "Gold",    value: "#fbbf24" },
-  { name: "Sky",     value: "#38bdf8" },
-  { name: "Violet",  value: "#a855f7" },
-  { name: "Emerald", value: "#10b981" },
-  { name: "Rose",    value: "#f43f5e" },
-  { name: "Orange",  value: "#f97316" },
-  { name: "Cyan",    value: "#06b6d4" },
-  { name: "Lime",    value: "#84cc16" },
+  { name: "Gold",    value: "#c9973a" },
+  { name: "Blau",    value: "#5b89b4" },
+  { name: "Lila",    value: "#8b7bbf" },
+  { name: "Grün",    value: "#5f9e7a" },
+  { name: "Rose",    value: "#b87070" },
+  { name: "Terrak.", value: "#b5694a" },
+  { name: "Teal",    value: "#4a9494" },
+  { name: "Olive",   value: "#7a8f4a" },
   { name: "Sand",    value: "#b8a98a" },
   { name: "Slate",   value: "#94a3b8" },
 ];
