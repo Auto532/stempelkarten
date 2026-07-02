@@ -219,8 +219,8 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
       className="w-full text-left rounded-2xl overflow-hidden"
       style={{
         background: isReady
-          ? `linear-gradient(135deg, #1c1a18, ${hexToRgba(accent, 0.12)})`
-          : "#1c1a18",
+          ? `linear-gradient(135deg, #161412, ${hexToRgba(accent, 0.12)})`
+          : "#161412",
         border: `1px solid ${hexToRgba(accent, isReady ? 0.45 : 0.22)}`,
         boxShadow: `0 2px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)${isReady ? `, 0 0 20px ${hexToRgba(accent, 0.08)}` : ""}`,
       }}
