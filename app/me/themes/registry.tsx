@@ -8,6 +8,7 @@ import { BakeryLoyaltyCard, BakeryRewardBanner, BakeryMilestonesSection } from "
 import { BarberLoyaltyCard, BarberRewardBanner, BarberMilestonesSection } from "./barber";
 import { EiszauberBackground, EiszauberLoyaltyCard, EiszauberRewardBanner, EiszauberMilestonesSection } from "./eiszauber";
 import { EntenhausBackground, EntenhausLoyaltyCard, EntenhausRewardBanner, EntenhausMilestonesSection } from "./entenhaus";
+import { Block13Background, Block13LoyaltyCard, Block13RewardBanner, Block13MilestonesSection } from "./block13";
 import type { ComponentType } from "react";
 
 type Star = { id: number; x: number; y: number; size: number; delay: number; dur: number };
@@ -242,6 +243,28 @@ const THEMES: Record<string, ThemeConfig> = {
     Card:       EntenhausLoyaltyCard,
     Banner:     EntenhausRewardBanner,
     Milestones: EntenhausMilestonesSection,
+  },
+  "block13": {
+    colors: {
+      accent:      "#c9a227",
+      accentDim:   "#8a6f1b",
+      accentFaint: "#1c1a13",
+      text:        "#f2ede4",
+      textBody:    "rgba(242,237,228,.55)",
+      cardBg:      "#17150f",
+      dark:        "#0d0c0a",
+      divider:     "rgba(201,162,39,.2)",
+      gradient:    "linear-gradient(120deg, #e8c96a, #c9a227)",
+      card:    { background: "#17150f", border: "1px solid rgba(255,255,255,.06)" },
+      sub:     { background: "#1c1a13", border: "1px solid rgba(255,255,255,.08)" },
+      input:   { background: "#1c1a13", border: "1px solid rgba(201,162,39,.3)", color: "#f2ede4" },
+      badge:   { background: "rgba(201,162,39,.12)", border: "1px solid rgba(201,162,39,.3)", color: "#c9a227" },
+      subCard: { background: "#17150f88", borderRadius: "0.75rem", padding: "0.75rem" },
+    },
+    Background: Block13Background,
+    Card:       Block13LoyaltyCard,
+    Banner:     Block13RewardBanner,
+    Milestones: Block13MilestonesSection,
   },
   "eiszauber": {
     colors: {

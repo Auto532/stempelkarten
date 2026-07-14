@@ -8,7 +8,7 @@ import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy,
-  Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, Info, type LucideIcon,
+  Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -533,6 +533,7 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
               { id: "asia-taste",   label: "Asia Taste",    color: "#D2603A" },
               { id: "bakery",       label: "Bäckerei",      color: "#d97706" },
               { id: "barber",       label: "Barbershop",    color: "#cca352" },
+              { id: "block13",      label: "Block 13",      color: "#c9a227" },
               { id: "eiszauber",    label: "Eiszauber",     color: "#ff4fa0" },
               { id: "entenhaus",    label: "Entenhaus",     color: "#C9A560" },
             ].map(({ id, label, color }) => (
@@ -1304,23 +1305,6 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
 function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const [period, setPeriod] = useState<Period>("all");
   const [exporting, setExporting] = useState(false);
-  const [priceInfo, setPriceInfo] = useState(shop.priceInfo ?? "");
-  const [priceSaved, setPriceSaved] = useState(false);
-  const [showPriceTooltip, setShowPriceTooltip] = useState(false);
-  const savePriceInfo = useMutation(api.shops.updatePriceInfo);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handlePriceInfoChange = (val: string) => {
-    setPriceInfo(val);
-    setPriceSaved(false);
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      await savePriceInfo({ shopId: shop._id, adminSecret, priceInfo: val || undefined });
-      setPriceSaved(true);
-      setTimeout(() => setPriceSaved(false), 2000);
-    }, 900);
-  };
-
   const data = useQuery(
     api.shops.getShopAnalyticsByPeriodAsAdmin,
     { shopId: shop._id, adminSecret, since: periodToSince(period) }
@@ -1335,41 +1319,6 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
 
   return (
     <motion.div key="shop-analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-
-      {/* Preisinfo */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-2 relative">
-          <FileText size={13} className="text-amber-400" />
-          <span className="text-xs font-semibold text-zinc-300">Preisinfo für PDF</span>
-          <button
-            onMouseEnter={() => setShowPriceTooltip(true)}
-            onMouseLeave={() => setShowPriceTooltip(false)}
-            onTouchStart={() => setShowPriceTooltip(v => !v)}
-            className="ml-0.5 text-zinc-600 hover:text-zinc-400 transition-colors"
-          >
-            <Info size={13} />
-          </button>
-          {showPriceTooltip && (
-            <div className="absolute left-0 top-6 z-20 w-64 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-[11px] text-zinc-300 leading-snug shadow-xl">
-              Preise helfen bei der Umsatzschätzung in der PDF. Z.B. "Haarschnitt €25, Rasur €15". Wird direkt im Bericht angezeigt.
-            </div>
-          )}
-          {priceSaved && (
-            <span className="ml-auto text-[10px] text-green-400 flex items-center gap-1">
-              <Check size={10} /> Gespeichert
-            </span>
-          )}
-        </div>
-        <textarea
-          value={priceInfo}
-          onChange={e => handlePriceInfoChange(e.target.value)}
-          placeholder="z.B. Haarschnitt €25 · Rasur €15 · Getränk €3 · Gericht €12"
-          rows={3}
-          maxLength={500}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 resize-none focus:outline-none focus:border-zinc-500"
-        />
-        <p className="text-[10px] text-zinc-600 mt-1 text-right">{priceInfo.length}/500</p>
-      </div>
 
       <PeriodSelector value={period} onChange={setPeriod} />
 
