@@ -1999,6 +1999,16 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
     }
   };
 
+  const handleDeletePartner = async (affiliateId: string, name: string) => {
+    if (!window.confirm(`Partner „${name}" wirklich löschen? Alle Leads, Verträge und Provisionen werden unwiderruflich gelöscht.`)) return;
+    try {
+      await affiliateMutation("admin:deleteAffiliate", { adminSecret, affiliateId });
+      await load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Fehler");
+    }
+  };
+
   const handleSuspendPartner = async (affiliateId: string) => {
     try {
       await affiliateMutation("admin:suspendAffiliate", { adminSecret, affiliateId });
@@ -2170,6 +2180,8 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
                       <button onClick={() => handleApprovePartner(p._id)}
                         className="text-[10px] text-green-400 hover:text-green-300 transition-colors">Reaktivieren</button>
                     )}
+                    <button onClick={() => handleDeletePartner(p._id, p.name)}
+                      className="text-[10px] text-zinc-600 hover:text-red-500 transition-colors">Löschen</button>
                   </div>
                 </div>
               ))}
