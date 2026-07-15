@@ -3,6 +3,43 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireShopRole, sanitizeShop } from "./auth";
 import type { Id } from "./_generated/dataModel";
 
+export const provisionShopFromAffiliate = internalMutation({
+  args: {
+    shopName:        v.string(),
+    affiliateLeadId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const umlautMap: Record<string, string> = { ä: "ae", ö: "oe", ü: "ue", ß: "ss" };
+    const base = args.shopName.toLowerCase()
+      .replace(/[äöüß]/g, c => umlautMap[c] ?? c)
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 30) || "shop";
+
+    let slug = base;
+    for (let i = 1; i < 100; i++) {
+      const exists = await ctx.db.query("shops").withIndex("by_slug", q => q.eq("slug", slug)).unique();
+      if (!exists) break;
+      slug = `${base}-${i}`;
+    }
+
+    const adminLoginToken    = crypto.randomUUID();
+    const mitarbeiterToken   = crypto.randomUUID();
+
+    const shopId = await ctx.db.insert("shops", {
+      name:            args.shopName,
+      slug,
+      stampsRequired:  10,
+      rewardText:      "Gratis-Produkt nach 10 Stempeln",
+      adminLoginToken,
+      mitarbeiterToken,
+      createdAt:       Date.now(),
+    });
+
+    return { shopId: shopId as string, slug, adminLoginToken };
+  },
+});
+
 export const getBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
