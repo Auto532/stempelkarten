@@ -2057,6 +2057,15 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
     finally { setBusy(false); }
   };
 
+  const toggleDiscount = async (eligible: boolean) => {
+    setBusy(true); setErr("");
+    try {
+      await affiliateMutation("admin:setDiscountEligible", { adminSecret, affiliateId, eligible });
+      await load(); onChanged();
+    } catch (e: any) { setErr(e?.message ?? "Fehler"); }
+    finally { setBusy(false); }
+  };
+
   const a = data?.affiliate;
   const pending = data?.pendingProfile as Record<string, any> | null | undefined;
 
@@ -2114,6 +2123,18 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
                   <p className="text-[10px] text-zinc-500">{s.label}</p>
                 </div>
               ))}
+            </div>
+
+            {/* Rabatt-Berechtigung (muss vor Nutzung eines Rabattcodes aktiviert sein) */}
+            <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+              <div className="min-w-0 pr-3">
+                <p className="text-xs font-semibold text-zinc-200">Rabatt berechtigt</p>
+                <p className="text-[10px] text-zinc-500">Erlaubt Rabattcodes (z.B. LOYAL50 · 50% aufs 1. Jahr) für die Shops dieses Partners</p>
+              </div>
+              <button onClick={() => toggleDiscount(!a.discountEligible)} disabled={busy}
+                className={`relative w-11 h-6 rounded-full flex-shrink-0 transition-colors disabled:opacity-50 ${a.discountEligible ? "bg-green-600" : "bg-zinc-700"}`}>
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${a.discountEligible ? "translate-x-5" : ""}`} />
+              </button>
             </div>
 
             <PModalSection title="Stammdaten">
