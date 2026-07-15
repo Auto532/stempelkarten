@@ -297,10 +297,28 @@ function ToggleSwitch({ active, onToggle, disabled }: { active: boolean; onToggl
 
 type Tier = { stamps: number; text: string; enabled: boolean };
 
-function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
+function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops">; adminSecret: string; onDeleted: () => void }) {
   const adminSetFeatures  = useMutation(api.shops.adminSetFeatures);
   const updateContent     = useMutation(api.shops.adminUpdateShopContent);
   const updateLegalTexts  = useMutation(api.shops.adminUpdateLegalTexts);
+  const deleteShop        = useMutation(api.shops.adminDeleteShop);
+
+  const shopActive = shop.active !== false; // fehlend = aktiv
+  const [togglingActive, setTogglingActive] = useState(false);
+  const [deleting, setDeleting]             = useState(false);
+
+  const handleToggleActive = async () => {
+    setTogglingActive(true);
+    try { await adminSetFeatures({ shopId: shop._id, adminSecret, active: !shopActive }); }
+    finally { setTogglingActive(false); }
+  };
+
+  const handleDeleteShop = async () => {
+    if (!window.confirm(`Shop „${shop.name}" wirklich KOMPLETT löschen? Alle Kundenkarten, Stempel und Nachrichten dieses Shops werden unwiderruflich gelöscht.`)) return;
+    setDeleting(true);
+    try { await deleteShop({ shopId: shop._id, adminSecret }); onDeleted(); }
+    catch (e) { alert(e instanceof Error ? e.message : "Fehler beim Löschen"); setDeleting(false); }
+  };
 
   // Program
   const [stampsRequired, setStampsRequired] = useState(shop.stampsRequired);
@@ -500,6 +518,18 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
         </div>
       </div>
 
+      {/* Shop-Status (aktiv/deaktiviert) */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className={`w-2.5 h-2.5 rounded-full ${shopActive ? "bg-green-500" : "bg-red-500"}`} />
+          <div>
+            <p className="text-sm font-semibold text-zinc-200">Shop {shopActive ? "aktiv" : "deaktiviert"}</p>
+            <p className="text-[10px] text-zinc-500">{shopActive ? "Kunden können Stempel sammeln" : "Stempeln ist gesperrt"}</p>
+          </div>
+        </div>
+        <ToggleSwitch active={shopActive} onToggle={handleToggleActive} disabled={togglingActive} />
+      </div>
+
       {/* Funktionen */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-zinc-800">
@@ -584,6 +614,16 @@ function ShopEinstellungen({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
           </button>
         </div>
       </div>
+
+      {/* Gefahrenzone: Shop löschen */}
+      <div className="bg-zinc-900 border border-red-900/40 rounded-2xl p-4 space-y-2">
+        <p className="text-sm font-semibold text-red-400">Gefahrenzone</p>
+        <p className="text-[11px] text-zinc-500">Löscht diesen Shop samt aller Kundenkarten, Stempel und Nachrichten. Nicht umkehrbar.</p>
+        <button onClick={handleDeleteShop} disabled={deleting}
+          className="w-full py-2.5 rounded-xl text-sm font-semibold bg-red-900/30 border border-red-900/50 text-red-400 hover:bg-red-900/40 transition-colors disabled:opacity-50">
+          {deleting ? "Löscht..." : "Shop komplett löschen"}
+        </button>
+      </div>
     </motion.div>
   );
 }
@@ -625,7 +665,7 @@ function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops">; admi
         <AnimatePresence mode="wait">
           {subView === "dashboard"     && <ShopDashboard     key={`${shop._id}-dash`}  shop={shop} adminSecret={adminSecret} />}
           {subView === "analytics"     && <ShopAnalytics     key={`${shop._id}-anal`}  shop={shop} adminSecret={adminSecret} />}
-          {subView === "einstellungen" && <ShopEinstellungen key={`${shop._id}-einst`} shop={shop} adminSecret={adminSecret} />}
+          {subView === "einstellungen" && <ShopEinstellungen key={`${shop._id}-einst`} shop={shop} adminSecret={adminSecret} onDeleted={onBack} />}
         </AnimatePresence>
       </div>
 

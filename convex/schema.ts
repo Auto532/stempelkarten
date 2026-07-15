@@ -17,6 +17,9 @@ export default defineSchema({
     adminLoginToken: v.string(),
     mitarbeiterToken: v.optional(v.string()),
     ownerId: v.optional(v.id("owners")),
+    // Shop aktiv? Fehlt/true = aktiv. false = deaktiviert (kein Stempeln mehr).
+    // Jetzt manuell im Admin; später automatisch bei abgelaufenem Abo.
+    active: v.optional(v.boolean()),
     showLeads: v.optional(v.boolean()),
     bonusProgramEnabled: v.optional(v.boolean()),
     rewardTiers: v.optional(v.array(v.object({

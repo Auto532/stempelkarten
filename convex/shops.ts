@@ -192,6 +192,7 @@ export const adminSetFeatures = mutation({
     bonusProgramEnabled: v.optional(v.boolean()),
     milestonesEnabled: v.optional(v.boolean()),
     customDesignEnabled: v.optional(v.boolean()),
+    active: v.optional(v.boolean()),
     clearTheme: v.optional(v.boolean()),
     theme: v.optional(v.string()),
     accentColor: v.optional(v.string()),
@@ -203,10 +204,43 @@ export const adminSetFeatures = mutation({
     if (flags.bonusProgramEnabled !== undefined) patch.bonusProgramEnabled = flags.bonusProgramEnabled;
     if (flags.milestonesEnabled !== undefined) patch.milestonesEnabled = flags.milestonesEnabled;
     if (flags.customDesignEnabled !== undefined) patch.customDesignEnabled = flags.customDesignEnabled;
+    if (flags.active !== undefined) patch.active = flags.active;
     if (flags.clearTheme) patch.theme = undefined;
     if (flags.theme !== undefined) patch.theme = flags.theme;
     if (flags.accentColor !== undefined) patch.accentColor = flags.accentColor;
     await ctx.db.patch(shopId, patch);
+  },
+});
+
+// Shop komplett löschen (Admin) — inkl. aller shop-bezogenen Daten.
+// Kunden bleiben erhalten (können in anderen Shops Mitgliedschaften haben).
+export const adminDeleteShop = mutation({
+  args: { shopId: v.id("shops"), adminSecret: v.string() },
+  handler: async (ctx, { shopId, adminSecret }) => {
+    requireAdmin({ secret: adminSecret });
+    const shop = await ctx.db.get(shopId);
+    if (!shop) throw new Error("Shop nicht gefunden");
+
+    const [stampEvents, messages, memberships] = await Promise.all([
+      ctx.db.query("stampEvents").withIndex("by_shop", (q) => q.eq("shopId", shopId)).collect(),
+      ctx.db.query("messages").withIndex("by_shop", (q) => q.eq("shopId", shopId)).collect(),
+      ctx.db.query("memberships").withIndex("by_shop", (q) => q.eq("shopId", shopId)).collect(),
+    ]);
+
+    for (const doc of [...stampEvents, ...messages, ...memberships]) {
+      await ctx.db.delete(doc._id);
+    }
+    if (shop.ownerId) {
+      const owner = await ctx.db.get(shop.ownerId);
+      if (owner) await ctx.db.delete(owner._id);
+    }
+    await ctx.db.delete(shopId);
+
+    return {
+      deletedMemberships: memberships.length,
+      deletedStampEvents: stampEvents.length,
+      deletedMessages:    messages.length,
+    };
   },
 });
 
