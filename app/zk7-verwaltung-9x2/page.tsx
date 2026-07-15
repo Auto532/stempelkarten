@@ -976,6 +976,64 @@ function GrowthCard({ label, value, prev, color, period }: {
   );
 }
 
+const AFFILIATE_SITE = process.env.NEXT_PUBLIC_AFFILIATE_SITE_URL ?? "";
+const ADMIN_SECRET_ENV = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "";
+
+function EarningsCard() {
+  const [data, setData] = useState<null | {
+    revenueTotal: number; commTotal: number; commPaid: number;
+    commConfirmed: number; commPending: number; netEarnings: number; activeContracts: number;
+  }>(null);
+
+  useEffect(() => {
+    if (!AFFILIATE_SITE || !ADMIN_SECRET_ENV) return;
+    fetch(`${AFFILIATE_SITE}/admin/earnings?secret=${ADMIN_SECRET_ENV}`)
+      .then(r => r.json()).then(setData).catch(() => {});
+  }, []);
+
+  if (!data) return null;
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
+        <TrendingUp size={14} className="text-green-400" />
+        <span className="text-sm font-semibold text-zinc-200">Meine Einnahmen</span>
+      </div>
+      <div className="p-4 space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-zinc-800/50 rounded-xl p-3">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Gesamtumsatz</p>
+            <p className="text-2xl font-bold text-green-400">€{data.revenueTotal.toFixed(2)}</p>
+            <p className="text-[10px] text-zinc-600 mt-0.5">{data.activeContracts} aktive Verträge</p>
+          </div>
+          <div className="bg-zinc-800/50 rounded-xl p-3">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Mein Anteil</p>
+            <p className="text-2xl font-bold text-amber-400">€{data.netEarnings.toFixed(2)}</p>
+            <p className="text-[10px] text-zinc-600 mt-0.5">nach Provisionen</p>
+          </div>
+        </div>
+        <div className="border-t border-zinc-800 pt-3 space-y-2">
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Provisionen an Partner</p>
+          {[
+            { label: "Ausstehend",  value: data.commPending,   color: "text-yellow-400" },
+            { label: "Bestätigt",   value: data.commConfirmed, color: "text-blue-400"   },
+            { label: "Ausgezahlt",  value: data.commPaid,      color: "text-zinc-400"   },
+          ].map(r => (
+            <div key={r.label} className="flex items-center justify-between">
+              <span className="text-xs text-zinc-500">{r.label}</span>
+              <span className={`text-sm font-semibold ${r.color}`}>€{r.value.toFixed(2)}</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between pt-1 border-t border-zinc-800">
+            <span className="text-xs text-zinc-400 font-semibold">Gesamt Provisionen</span>
+            <span className="text-sm font-bold text-red-400">– €{data.commTotal.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
   const [period, setPeriod] = useState<Period>("all");
   const data = useQuery(api.shops.getGlobalAnalyticsByPeriod, {
@@ -987,6 +1045,8 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
 
   return (
     <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+
+      <EarningsCard />
 
       <PeriodSelector value={period} onChange={setPeriod} />
 
