@@ -1552,6 +1552,7 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
 function SettingsTab({ adminSecret }: { adminSecret: string }) {
   const clearAllData       = useMutation(api.admin.clearAllData);
   const createTestCustomer = useMutation(api.admin.adminCreateTestCustomer);
+  const [showAdminZugang, setShowAdminZugang] = useState(false);
   const [showDangerZone, setShowDangerZone] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteText, setDeleteText] = useState("");
@@ -1606,26 +1607,34 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
   return (
     <motion.div key="settings" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800">
+        <button onClick={() => setShowAdminZugang(!showAdminZugang)}
+          className="w-full flex items-center gap-2 px-5 py-4 hover:bg-zinc-800/50 transition-colors">
           <Shield size={15} className="text-zinc-400" />
-          <span className="text-sm font-medium text-zinc-200">Admin-Zugang</span>
-        </div>
-        <div className="p-5 space-y-4">
-          <div>
-            <p className="text-xs text-zinc-500 mb-2">Geheime Admin-URL</p>
-            <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2.5">
-              <code className="text-[11px] text-amber-300 flex-1 truncate">{adminUrl}</code>
-              <button onClick={copyAdminUrl} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
-                {copied ? <Check size={14} className="text-green-400" /> : <Link size={14} />}
-              </button>
-            </div>
-            <p className="text-[11px] text-zinc-600 mt-1.5">Nur du kennst diese URL — teile sie niemals.</p>
-          </div>
-          <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl p-3">
-            <p className="text-xs text-amber-300 font-medium mb-1">PIN: gesetzt via ADMIN_PIN Env-Variable</p>
-            <p className="text-[11px] text-zinc-500">PIN wird server-seitig geprüft — nicht im Client-Bundle sichtbar.</p>
-          </div>
-        </div>
+          <span className="text-sm font-medium text-zinc-200 flex-1 text-left">Admin-Zugang</span>
+          <ChevronRight size={13} className={`text-zinc-600 transition-transform ${showAdminZugang ? "rotate-90" : ""}`} />
+        </button>
+        <AnimatePresence>
+          {showAdminZugang && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="p-5 space-y-4 border-t border-zinc-800">
+                <div>
+                  <p className="text-xs text-zinc-500 mb-2">Geheime Admin-URL</p>
+                  <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2.5">
+                    <code className="text-[11px] text-amber-300 flex-1 truncate">{adminUrl}</code>
+                    <button onClick={copyAdminUrl} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
+                      {copied ? <Check size={14} className="text-green-400" /> : <Link size={14} />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-zinc-600 mt-1.5">Nur du kennst diese URL — teile sie niemals.</p>
+                </div>
+                <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl p-3">
+                  <p className="text-xs text-amber-300 font-medium mb-1">PIN: gesetzt via ADMIN_PIN Env-Variable</p>
+                  <p className="text-[11px] text-zinc-500">PIN wird server-seitig geprüft — nicht im Client-Bundle sichtbar.</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Gerät zurücksetzen */}
