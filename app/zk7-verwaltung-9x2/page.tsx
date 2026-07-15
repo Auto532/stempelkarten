@@ -266,7 +266,7 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-zinc-200 truncate">{customer.name}</p>
-                <p className="text-[11px] text-zinc-500 truncate">{customer.phone}</p>
+                <p className="text-[11px] text-zinc-500 truncate">{customer.email}</p>
               </div>
               <div className="text-right shrink-0">
                 <p className="text-xs font-semibold text-amber-400">{membership.currentStamps}/{shop.stampsRequired}</p>
@@ -1639,15 +1639,641 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
   );
 }
 
+// ─── Partner Tab ─────────────────────────────────────────────────────────────
+
+const AFFILIATE_URL = process.env.NEXT_PUBLIC_AFFILIATE_CONVEX_URL ?? "";
+
+async function affiliateQuery(path: string, args: Record<string, unknown>) {
+  if (!AFFILIATE_URL) return null;
+  const res = await fetch(`${AFFILIATE_URL}/api/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, format: "json", args }),
+  });
+  const data = await res.json();
+  if (data.status === "error") throw new Error(data.errorMessage);
+  return data.value;
+}
+
+async function affiliateMutation(path: string, args: Record<string, unknown>) {
+  if (!AFFILIATE_URL) return null;
+  const res = await fetch(`${AFFILIATE_URL}/api/mutation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, format: "json", args }),
+  });
+  const data = await res.json();
+  if (data.status === "error") throw new Error(data.errorMessage);
+  return data.value;
+}
+
+type AffiliateStatus = "pending" | "active" | "suspended";
+type LeadStatus = "submitted" | "under_review" | "approved" | "rejected" | "active" | "draft";
+
+interface AffiliateLead {
+  _id: string; _creationTime: number;
+  shopName: string; ownerName: string; ownerEmail: string;
+  city?: string; businessType?: string;
+  affiliateName: string; affiliateCode: string;
+  status: LeadStatus;
+}
+
+interface AffiliatePartner {
+  _id: string; name: string; email: string;
+  referralCode: string; status: AffiliateStatus;
+  _creationTime: number;
+}
+
+interface AffiliateDashboard {
+  leads: { total: number; submitted: number; active: number; rejected: number };
+  affiliates: { total: number; pending: number; active: number };
+  commissions: { pending: number; confirmed: number; paid: number };
+}
+
+async function sha256(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+const EMPTY_PARTNER = {
+  name: "", email: "", password: "", phone: "",
+  company: "", dateOfBirth: "", taxId: "", vatId: "",
+  address: "", zip: "", city: "", country: "Deutschland",
+  bankIban: "", bankBic: "", bankName: "", notes: "",
+};
+
+function CreatePartnerForm({ adminSecret, onCreated }: { adminSecret: string; onCreated: () => void }) {
+  const [open, setOpen]       = useState(false);
+  const [form, setForm]       = useState(EMPTY_PARTNER);
+  const [saving, setSaving]   = useState(false);
+  const [result, setResult]   = useState<{ referralCode: string; name: string } | null>(null);
+
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleCreate = async () => {
+    if (!form.name || !form.email || !form.password) return;
+    setSaving(true);
+    try {
+      const passwordHash = await sha256(form.password);
+      const res = await affiliateMutation("admin:createAffiliate", {
+        adminSecret,
+        name:        form.name,
+        email:       form.email,
+        passwordHash,
+        phone:       form.phone       || undefined,
+        company:     form.company     || undefined,
+        dateOfBirth: form.dateOfBirth || undefined,
+        taxId:       form.taxId       || undefined,
+        vatId:       form.vatId       || undefined,
+        address:     form.address     || undefined,
+        zip:         form.zip         || undefined,
+        city:        form.city        || undefined,
+        country:     form.country     || undefined,
+        bankIban:    form.bankIban    || undefined,
+        bankBic:     form.bankBic     || undefined,
+        bankName:    form.bankName    || undefined,
+        notes:       form.notes       || undefined,
+      });
+      setResult({ referralCode: (res as any).referralCode, name: form.name });
+      setForm(EMPTY_PARTNER);
+      onCreated();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Fehler");
+    } finally { setSaving(false); }
+  };
+
+  if (result) return (
+    <div className="bg-zinc-900 border border-green-900/40 rounded-2xl p-4 space-y-2">
+      <p className="text-sm font-semibold text-green-400">✓ Partner angelegt</p>
+      <p className="text-xs text-zinc-400">{result.name} · Code: <span className="font-mono text-amber-400">{result.referralCode}</span></p>
+      <p className="text-xs text-zinc-500">Login über die Partner-App mit der gesetzten E-Mail + Passwort.</p>
+      <button onClick={() => { setResult(null); setOpen(false); }}
+        className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Schließen</button>
+    </div>
+  );
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-zinc-800/50 transition-colors">
+        <span className="text-sm font-medium text-zinc-200">+ Partner erstellen</span>
+        <span className="ml-auto text-zinc-600 text-xs">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div className="border-t border-zinc-800 px-4 py-4 space-y-4">
+
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Zugangsdaten</p>
+          <div className="space-y-2">
+            {[
+              { k: "name",  label: "Vollständiger Name *", type: "text"  },
+              { k: "email", label: "E-Mail (Login) *",     type: "email" },
+              { k: "phone", label: "Telefon",              type: "tel"   },
+            ].map(({ k, label, type }) => (
+              <div key={k}>
+                <label className="block text-[10px] text-zinc-500 mb-1">{label}</label>
+                <input type={type} value={(form as any)[k]} onChange={set(k)}
+                  className="w-full px-3 py-2 rounded-lg text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40" />
+              </div>
+            ))}
+            <div>
+              <label className="block text-[10px] text-zinc-500 mb-1">Initial-Passwort *</label>
+              <input type="text" value={form.password} onChange={set("password")}
+                placeholder="Sichtbar — wird dem Partner mitgeteilt"
+                className="w-full px-3 py-2 rounded-lg text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40 font-mono" />
+              <p className="text-[10px] text-zinc-600 mt-1">Partner kann es nach dem Login ändern</p>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold pt-1">Rechtliches</p>
+          <div className="space-y-2">
+            {[
+              { k: "company",     label: "Firmenname (falls Gewerbe)",   type: "text" },
+              { k: "dateOfBirth", label: "Geburtsdatum (TT.MM.JJJJ)",   type: "text", placeholder: "15.03.1990" },
+              { k: "taxId",       label: "Steuernummer",                 type: "text", placeholder: "123/456/78901" },
+              { k: "vatId",       label: "USt-IdNr. (falls vorhanden)",  type: "text", placeholder: "DE123456789" },
+            ].map(({ k, label, type, placeholder }) => (
+              <div key={k}>
+                <label className="block text-[10px] text-zinc-500 mb-1">{label}</label>
+                <input type={type} value={(form as any)[k]} onChange={set(k)} placeholder={placeholder}
+                  className="w-full px-3 py-2 rounded-lg text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40" />
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold pt-1">Adresse</p>
+          <div className="space-y-2">
+            {[
+              { k: "address", label: "Straße + Hausnummer", type: "text" },
+              { k: "zip",     label: "PLZ",                 type: "text" },
+              { k: "city",    label: "Stadt",               type: "text" },
+              { k: "country", label: "Land",                type: "text" },
+            ].map(({ k, label, type }) => (
+              <div key={k}>
+                <label className="block text-[10px] text-zinc-500 mb-1">{label}</label>
+                <input type={type} value={(form as any)[k]} onChange={set(k)}
+                  className="w-full px-3 py-2 rounded-lg text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40" />
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold pt-1">Bankverbindung</p>
+          <div className="space-y-2">
+            {[
+              { k: "bankIban", label: "IBAN",         type: "text", placeholder: "DE89 3704 0044 ..." },
+              { k: "bankBic",  label: "BIC / SWIFT",  type: "text", placeholder: "COBADEFFXXX" },
+              { k: "bankName", label: "Bankname",      type: "text" },
+            ].map(({ k, label, type, placeholder }) => (
+              <div key={k}>
+                <label className="block text-[10px] text-zinc-500 mb-1">{label}</label>
+                <input type={type} value={(form as any)[k]} onChange={set(k)} placeholder={placeholder}
+                  className="w-full px-3 py-2 rounded-lg text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40" />
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <label className="block text-[10px] text-zinc-500 mb-1">Interne Notiz</label>
+            <textarea value={form.notes} onChange={set("notes")} rows={2}
+              className="w-full px-3 py-2 rounded-lg text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40 resize-none" />
+          </div>
+
+          <button onClick={handleCreate} disabled={saving || !form.name || !form.email || !form.password}
+            className="w-full py-2.5 rounded-xl text-xs font-semibold bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 transition-colors">
+            {saving ? "Erstelle..." : "Partner anlegen & Konto erstellen"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const AFFILIATE_APP_URL = process.env.NEXT_PUBLIC_AFFILIATE_APP_URL ?? "http://localhost:3000";
+
+function InvitePartnerButton({ adminSecret }: { adminSecret: string }) {
+  const [link, setLink]       = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied]   = useState(false);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const res = await affiliateMutation("admin:generateAffiliateInvite", { adminSecret });
+      const token = (res as any).token;
+      setLink(`${AFFILIATE_APP_URL}/invite/partner/${token}`);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Fehler");
+    } finally { setLoading(false); }
+  };
+
+  const handleCopy = () => {
+    if (!link) return;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-zinc-200">Partner einladen</p>
+          <p className="text-xs text-zinc-500">Link ist 7 Tage gültig</p>
+        </div>
+        <button onClick={handleGenerate} disabled={loading}
+          className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-50 transition-colors"
+          style={{ background: "rgba(251,191,36,.15)", border: "1px solid rgba(251,191,36,.3)", color: "#fbbf24" }}>
+          {loading ? "..." : "Link generieren"}
+        </button>
+      </div>
+
+      {link && (
+        <div className="flex items-center gap-2 rounded-lg px-3 py-2"
+          style={{ background: "#18181b", border: "1px solid #27272a" }}>
+          <p className="flex-1 text-[10px] text-zinc-400 truncate font-mono">{link}</p>
+          <button onClick={handleCopy}
+            className="text-[10px] font-semibold flex-shrink-0 transition-colors"
+            style={{ color: copied ? "#4ade80" : "#fbbf24" }}>
+            {copied ? "✓ Kopiert" : "Kopieren"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function nextCommissionPreview(planType: "annual" | "monthly", paymentNumber: number) {
+  const phase =
+    planType === "annual"
+      ? paymentNumber === 1 ? "Erstprovision" : paymentNumber === 2 ? "Jahr 2" : paymentNumber === 3 ? "Jahr 3" : "Jahr 4+"
+      : paymentNumber <= 12 ? "Erstprovision" : paymentNumber <= 24 ? "Jahr 2" : paymentNumber <= 36 ? "Jahr 3" : "Jahr 4+";
+  const rates: Record<string, number> = { "Erstprovision": 0.20, "Jahr 2": 0.05, "Jahr 3": 0.10, "Jahr 4+": 0.15 };
+  const base   = planType === "annual" ? 389 : 39;
+  const rate   = rates[phase];
+  const amount = Math.round(base * rate * 100) / 100;
+  return { phase, rate, amount };
+}
+
+function PartnerTab({ adminSecret }: { adminSecret: string }) {
+  const [dashboard, setDashboard]     = useState<AffiliateDashboard | null>(null);
+  const [leads, setLeads]             = useState<AffiliateLead[] | null>(null);
+  const [partners, setPartners]       = useState<AffiliatePartner[] | null>(null);
+  const [activeLeads, setActiveLeads] = useState<any[]>([]);
+  const [contractMap, setContractMap] = useState<Record<string, any>>({});
+  const [commissionsMap, setCommissionsMap] = useState<Record<string, any[]>>({});
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState("");
+  const [approving, setApproving]     = useState<string | null>(null);
+  const [rejecting, setRejecting]     = useState<string | null>(null);
+  const [recording, setRecording]     = useState<string | null>(null);
+  const [confirming, setConfirming]   = useState<string | null>(null);
+  const [planMap, setPlanMap]         = useState<Record<string, "annual" | "monthly">>({});
+  const [reasonMap, setReasonMap]     = useState<Record<string, string>>({});
+  const [section, setSection]         = useState<"leads" | "partners" | "provisionen">("leads");
+
+  const load = async () => {
+    setLoading(true); setError("");
+    try {
+      const [dash, pendingLeads, allPartners, allLeads] = await Promise.all([
+        affiliateQuery("admin:getAdminDashboard", { adminSecret }),
+        affiliateQuery("admin:getAllLeads",         { adminSecret }),
+        affiliateQuery("admin:listAffiliates",    { adminSecret }),
+        affiliateQuery("admin:getAllLeads",        { adminSecret }),
+      ]);
+      setDashboard(dash);
+      setLeads(pendingLeads);
+      setPartners(allPartners);
+
+      const active = (allLeads ?? []).filter((l: any) => l.status === "active");
+      setActiveLeads(active);
+
+      const contracts: Record<string, any>    = {};
+      const commissions: Record<string, any[]> = {};
+      await Promise.all(active.map(async (lead: any) => {
+        const contract = await affiliateQuery("admin:getContractForLead", { adminSecret, leadId: lead._id });
+        if (contract) {
+          contracts[lead._id] = contract;
+          const comms = await affiliateQuery("admin:getCommissionsForContract", { adminSecret, contractId: contract._id });
+          commissions[lead._id] = comms ?? [];
+        }
+      }));
+      setContractMap(contracts);
+      setCommissionsMap(commissions);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Verbindungsfehler zur Partner-App");
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleApproveLead = async (leadId: string) => {
+    setApproving(leadId);
+    try {
+      await affiliateMutation("admin:approveLead", {
+        adminSecret, leadId, planType: planMap[leadId] ?? "annual", adminName: "Admin",
+      });
+      await load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Fehler");
+    } finally { setApproving(null); }
+  };
+
+  const handleRejectLead = async (leadId: string) => {
+    if (!reasonMap[leadId]) return;
+    setRejecting(leadId);
+    try {
+      await affiliateMutation("admin:rejectLead", { adminSecret, leadId, reason: reasonMap[leadId] });
+      await load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Fehler");
+    } finally { setRejecting(null); }
+  };
+
+  const handleApprovePartner = async (affiliateId: string) => {
+    try {
+      await affiliateMutation("admin:approveAffiliate", { adminSecret, affiliateId });
+      await load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Fehler");
+    }
+  };
+
+  const handleSuspendPartner = async (affiliateId: string) => {
+    try {
+      await affiliateMutation("admin:suspendAffiliate", { adminSecret, affiliateId });
+      await load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Fehler");
+    }
+  };
+
+  const handleRecordPayment = async (contractId: string) => {
+    setRecording(contractId);
+    try {
+      const result = await affiliateMutation("admin:recordPayment", { adminSecret, shopContractId: contractId });
+      alert(`✓ Provision erfasst: €${(result as any)?.amount?.toFixed(2)} (${(result as any)?.phase})`);
+      await load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Fehler");
+    } finally { setRecording(null); }
+  };
+
+  const handleConfirmCommission = async (commissionId: string) => {
+    setConfirming(commissionId);
+    try {
+      await affiliateMutation("admin:confirmCommission", { adminSecret, commissionId });
+      await load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Fehler");
+    } finally { setConfirming(null); }
+  };
+
+  if (!AFFILIATE_URL) return (
+    <div className="py-10 text-center text-zinc-500 text-sm">
+      NEXT_PUBLIC_AFFILIATE_CONVEX_URL nicht konfiguriert
+    </div>
+  );
+
+  if (loading) return (
+    <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
+      className="text-zinc-500 text-sm text-center py-10">Lade Partner-Daten...</motion.div>
+  );
+
+  if (error) return (
+    <div className="py-8 text-center space-y-3">
+      <p className="text-red-400 text-sm">{error}</p>
+      <button onClick={load} className="text-xs text-zinc-400 hover:text-zinc-200">Erneut versuchen</button>
+    </div>
+  );
+
+  const pendingPartners = partners?.filter(p => p.status === "pending") ?? [];
+
+  return (
+    <motion.div key="partner" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: "Shops offen",    value: dashboard?.leads.submitted ?? 0,                                     color: "text-yellow-400" },
+          { label: "Partner aktiv",  value: dashboard?.affiliates.active ?? 0,                                   color: "text-amber-400"  },
+          { label: "Provision off.", value: `€${(dashboard?.commissions.pending ?? 0).toFixed(0)}`,              color: "text-orange-400" },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+            <p className={`text-lg font-bold ${color}`}>{value}</p>
+            <p className="text-[10px] text-zinc-500 mt-0.5">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Pending Partner-Anfragen */}
+      {pendingPartners.length > 0 && (
+        <div className="bg-zinc-900 border border-amber-900/30 rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+            <Users size={13} className="text-amber-400" />
+            <span className="text-sm font-medium text-zinc-200">Neue Partner-Anfragen</span>
+            <span className="ml-auto text-[10px] text-amber-400 font-semibold">{pendingPartners.length}</span>
+          </div>
+          <div className="divide-y divide-zinc-800/50">
+            {pendingPartners.map(p => (
+              <div key={p._id} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-zinc-200 font-medium">{p.name}</p>
+                  <p className="text-xs text-zinc-500">{p.email} · {p.referralCode}</p>
+                </div>
+                <button onClick={() => handleApprovePartner(p._id)}
+                  className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors"
+                  style={{ background: "rgba(251,191,36,.15)", border: "1px solid rgba(251,191,36,.3)", color: "#fbbf24" }}>
+                  Freigeben
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Section-Toggle */}
+      <div className="flex gap-1.5">
+        {(["leads", "partners", "provisionen"] as const).map(s => (
+          <button key={s} onClick={() => setSection(s)}
+            className="flex-1 py-2 rounded-xl text-[11px] font-semibold transition-colors"
+            style={section === s
+              ? { background: "rgba(251,191,36,.15)", border: "1px solid rgba(251,191,36,.3)", color: "#fbbf24" }
+              : { background: "#18181b", border: "1px solid #27272a", color: "#71717a" }}>
+            {s === "leads" ? `Shops (${leads?.length ?? 0})` : s === "partners" ? `Partner (${partners?.length ?? 0})` : `Prov. (${activeLeads.length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Neue Shops (Info) */}
+      {section === "leads" && (
+        <div className="space-y-3">
+          <div className="rounded-xl px-3 py-2.5 text-xs text-zinc-400"
+            style={{ background: "rgba(251,191,36,.06)", border: "1px solid rgba(251,191,36,.15)" }}>
+            Shops werden automatisch aktiviert. Hier siehst du neue Shops die in Loatycard eingerichtet werden müssen.
+          </div>
+          {leads?.length === 0 && (
+            <p className="text-center text-zinc-500 text-sm py-6">Keine neuen Shops</p>
+          )}
+          {leads?.map((lead: any) => (
+            <div key={lead._id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold text-zinc-100">{lead.shopName}</p>
+                  <p className="text-xs text-zinc-500">{lead.ownerName} · {lead.ownerEmail}</p>
+                  {lead.ownerPhone && <p className="text-xs text-zinc-600">{lead.ownerPhone}</p>}
+                  {lead.city && <p className="text-xs text-zinc-600">{lead.businessType ?? ""}{lead.businessType && lead.city ? " · " : ""}{lead.city}</p>}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs text-amber-400">{lead.affiliateName}</p>
+                  <p className="text-[10px] text-zinc-600">{lead.affiliateCode}</p>
+                  <p className="text-[10px] text-green-400 mt-0.5">● Aktiv</p>
+                </div>
+              </div>
+              <p className="text-[10px] text-zinc-600 pt-1 border-t border-zinc-800">
+                Eingereicht: {new Date(lead._creationTime).toLocaleDateString("de-DE")}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Alle Partner */}
+      {section === "partners" && (
+        <div className="space-y-3">
+          {/* Partner erstellen */}
+          <CreatePartnerForm adminSecret={adminSecret} onCreated={load} />
+          <InvitePartnerButton adminSecret={adminSecret} />
+
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            {partners?.length === 0 && (
+              <p className="text-center text-zinc-500 text-sm p-6">Noch keine Partner</p>
+            )}
+            <div className="divide-y divide-zinc-800/50">
+              {partners?.map(p => (
+                <div key={p._id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-200">{p.name}</p>
+                    <p className="text-xs text-zinc-500">{p.email}</p>
+                    {(p as any).company && <p className="text-xs text-zinc-600">{(p as any).company}</p>}
+                  </div>
+                  <div className="text-right flex-shrink-0 space-y-1">
+                    <p className="text-xs font-mono text-amber-400">{p.referralCode}</p>
+                    <p className={`text-[10px] ${p.status === "active" ? "text-green-400" : p.status === "pending" ? "text-yellow-400" : "text-red-400"}`}>
+                      {p.status === "active" ? "Aktiv" : p.status === "pending" ? "Ausstehend" : "Gesperrt"}
+                    </p>
+                    {p.status === "active" && (
+                      <button onClick={() => handleSuspendPartner(p._id)}
+                        className="text-[10px] text-red-400 hover:text-red-300 transition-colors">Sperren</button>
+                    )}
+                    {p.status === "suspended" && (
+                      <button onClick={() => handleApprovePartner(p._id)}
+                        className="text-[10px] text-green-400 hover:text-green-300 transition-colors">Reaktivieren</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Provisionen */}
+      {section === "provisionen" && (
+        <div className="space-y-3">
+          {activeLeads.length === 0 && (
+            <p className="text-center text-zinc-500 text-sm py-6">Keine aktiven Shops</p>
+          )}
+          {activeLeads.map(lead => {
+            const contract = contractMap[lead._id];
+            if (!contract) return null;
+            const comms    = commissionsMap[lead._id] ?? [];
+            const pending  = comms.filter((c: any) => c.status === "pending");
+            const confirmed = comms.filter((c: any) => c.status === "confirmed");
+            const preview  = nextCommissionPreview(contract.planType, contract.paymentCount + 1);
+            return (
+              <div key={lead._id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-zinc-100">{lead.shopName}</p>
+                    <p className="text-xs text-zinc-500">{lead.affiliateName} · {lead.affiliateCode}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xs font-semibold text-amber-400">
+                      {contract.planType === "annual" ? "Jahresabo" : "Monatsabo"}
+                    </p>
+                    <p className="text-[10px] text-zinc-600">{contract.paymentCount} Zahlungen</p>
+                  </div>
+                </div>
+
+                {/* Nächste Provision */}
+                <div className="rounded-lg px-3 py-2 bg-zinc-800/60 border border-zinc-700/50">
+                  <p className="text-[10px] text-zinc-500 mb-0.5">Zahlung #{contract.paymentCount + 1} → Provision</p>
+                  <p className="text-sm font-bold text-amber-400">
+                    €{preview.amount.toFixed(2)}
+                    <span className="text-xs font-normal text-zinc-500 ml-1">
+                      ({(preview.rate * 100).toFixed(0)}% · {preview.phase})
+                    </span>
+                  </p>
+                </div>
+
+                <button onClick={() => handleRecordPayment(contract._id)}
+                  disabled={recording === contract._id}
+                  className="w-full py-2 rounded-xl text-xs font-semibold bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 transition-colors">
+                  {recording === contract._id ? "Erfasse..." : "Zahlung erfassen →"}
+                </button>
+
+                {/* Ausstehende Provisionen bestätigen */}
+                {pending.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Ausstehend (nach 14 Tagen bestätigen)</p>
+                    {pending.map((c: any) => (
+                      <div key={c._id} className="flex items-center gap-2 rounded-lg px-3 py-2"
+                        style={{ background: "rgba(249,115,22,.07)", border: "1px solid rgba(249,115,22,.2)" }}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-zinc-200">€{c.amount.toFixed(2)}</p>
+                          <p className="text-[10px] text-zinc-500">
+                            {new Date(c.triggeredAt).toLocaleDateString("de-DE")}
+                          </p>
+                        </div>
+                        <button onClick={() => handleConfirmCommission(c._id)} disabled={confirming === c._id}
+                          className="text-xs px-2.5 py-1 rounded-lg font-semibold text-green-400 disabled:opacity-40 transition-opacity"
+                          style={{ background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.2)" }}>
+                          {confirming === c._id ? "..." : "Bestätigen"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {confirmed.length > 0 && (
+                  <p className="text-[10px] text-green-400">
+                    ✓ {confirmed.length}× bestätigt · €{confirmed.reduce((s: number, c: any) => s + c.amount, 0).toFixed(2)} bereit
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <button onClick={load} className="w-full py-2 text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
+        ↻ Aktualisieren
+      </button>
+    </motion.div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "shops" | "analytics" | "settings";
+type Tab = "overview" | "shops" | "analytics" | "settings" | "partner";
 
 const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "overview",   label: "Übersicht",    icon: BarChart2  },
   { id: "shops",      label: "Shops",        icon: Store      },
   { id: "analytics",  label: "Analytics",    icon: TrendingUp },
   { id: "settings",   label: "Einstellungen", icon: Settings  },
+  { id: "partner",    label: "Partner",      icon: Users      },
 ];
 
 export default function SuperAdminPage() {
@@ -1758,6 +2384,7 @@ export default function SuperAdminPage() {
             {activeTab === "shops"     && "Shops"}
             {activeTab === "analytics" && "Analytics"}
             {activeTab === "settings"  && "Einstellungen"}
+            {activeTab === "partner"   && "Partner"}
           </motion.span>
         </AnimatePresence>
         <span className="ml-auto text-[10px] text-zinc-600 uppercase tracking-widest font-medium">Admin</span>
@@ -1768,7 +2395,8 @@ export default function SuperAdminPage() {
           {activeTab === "overview"  && <OverviewTab   key="overview"   adminSecret={adminSecret} onSelectShop={id => setSelectedShopId(id)} />}
           {activeTab === "shops"     && <ShopsTab      key="shops"      shops={allShops} adminSecret={adminSecret} onSelectShop={id => { setSelectedShopId(id); }} />}
           {activeTab === "analytics" && <AnalyticsTab  key="analytics"  adminSecret={adminSecret} />}
-          {activeTab === "settings"  && <SettingsTab   key="settings" adminSecret={adminSecret} />}
+          {activeTab === "settings"  && <SettingsTab   key="settings"   adminSecret={adminSecret} />}
+          {activeTab === "partner"   && <PartnerTab    key="partner"    adminSecret={adminSecret} />}
         </AnimatePresence>
       </div>
 

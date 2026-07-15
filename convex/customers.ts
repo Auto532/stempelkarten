@@ -1,10 +1,10 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
-import { normalizePhone } from "./lib/phone";
+import { normalizeEmail } from "./lib/phone";
 
-export const findCustomerByPhone = query({
-  args: { phone: v.string(), adminToken: v.string() },
-  handler: async (ctx, { phone, adminToken }) => {
+export const findCustomerByEmail = query({
+  args: { email: v.string(), adminToken: v.string() },
+  handler: async (ctx, { email, adminToken }) => {
     const shop = await ctx.db
       .query("shops")
       .filter(q => q.eq(q.field("adminLoginToken"), adminToken))
@@ -13,7 +13,7 @@ export const findCustomerByPhone = query({
 
     const customer = await ctx.db
       .query("customers")
-      .withIndex("by_phone", q => q.eq("phone", normalizePhone(phone)))
+      .withIndex("by_email", q => q.eq("email", normalizeEmail(email)))
       .first();
     if (!customer) return null;
 
@@ -93,16 +93,15 @@ export const updateName = mutation({
 export const registerCustomer = mutation({
   args: {
     name: v.string(),
-    phone: v.string(),
+    email: v.string(),
     shopSlug: v.string(),
     existingQrToken: v.optional(v.string()),
     acquisitionType: v.optional(v.union(v.literal("new"), v.literal("returning"))),
   },
-  handler: async (ctx, { name, phone, shopSlug, existingQrToken, acquisitionType }) => {
-    const normalized = normalizePhone(phone);
-    const digits = phone.replace(/\D/g, "");
-    if (!normalized || !/^[\+\d\s\-\(\)\/]+$/.test(phone.trim()) || digits.length < 7 || digits.length > 15) {
-      throw new Error("Ungültige Telefonnummer");
+  handler: async (ctx, { name, email, shopSlug, existingQrToken, acquisitionType }) => {
+    const normalized = normalizeEmail(email);
+    if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      throw new Error("Ungültige E-Mail-Adresse");
     }
 
     const shop = await ctx.db
@@ -119,27 +118,26 @@ export const registerCustomer = mutation({
         .query("customers")
         .withIndex("by_qrToken", (q) => q.eq("qrToken", existingQrToken))
         .unique();
-      // Nur akzeptieren wenn Telefonnummer zum bestehenden Account passt
-      if (existing && existing.phone === normalized) {
+      if (existing && existing.email === normalized) {
         customerId = existing._id;
         qrToken = existingQrToken;
       }
     }
 
     if (!customerId) {
-      // Deduplicate by phone: returning customer gets their old card back
-      const byPhone = await ctx.db
+      // Deduplicate by email: returning customer gets their old card back
+      const byEmail = await ctx.db
         .query("customers")
-        .withIndex("by_phone", (q) => q.eq("phone", normalized))
+        .withIndex("by_email", (q) => q.eq("email", normalized))
         .first();
-      if (byPhone) {
-        customerId = byPhone._id;
-        qrToken = byPhone.qrToken;
+      if (byEmail) {
+        customerId = byEmail._id;
+        qrToken = byEmail.qrToken;
       } else {
         qrToken = crypto.randomUUID();
         customerId = await ctx.db.insert("customers", {
           name,
-          phone: normalized,
+          email: normalized,
           qrToken: qrToken!,
           createdAt: Date.now(),
         });
@@ -169,22 +167,19 @@ export const registerCustomer = mutation({
   },
 });
 
-export const migratePhones = internalMutation({
+export const migratePhonesToEmail = internalMutation({
   args: {},
   handler: async (ctx) => {
     const customers = await ctx.db.query("customers").collect();
-    let migrated = 0, conflicts = 0;
+    let migrated = 0;
     for (const c of customers) {
-      const normalized = normalizePhone(c.phone);
-      if (!normalized || normalized === c.phone) continue;
-      const existing = await ctx.db
-        .query("customers")
-        .withIndex("by_phone", q => q.eq("phone", normalized))
-        .first();
-      if (existing && existing._id !== c._id) { conflicts++; continue; }
-      await ctx.db.patch(c._id, { phone: normalized });
-      migrated++;
+      // @ts-expect-error - old documents may have phone field
+      if (c.phone && !c.email) {
+        // @ts-expect-error - old documents may have phone field
+        await ctx.db.patch(c._id, { email: normalizeEmail(c.phone) });
+        migrated++;
+      }
     }
-    return { migrated, conflicts, total: customers.length };
+    return { migrated, total: customers.length };
   },
 });

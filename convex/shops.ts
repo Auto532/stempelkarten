@@ -538,7 +538,7 @@ export const listCustomersForShop = query({
         if (!customer) return null;
         return {
           membership: m,
-          customer: isMitarbeiter ? { ...customer, phone: "" } : customer,
+          customer: isMitarbeiter ? { ...customer, email: "" } : customer,
         };
       })
     );

@@ -121,7 +121,7 @@ export const adminStampForCustomer = mutation({
     if (!customer) {
       const id = await ctx.db.insert("customers", {
         name: "Test-Kunde",
-        phone: "",
+        email: "",
         qrToken,
         createdAt: Date.now(),
       });

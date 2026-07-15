@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Phone, Gift, ArrowRight, CheckCircle, Stamp } from "lucide-react";
+import { User, Mail, Gift, ArrowRight, CheckCircle, Stamp } from "lucide-react";
 import { getShopTheme, DEFAULT_COLORS, type ThemeColors } from "@/app/me/themes/registry";
 import { hexToRgba } from "@/app/me/components";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
@@ -66,8 +66,8 @@ export default function JoinPage() {
   );
 
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [phoneError, setPhoneError] = useState("");
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [consent, setConsent] = useState(false);
   const [acquisitionType, setAcquisitionType] = useState<"new" | "returning" | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,11 +85,11 @@ export default function JoinPage() {
 
   const handleNewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !phone.trim() || !consent) return;
+    if (!name.trim() || !email.trim() || !consent) return;
     setLoading(true); setError("");
     try {
       const { qrToken: newToken } = await registerCustomer({
-        name: name.trim(), phone: phone.trim(), shopSlug,
+        name: name.trim(), email: email.trim(), shopSlug,
         existingQrToken: qrToken ?? undefined,
         acquisitionType: acquisitionType ?? undefined,
       });
@@ -156,21 +156,18 @@ export default function JoinPage() {
   const customerName = existing?.customer?.name;
   const isReturning = !!qrToken && !!existing && !existing.membership;
 
-  const isValidPhone = (v: string) => {
-    const digits = v.replace(/\D/g, "");
-    return /^[\+\d\s\-\(\)\/]+$/.test(v.trim()) && digits.length >= 7 && digits.length <= 15;
-  };
+  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
-  const handlePhoneChange = (v: string) => {
-    setPhone(v);
-    if (v && !isValidPhone(v)) {
-      setPhoneError("Ungültige Nummer (mind. 7 Ziffern, nur +, -, Leerzeichen erlaubt)");
+  const handleEmailChange = (v: string) => {
+    setEmail(v);
+    if (v && !isValidEmail(v)) {
+      setEmailError("Ungültige E-Mail-Adresse");
     } else {
-      setPhoneError("");
+      setEmailError("");
     }
   };
 
-  const phoneValid = isValidPhone(phone);
+  const emailValid = isValidEmail(email);
 
   const inputStyle = { background: c.cardBg, border: `1px solid ${c.accentDim}44`, color: c.textBody };
   const inputError = { background: c.cardBg, border: "1px solid #ef444488", color: c.textBody };
@@ -282,23 +279,23 @@ export default function JoinPage() {
             </div>
 
             <div className="group">
-              <label className="block text-xs font-medium mb-2 ml-1" style={{ color: c.accentDim }}>Handynummer</label>
+              <label className="block text-xs font-medium mb-2 ml-1" style={{ color: c.accentDim }}>E-Mail-Adresse</label>
               <div className="relative">
-                <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: phoneError ? "#ef4444" : c.accentDim }} />
-                <input type="tel" value={phone} onChange={(e) => handlePhoneChange(e.target.value)}
-                  placeholder="+49 151 12345678" required
+                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: emailError ? "#ef4444" : c.accentDim }} />
+                <input type="email" value={email} onChange={(e) => handleEmailChange(e.target.value)}
+                  placeholder="deine@email.de" required
                   className="w-full pl-11 pr-4 py-3.5 rounded-2xl placeholder-zinc-600 focus:outline-none transition-all"
-                  style={phoneError ? inputError : inputStyle}
+                  style={emailError ? inputError : inputStyle}
                 />
               </div>
-              {phoneError && <p className="text-red-400 text-xs mt-1.5 ml-1">{phoneError}</p>}
+              {emailError && <p className="text-red-400 text-xs mt-1.5 ml-1">{emailError}</p>}
             </div>
 
             {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
 
             <p className="text-[11px] leading-relaxed rounded-xl px-3 py-2.5"
               style={{ color: c.accentDim, background: hexToRgba(c.accent, 0.08), border: `1px solid ${hexToRgba(c.accent, 0.15)}` }}>
-              Damit deine Karte wirklich dir gehört, gib bitte deine echte Nummer an. Pro Nummer gibt es eine Stempelkarte. Deine Daten bleiben bei uns.
+              Damit deine Karte wirklich dir gehört, gib bitte deine echte E-Mail an. Pro E-Mail gibt es eine Stempelkarte. Deine Daten bleiben bei uns.
             </p>
 
             <AcquisitionPicker value={acquisitionType} onChange={setAcquisitionType} c={c} shopName={shop.name} />
@@ -314,16 +311,16 @@ export default function JoinPage() {
                 </div>
               </div>
               <span className="text-xs leading-relaxed" style={{ color: c.accentDim }}>
-                Ich stimme zu, dass meine Daten (Name, Telefonnummer) für das Treueprogramm bei{" "}
+                Ich stimme zu, dass meine Daten (Name, E-Mail-Adresse) für das Treueprogramm bei{" "}
                 <span style={{ color: c.textBody }}>{shop.name}</span> gespeichert und gemäß{" "}
                 <a href={`/me/datenschutz/${shopSlug}`} style={{ color: c.accent, textDecoration: "underline" }}>Datenschutzerklärung</a> genutzt werden.
               </span>
             </label>
 
-            <motion.button type="submit" disabled={loading || !name.trim() || !phoneValid || !consent}
+            <motion.button type="submit" disabled={loading || !name.trim() || !emailValid || !consent}
               whileTap={{ scale: 0.97 }}
               className="w-full py-4 font-semibold rounded-2xl transition-colors flex items-center justify-center gap-2 text-base"
-              style={!loading && name.trim() && phoneValid && consent ? btnActive : btnOff}>
+              style={!loading && name.trim() && emailValid && consent ? btnActive : btnOff}>
               {loading
                 ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-5 h-5 border-2 border-zinc-900/30 border-t-zinc-900 rounded-full" />
                 : <><span>Jetzt registrieren</span><ArrowRight size={18} /></>}

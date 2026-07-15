@@ -225,7 +225,7 @@ export default function StampPage() {
           </div>
           <div>
             <p className="font-bold text-zinc-100">{customerInfo?.name ?? "Laden..."}</p>
-            <p className="text-xs text-zinc-500">{customerInfo?.phone || "Kein Telefon"}</p>
+            <p className="text-xs text-zinc-500">{customerInfo?.email || "Keine E-Mail"}</p>
           </div>
         </div>
 
@@ -454,7 +454,7 @@ export default function StampPage() {
         </div>
         <div className="min-w-0">
           <p className="font-bold" style={{ color: c.text }}>{customer.name}</p>
-          <p className="text-xs truncate" style={{ color: c.accentDim }}>{customer.phone}</p>
+          <p className="text-xs truncate" style={{ color: c.accentDim }}>{customer.email}</p>
         </div>
       </motion.div>
 

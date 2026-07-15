@@ -34,15 +34,15 @@ export const seedBarbershop = internalMutation({
     });
 
     const kunden = [
-      { name: "Max Mustermann", phone: "+49 151 11111111", qrToken: "demo-max",   stamps: 8,  total: 32, redeemed: 3 },
-      { name: "Jonas Weber",    phone: "+49 151 22222222", qrToken: "demo-jonas", stamps: 5,  total: 13, redeemed: 1 },
-      { name: "Leon Bauer",     phone: "+49 151 33333333", qrToken: "demo-leon",  stamps: 2,  total: 2,  redeemed: 0 },
-      { name: "Lena Schmidt",   phone: "+49 151 44444444", qrToken: "demo-lena",  stamps: 0,  total: 8,  redeemed: 1 },
+      { name: "Max Mustermann", email: "max@example.com",   qrToken: "demo-max",   stamps: 8,  total: 32, redeemed: 3 },
+      { name: "Jonas Weber",    email: "jonas@example.com", qrToken: "demo-jonas", stamps: 5,  total: 13, redeemed: 1 },
+      { name: "Leon Bauer",     email: "leon@example.com",  qrToken: "demo-leon",  stamps: 2,  total: 2,  redeemed: 0 },
+      { name: "Lena Schmidt",   email: "lena@example.com",  qrToken: "demo-lena",  stamps: 0,  total: 8,  redeemed: 1 },
     ];
 
     for (const k of kunden) {
       const customerId = await ctx.db.insert("customers", {
-        name: k.name, phone: k.phone, qrToken: k.qrToken, createdAt: Date.now(),
+        name: k.name, email: k.email, qrToken: k.qrToken, createdAt: Date.now(),
       });
       const membershipId = await ctx.db.insert("memberships", {
         customerId, shopId,

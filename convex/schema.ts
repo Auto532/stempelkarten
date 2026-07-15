@@ -47,10 +47,10 @@ export default defineSchema({
 
   customers: defineTable({
     name: v.string(),
-    phone: v.string(),
+    email: v.string(),
     qrToken: v.string(),
     createdAt: v.number(),
-  }).index("by_qrToken", ["qrToken"]).index("by_phone", ["phone"]),
+  }).index("by_qrToken", ["qrToken"]).index("by_email", ["email"]),
 
   memberships: defineTable({
     customerId: v.id("customers"),

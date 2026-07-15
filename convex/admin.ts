@@ -41,7 +41,7 @@ export const adminCreateTestCustomer = mutation({
       .unique();
     if (existing) return { qrToken: existing.qrToken, created: false };
 
-    await ctx.db.insert("customers", { name, phone: "", qrToken, createdAt: Date.now() });
+    await ctx.db.insert("customers", { name, email: "", qrToken, createdAt: Date.now() });
     return { qrToken, created: true };
   },
 });

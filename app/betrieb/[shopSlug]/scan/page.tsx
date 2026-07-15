@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   UserPlus, Stamp, Gift, ScanLine,
-  Users, ChevronRight, Award, X, QrCode, Phone, Eye,
+  Users, ChevronRight, Award, X, QrCode, Eye,
   Printer, Search, Check,
 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -164,7 +164,7 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
           </div>
           <div>
             <h2 className="font-bold text-zinc-100">{customer.name}</h2>
-            <p className="text-zinc-500 text-xs">{customer.phone}</p>
+            <p className="text-zinc-500 text-xs">{customer.email}</p>
           </div>
         </div>
         <p className="text-zinc-500 text-sm bg-zinc-800 rounded-xl px-4 py-3">
@@ -220,7 +220,7 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="font-bold" style={{ color: c.text }}>{customer.name}</h2>
-          <p className="text-xs" style={{ color: c.accentDim }}>{customer.phone}</p>
+          <p className="text-xs" style={{ color: c.accentDim }}>{customer.email}</p>
         </div>
         {rewardReady && (
           <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}

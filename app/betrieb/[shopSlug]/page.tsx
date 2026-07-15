@@ -9,7 +9,7 @@ import type { IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ScanLine, Users, Award, Stamp, X, Check, QrCode,
-  Phone, Printer, Search, Gift, Plus, TrendingUp, Trash2,
+  Mail, Printer, Search, Gift, Plus, TrendingUp, Trash2,
   Trophy, ChevronRight, ArrowLeft, Settings, KeyRound, Share2, Copy,
 } from "lucide-react";
 import { QRImage } from "@/app/components/QRImage";
@@ -72,13 +72,13 @@ export default function BetriebDashboard() {
   const [milestoneSaving, setMilestoneSaving] = useState(false);
   const [milestoneSaved, setMilestoneSaved] = useState(false);
 
-  const [recoveryPhone, setRecoveryPhone] = useState("");
-  const [submittedPhone, setSubmittedPhone] = useState<string | null>(null);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const [recoveryCopied, setRecoveryCopied] = useState(false);
 
   const recoveryResult = useQuery(
-    api.customers.findCustomerByPhone,
-    submittedPhone && adminToken ? { phone: submittedPhone, adminToken } : "skip"
+    api.customers.findCustomerByEmail,
+    submittedEmail && adminToken ? { email: submittedEmail, adminToken } : "skip"
   );
 
   const updateSettings     = useMutation(api.shops.updateSettings);
@@ -157,7 +157,7 @@ export default function BetriebDashboard() {
   const filteredCustomers = customers?.filter(({ customer }) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return customer?.name.toLowerCase().includes(q) || (shop.showLeads && customer?.phone.includes(q));
+    return customer?.name.toLowerCase().includes(q) || (shop.showLeads && customer?.email.toLowerCase().includes(q));
   }) ?? [];
 
   const baseDirty = stampsRequired !== shop.stampsRequired || rewardText !== shop.rewardText || stampValue !== (shop.stampValue ?? "");
@@ -633,8 +633,8 @@ export default function BetriebDashboard() {
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                         <div className="mx-4 mb-3 rounded-xl p-4 space-y-3" style={sub}>
                           <div className="flex items-center gap-2">
-                            <Phone size={13} style={{ color: ic }} />
-                            <a href={`tel:${customer.phone}`} className="text-sm" style={{ color: tb }}>{customer.phone}</a>
+                            <Mail size={13} style={{ color: ic }} />
+                            <a href={`mailto:${customer.email}`} className="text-sm" style={{ color: tb }}>{customer.email}</a>
                           </div>
                           <div className="grid grid-cols-3 gap-2 text-center">
                             {[{ label: "Aktuell", value: membership.currentStamps }, { label: "Gesamt", value: membership.totalStampsEver }, { label: "Belohnt", value: membership.rewardsRedeemed }].map(({ label, value }) => (
@@ -799,24 +799,24 @@ export default function BetriebDashboard() {
           {/* Eingabe */}
           <div className="rounded-2xl p-5 space-y-4" style={card}>
             <p className="text-xs" style={{ color: tm }}>
-              Handynummer des Kunden eingeben — es wird nur gesucht wenn eine Mitgliedschaft bei <span style={{ color: ic }}>{shop.name}</span> existiert.
+              E-Mail des Kunden eingeben — es wird nur gesucht wenn eine Mitgliedschaft bei <span style={{ color: ic }}>{shop.name}</span> existiert.
             </p>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: tm }} />
+                <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: tm }} />
                 <input
-                  value={recoveryPhone}
-                  onChange={e => { setRecoveryPhone(e.target.value); setSubmittedPhone(null); }}
-                  placeholder="+49 …"
-                  type="tel"
+                  value={recoveryEmail}
+                  onChange={e => { setRecoveryEmail(e.target.value); setSubmittedEmail(null); }}
+                  placeholder="kunde@email.de"
+                  type="email"
                   className="w-full pl-8 pr-3 py-2.5 rounded-xl text-sm focus:outline-none"
                   style={inp}
-                  onKeyDown={e => e.key === "Enter" && recoveryPhone.trim() && setSubmittedPhone(recoveryPhone.trim())}
+                  onKeyDown={e => e.key === "Enter" && recoveryEmail.trim() && setSubmittedEmail(recoveryEmail.trim())}
                 />
               </div>
               <button
-                onClick={() => recoveryPhone.trim() && setSubmittedPhone(recoveryPhone.trim())}
-                disabled={!recoveryPhone.trim()}
+                onClick={() => recoveryEmail.trim() && setSubmittedEmail(recoveryEmail.trim())}
+                disabled={!recoveryEmail.trim()}
                 className="px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
                 style={{ background: btn, color: "#18181b" }}>
                 <Search size={15} />
@@ -826,21 +826,21 @@ export default function BetriebDashboard() {
 
           {/* Ergebnis */}
           <AnimatePresence>
-            {submittedPhone && recoveryResult === undefined && (
+            {submittedEmail && recoveryResult === undefined && (
               <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="rounded-2xl px-5 py-4 text-sm text-center" style={{ color: tm, ...card }}>
                 Suche…
               </motion.div>
             )}
 
-            {submittedPhone && recoveryResult === null && (
+            {submittedEmail && recoveryResult === null && (
               <motion.div key="notfound" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className="rounded-2xl px-5 py-4 text-sm text-center" style={card}>
-                <span style={{ color: tm }}>Kein Konto bei <span style={{ color: ic }}>{shop.name}</span> für diese Nummer gefunden.</span>
+                <span style={{ color: tm }}>Kein Konto bei <span style={{ color: ic }}>{shop.name}</span> für diese E-Mail gefunden.</span>
               </motion.div>
             )}
 
-            {submittedPhone && recoveryResult && recoveryUrl && (
+            {submittedEmail && recoveryResult && recoveryUrl && (
               <motion.div key="found" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className="rounded-2xl p-5 space-y-4" style={card}>
                 <div className="flex items-center gap-3">
