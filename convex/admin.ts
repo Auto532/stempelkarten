@@ -1,12 +1,20 @@
 import { internalMutation, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { assertNotLocked, recordFailure, clearFailures, timingSafeEqual } from "./rateLimit";
 
 export const checkPin = mutation({
   args: { pin: v.string() },
   handler: async (ctx, { pin }) => {
     const expected = process.env.ADMIN_PIN;
     if (!expected) throw new Error("ADMIN_PIN nicht gesetzt");
-    if (pin !== expected) throw new Error("Falscher PIN");
+
+    // Brute-Force-Schutz (C2): globaler Schlüssel, da es genau einen Admin-PIN gibt.
+    const throttle = await assertNotLocked(ctx, "admin-pin");
+    if (!timingSafeEqual(pin, expected)) {
+      await recordFailure(ctx, "admin-pin", throttle);
+      throw new Error("Falscher PIN");
+    }
+    await clearFailures(ctx, throttle);
     return true;
   },
 });

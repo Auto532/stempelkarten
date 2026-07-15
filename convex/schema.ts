@@ -88,4 +88,12 @@ export default defineSchema({
   })
     .index("by_shop", ["shopId"])
     .index("by_membership", ["membershipId"]),
+
+  // Brute-Force-Schutz für den Admin-PIN (C2)
+  authThrottle: defineTable({
+    key: v.string(),
+    count: v.number(),
+    windowStart: v.number(),
+    lockedUntil: v.optional(v.number()),
+  }).index("by_key", ["key"]),
 });

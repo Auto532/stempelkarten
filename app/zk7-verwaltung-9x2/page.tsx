@@ -976,20 +976,19 @@ function GrowthCard({ label, value, prev, color, period }: {
   );
 }
 
-const AFFILIATE_SITE = process.env.NEXT_PUBLIC_AFFILIATE_SITE_URL ?? "";
-const ADMIN_SECRET_ENV = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "";
-
-function EarningsCard() {
+function EarningsCard({ adminSecret }: { adminSecret: string }) {
   const [data, setData] = useState<null | {
     revenueTotal: number; commTotal: number; commPaid: number;
     commConfirmed: number; commPending: number; netEarnings: number; activeContracts: number;
   }>(null);
 
   useEffect(() => {
-    if (!AFFILIATE_SITE || !ADMIN_SECRET_ENV) return;
-    fetch(`${AFFILIATE_SITE}/admin/earnings?secret=${ADMIN_SECRET_ENV}`)
-      .then(r => r.json()).then(setData).catch(() => {});
-  }, []);
+    if (!adminSecret) return;
+    // Einnahmen über die reguläre, secret-geschützte Query abrufen — mit dem
+    // zur Laufzeit eingegebenen Admin-PIN. Kein Secret im Client-Bundle.
+    affiliateQuery("admin:getEarningsSummary", { adminSecret })
+      .then(setData).catch(() => {});
+  }, [adminSecret]);
 
   if (!data) return null;
 
@@ -1046,7 +1045,7 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
   return (
     <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
 
-      <EarningsCard />
+      <EarningsCard adminSecret={adminSecret} />
 
       <PeriodSelector value={period} onChange={setPeriod} />
 

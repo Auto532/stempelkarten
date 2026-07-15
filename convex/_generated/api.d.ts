@@ -16,6 +16,7 @@ import type * as http from "../http.js";
 import type * as lib_phone from "../lib/phone.js";
 import type * as memberships from "../memberships.js";
 import type * as messages from "../messages.js";
+import type * as rateLimit from "../rateLimit.js";
 import type * as seed from "../seed.js";
 import type * as shops from "../shops.js";
 
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   "lib/phone": typeof lib_phone;
   memberships: typeof memberships;
   messages: typeof messages;
+  rateLimit: typeof rateLimit;
   seed: typeof seed;
   shops: typeof shops;
 }>;
