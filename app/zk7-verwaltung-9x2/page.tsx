@@ -1599,6 +1599,7 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
     setDeleting(true);
     try {
       await clearAllData({ adminSecret: pinInput });
+      await affiliateMutation("admin:clearAllData", { adminSecret: pinInput });
       setDeleted(true);
       setConfirmDelete(false);
     } finally { setDeleting(false); }
@@ -2289,18 +2290,23 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
                     <p className={`text-[10px] ${p.status === "active" ? "text-green-400" : p.status === "pending" ? "text-yellow-400" : "text-red-400"}`}>
                       {p.status === "active" ? "Aktiv" : p.status === "pending" ? "Ausstehend" : "Gesperrt"}
                     </p>
-                    <div className="flex items-center justify-end gap-2 mt-0.5">
+                    <div className="flex items-center justify-end gap-1.5 mt-1">
                       {p.status === "active" && (
                         <button onClick={() => handleSuspendPartner(p._id)}
-                          className="text-[10px] text-red-400 hover:text-red-300 transition-colors">Sperren</button>
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-red-900/20 border border-red-900/40 text-red-400 hover:bg-red-900/30 transition-colors">
+                          Sperren
+                        </button>
                       )}
                       {p.status === "suspended" && (
                         <button onClick={() => handleApprovePartner(p._id)}
-                          className="text-[10px] text-green-400 hover:text-green-300 transition-colors">Reaktivieren</button>
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-green-900/20 border border-green-900/40 text-green-400 hover:bg-green-900/30 transition-colors">
+                          Reaktivieren
+                        </button>
                       )}
-                      <span className="text-zinc-700 select-none">·</span>
                       <button onClick={() => handleDeletePartner(p._id, p.name)}
-                        className="text-[10px] text-zinc-600 hover:text-red-500 transition-colors">Löschen</button>
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-500 hover:text-red-400 hover:border-red-900/40 transition-colors">
+                        Löschen
+                      </button>
                     </div>
                   </div>
                 </div>
