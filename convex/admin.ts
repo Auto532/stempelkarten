@@ -17,7 +17,7 @@ export const clearAllData = mutation({
     const expected = process.env.ADMIN_PIN;
     if (!expected) throw new Error("ADMIN_PIN Umgebungsvariable nicht gesetzt");
     if (adminSecret !== expected) throw new Error("Nicht autorisiert");
-    const tables = ["stampEvents", "memberships", "customers", "shops"] as const;
+    const tables = ["stampEvents", "memberships", "customers", "messages", "shops", "owners"] as const;
     for (const table of tables) {
       const docs = await ctx.db.query(table).collect();
       for (const doc of docs) {
@@ -66,7 +66,7 @@ export const clearCustomerData = mutation({
 export const clearAll = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const tables = ["stampEvents", "memberships", "customers", "shops"] as const;
+    const tables = ["stampEvents", "memberships", "customers", "messages", "shops", "owners"] as const;
     for (const table of tables) {
       const docs = await ctx.db.query(table).collect();
       for (const doc of docs) {

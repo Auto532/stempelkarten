@@ -2289,16 +2289,19 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
                     <p className={`text-[10px] ${p.status === "active" ? "text-green-400" : p.status === "pending" ? "text-yellow-400" : "text-red-400"}`}>
                       {p.status === "active" ? "Aktiv" : p.status === "pending" ? "Ausstehend" : "Gesperrt"}
                     </p>
-                    {p.status === "active" && (
-                      <button onClick={() => handleSuspendPartner(p._id)}
-                        className="text-[10px] text-red-400 hover:text-red-300 transition-colors">Sperren</button>
-                    )}
-                    {p.status === "suspended" && (
-                      <button onClick={() => handleApprovePartner(p._id)}
-                        className="text-[10px] text-green-400 hover:text-green-300 transition-colors">Reaktivieren</button>
-                    )}
-                    <button onClick={() => handleDeletePartner(p._id, p.name)}
-                      className="text-[10px] text-zinc-600 hover:text-red-500 transition-colors">Löschen</button>
+                    <div className="flex items-center justify-end gap-2 mt-0.5">
+                      {p.status === "active" && (
+                        <button onClick={() => handleSuspendPartner(p._id)}
+                          className="text-[10px] text-red-400 hover:text-red-300 transition-colors">Sperren</button>
+                      )}
+                      {p.status === "suspended" && (
+                        <button onClick={() => handleApprovePartner(p._id)}
+                          className="text-[10px] text-green-400 hover:text-green-300 transition-colors">Reaktivieren</button>
+                      )}
+                      <span className="text-zinc-700 select-none">·</span>
+                      <button onClick={() => handleDeletePartner(p._id, p.name)}
+                        className="text-[10px] text-zinc-600 hover:text-red-500 transition-colors">Löschen</button>
+                    </div>
                   </div>
                 </div>
               ))}
