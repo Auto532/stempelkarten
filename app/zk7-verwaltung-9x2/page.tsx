@@ -1772,6 +1772,8 @@ interface AffiliatePartner {
   _id: string; name: string; email: string;
   referralCode: string; status: AffiliateStatus;
   _creationTime: number;
+  company?: string;
+  pendingProfile?: Record<string, any> | null;
 }
 
 interface AffiliateDashboard {
@@ -2005,6 +2007,149 @@ function nextCommissionPreview(planType: "annual" | "monthly", paymentNumber: nu
   return { phase, rate, amount };
 }
 
+const PARTNER_FIELD_LABELS: Record<string, string> = {
+  name: "Name", company: "Firma", taxId: "Steuernr.", vatId: "USt-IdNr.",
+  dateOfBirth: "Geburtsdatum", bankIban: "IBAN", bankBic: "BIC", bankName: "Bank",
+  phone: "Telefon", address: "Adresse", zip: "PLZ", city: "Stadt", country: "Land",
+};
+
+function PModalSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-1.5">
+      <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function PModalRow({ label, value, mono }: { label: string; value?: string; mono?: boolean }) {
+  if (!value) return null;
+  return (
+    <div className="flex justify-between gap-3 text-xs">
+      <span className="text-zinc-500 flex-shrink-0">{label}</span>
+      <span className={`text-zinc-300 text-right break-all ${mono ? "font-mono" : ""}`}>{value}</span>
+    </div>
+  );
+}
+
+function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
+  adminSecret: string; affiliateId: string; onClose: () => void; onChanged: () => void;
+}) {
+  const [data, setData]       = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy]       = useState(false);
+  const [err, setErr]         = useState("");
+
+  const load = async () => {
+    setLoading(true); setErr("");
+    try { setData(await affiliateQuery("admin:getAffiliateDetail", { adminSecret, affiliateId })); }
+    catch (e: any) { setErr(e?.message ?? "Fehler"); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, [affiliateId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const decide = async (approve: boolean) => {
+    setBusy(true); setErr("");
+    try {
+      await affiliateMutation(approve ? "admin:approveProfileChange" : "admin:rejectProfileChange", { adminSecret, affiliateId });
+      await load(); onChanged();
+    } catch (e: any) { setErr(e?.message ?? "Fehler"); }
+    finally { setBusy(false); }
+  };
+
+  const a = data?.affiliate;
+  const pending = data?.pendingProfile as Record<string, any> | null | undefined;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 sm:p-4" onClick={onClose}>
+      <div className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl"
+        onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-4 py-3 flex items-center justify-between z-10">
+          <p className="text-sm font-semibold text-zinc-100">Partner-Details</p>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 text-lg leading-none">✕</button>
+        </div>
+
+        {loading ? (
+          <p className="text-center text-zinc-500 text-sm py-12 animate-pulse">Laden...</p>
+        ) : !a ? (
+          <p className="text-center text-zinc-500 text-sm py-12">{err || "Nicht gefunden"}</p>
+        ) : (
+          <div className="p-4 space-y-4">
+            <div>
+              <p className="text-lg font-bold text-zinc-100">{a.name}</p>
+              <p className="text-xs text-zinc-500">{a.email} · <span className="font-mono text-amber-400">{a.referralCode}</span></p>
+            </div>
+
+            {pending && (
+              <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(251,191,36,.08)", border: "1px solid rgba(251,191,36,.3)" }}>
+                <p className="text-xs font-semibold text-yellow-400">Änderungen warten auf Freigabe</p>
+                <div className="space-y-1">
+                  {Object.keys(pending).filter(k => k !== "submittedAt").map(k => (
+                    <div key={k} className="text-[11px] flex flex-wrap items-center gap-1">
+                      <span className="text-zinc-500">{PARTNER_FIELD_LABELS[k] ?? k}:</span>
+                      <span className="text-zinc-500 line-through">{String(a[k] ?? "—")}</span>
+                      <span className="text-zinc-600">→</span>
+                      <span className="text-green-400 font-medium">{String(pending[k])}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => decide(true)} disabled={busy}
+                    className="flex-1 text-xs py-1.5 rounded-lg bg-green-900/30 border border-green-800/50 text-green-400 disabled:opacity-50">Freigeben</button>
+                  <button onClick={() => decide(false)} disabled={busy}
+                    className="flex-1 text-xs py-1.5 rounded-lg bg-red-900/20 border border-red-900/40 text-red-400 disabled:opacity-50">Ablehnen</button>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Shops aktiv",       value: String(data.stats.leadsActive) },
+                { label: "In Prüfung",        value: String(data.stats.leadsInReview) },
+                { label: "Prov. ausstehend",  value: `€${data.commissions.pending.toFixed(2)}` },
+                { label: "Prov. ausgezahlt",  value: `€${data.commissions.paid.toFixed(2)}` },
+              ].map(s => (
+                <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                  <p className="text-lg font-bold text-zinc-100">{s.value}</p>
+                  <p className="text-[10px] text-zinc-500">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <PModalSection title="Stammdaten">
+              <PModalRow label="Telefon" value={a.phone} />
+              <PModalRow label="Firma" value={a.company} />
+              <PModalRow label="Adresse" value={[a.address, [a.zip, a.city].filter(Boolean).join(" "), a.country].filter(Boolean).join(", ") || undefined} />
+              <PModalRow label="Geburtsdatum" value={a.dateOfBirth} />
+              <PModalRow label="Steuernr." value={a.taxId} />
+              <PModalRow label="USt-IdNr." value={a.vatId} />
+              <PModalRow label="Typ" value={a.businessType === "business" ? "Gewerbe" : a.businessType === "private" ? "Privat" : undefined} />
+            </PModalSection>
+
+            <PModalSection title="Bankverbindung">
+              <PModalRow label="IBAN" value={a.bankIban} mono />
+              <PModalRow label="BIC" value={a.bankBic} mono />
+              <PModalRow label="Bank" value={a.bankName} />
+            </PModalSection>
+
+            <PModalSection title={`Shops (${data.leads.length})`}>
+              {data.leads.length === 0 && <p className="text-xs text-zinc-600">Noch keine.</p>}
+              {data.leads.map((l: any) => (
+                <div key={l._id} className="flex items-center justify-between gap-2 text-xs py-0.5">
+                  <span className="text-zinc-300 truncate">{l.shopName || "—"} <span className="text-zinc-600">· {l.ownerName}</span></span>
+                  <span className="text-zinc-500 flex-shrink-0">{l.status}</span>
+                </div>
+              ))}
+            </PModalSection>
+
+            {err && <p className="text-red-400 text-xs text-center">{err}</p>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PartnerTab({ adminSecret }: { adminSecret: string }) {
   const [dashboard, setDashboard]     = useState<AffiliateDashboard | null>(null);
   const [leads, setLeads]             = useState<AffiliateLead[] | null>(null);
@@ -2021,6 +2166,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
   const [planMap, setPlanMap]         = useState<Record<string, "annual" | "monthly">>({});
   const [reasonMap, setReasonMap]     = useState<Record<string, string>>({});
   const [section, setSection]         = useState<"leads" | "partners" | "provisionen">("leads");
+  const [detailId, setDetailId]       = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true); setError("");
@@ -2252,17 +2398,26 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
             <div className="divide-y divide-zinc-800/50">
               {partners?.map(p => (
                 <div key={p._id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-zinc-200">{p.name}</p>
+                  <button onClick={() => setDetailId(p._id)} className="flex-1 min-w-0 text-left group">
+                    <p className="text-sm text-zinc-200 group-hover:text-amber-400 transition-colors flex items-center gap-2">
+                      {p.name}
+                      {p.pendingProfile && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-900/30 border border-yellow-800/50 text-yellow-400">Änderung offen</span>
+                      )}
+                    </p>
                     <p className="text-xs text-zinc-500">{p.email}</p>
-                    {(p as any).company && <p className="text-xs text-zinc-600">{(p as any).company}</p>}
-                  </div>
+                    {p.company && <p className="text-xs text-zinc-600">{p.company}</p>}
+                  </button>
                   <div className="text-right flex-shrink-0 space-y-1">
                     <p className="text-xs font-mono text-amber-400">{p.referralCode}</p>
                     <p className={`text-[10px] ${p.status === "active" ? "text-green-400" : p.status === "pending" ? "text-yellow-400" : "text-red-400"}`}>
                       {p.status === "active" ? "Aktiv" : p.status === "pending" ? "Ausstehend" : "Gesperrt"}
                     </p>
                     <div className="flex items-center justify-end gap-1.5 mt-1">
+                      <button onClick={() => setDetailId(p._id)}
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-amber-900/40 transition-colors">
+                        Details
+                      </button>
                       {p.status === "active" && (
                         <button onClick={() => handleSuspendPartner(p._id)}
                           className="text-[10px] px-2 py-0.5 rounded-md bg-red-900/20 border border-red-900/40 text-red-400 hover:bg-red-900/30 transition-colors">
@@ -2286,6 +2441,16 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Partner-Detail-Popup */}
+      {detailId && (
+        <PartnerDetailModal
+          adminSecret={adminSecret}
+          affiliateId={detailId}
+          onClose={() => setDetailId(null)}
+          onChanged={load}
+        />
       )}
 
       {/* Provisionen */}
