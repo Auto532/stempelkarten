@@ -656,6 +656,11 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
   const [rewardText, setRewardText] = useState("");
   const [brancheText, setBrancheText] = useState("");
   const [stampValue, setStampValue] = useState<number | "">("");
+  const [ownerName, setOwnerName]   = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerPhone, setOwnerPhone] = useState("");
+  const [wantsDesign, setWantsDesign]           = useState(false);
+  const [wantsBonusStamps, setWantsBonusStamps] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -666,7 +671,12 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
     try {
       await createShop({
         adminSecret, name, slug, stampsRequired, rewardText, stampIcon,
-        stampValue: stampValue === "" ? undefined : Number(stampValue),
+        stampValue:       stampValue === "" ? undefined : Number(stampValue),
+        ownerName:        ownerName  || undefined,
+        ownerEmail:       ownerEmail || undefined,
+        ownerPhone:       ownerPhone || undefined,
+        wantsDesign:      wantsDesign      || undefined,
+        wantsBonusStamps: wantsBonusStamps || undefined,
       });
       onDone();
     } catch (err: unknown) {
@@ -725,6 +735,53 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
           <p className="text-[10px] text-zinc-600 mt-1">→ „1 Stempel pro €{stampValue} Einkauf"</p>
         )}
       </div>
+      {/* Inhaber-Infos */}
+      <div className="pt-2 border-t border-zinc-800 space-y-3">
+        <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Inhaber (für Bestätigungsmail)</p>
+        {[
+          { label: "Name",    value: ownerName,  set: setOwnerName,  placeholder: "Max Müller",    type: "text"  },
+          { label: "E-Mail",  value: ownerEmail, set: setOwnerEmail, placeholder: "max@cafe.de",   type: "email" },
+          { label: "Telefon", value: ownerPhone, set: setOwnerPhone, placeholder: "+49 ...",       type: "tel"   },
+        ].map(f => (
+          <div key={f.label}>
+            <label className="block text-xs text-zinc-500 mb-1.5">{f.label}</label>
+            <input type={f.type} value={f.value} onChange={e => f.set(e.target.value)}
+              placeholder={f.placeholder}
+              className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/50" />
+          </div>
+        ))}
+
+        <div>
+          <label className="block text-xs text-zinc-500 mb-2">Extras</label>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { state: wantsDesign,      set: setWantsDesign,      label: "Custom Design",  sub: "Individuelle Gestaltung" },
+              { state: wantsBonusStamps, set: setWantsBonusStamps, label: "Bonus-Stempel",  sub: "Mehr als 10 Stempel"     },
+            ] as const).map((opt, i) => (
+              <button key={i} type="button" onClick={() => opt.set((v: boolean) => !v)}
+                className="rounded-xl p-3 text-left transition-colors"
+                style={opt.state
+                  ? { background: "rgba(251,191,36,.12)", border: "1px solid rgba(251,191,36,.4)" }
+                  : { background: "rgb(39,39,42)",        border: "1px solid rgb(63,63,70)" }}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${opt.state ? "bg-amber-400" : "bg-zinc-700 border border-zinc-600"}`}>
+                    {opt.state && (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#18181b" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-100 leading-none">{opt.label}</p>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">{opt.sub}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <button type="submit" disabled={loading}
         className="w-full py-3 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-semibold rounded-xl transition-colors">

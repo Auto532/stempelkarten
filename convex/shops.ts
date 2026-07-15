@@ -1,7 +1,9 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireShopRole, sanitizeShop } from "./auth";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+
 
 export const provisionShopFromAffiliate = internalMutation({
   args: {
@@ -210,24 +212,53 @@ export const adminSetFeatures = mutation({
 
 export const createShop = mutation({
   args: {
-    adminSecret: v.string(),
-    name: v.string(),
-    slug: v.string(),
-    stampsRequired: v.number(),
-    rewardText: v.string(),
-    stampIcon: v.optional(v.string()),
-    stampValue: v.optional(v.number()),
+    adminSecret:      v.string(),
+    name:             v.string(),
+    slug:             v.string(),
+    stampsRequired:   v.number(),
+    rewardText:       v.string(),
+    stampIcon:        v.optional(v.string()),
+    stampValue:       v.optional(v.number()),
+    ownerName:        v.optional(v.string()),
+    ownerEmail:       v.optional(v.string()),
+    ownerPhone:       v.optional(v.string()),
+    wantsDesign:      v.optional(v.boolean()),
+    wantsBonusStamps: v.optional(v.boolean()),
   },
-  handler: async (ctx, { adminSecret, ...args }) => {
+  handler: async (ctx, { adminSecret, ownerName, ownerEmail, ownerPhone, wantsDesign, wantsBonusStamps, ...shopArgs }) => {
     requireAdmin({ secret: adminSecret });
-    const adminLoginToken = crypto.randomUUID();
+    const adminLoginToken  = crypto.randomUUID();
     const mitarbeiterToken = crypto.randomUUID();
-    return await ctx.db.insert("shops", {
-      ...args,
+
+    let ownerId: Id<"owners"> | undefined;
+    if (ownerName || ownerEmail) {
+      ownerId = await ctx.db.insert("owners", {
+        name:      ownerName ?? "",
+        email:     ownerEmail,
+        phone:     ownerPhone,
+        createdAt: Date.now(),
+      });
+    }
+
+    const shopId = await ctx.db.insert("shops", {
+      ...shopArgs,
+      ownerId,
       adminLoginToken,
       mitarbeiterToken,
       createdAt: Date.now(),
     });
+
+    if (ownerEmail && ownerName) {
+      await ctx.scheduler.runAfter(0, internal.emails.sendWelcomeEmail, {
+        ownerEmail,
+        ownerName,
+        shopName:         shopArgs.name,
+        wantsDesign,
+        wantsBonusStamps,
+      });
+    }
+
+    return shopId;
   },
 });
 
