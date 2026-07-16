@@ -1,6 +1,23 @@
-import { mutation, internalAction } from "./_generated/server";
+import { mutation, query, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { requireAdmin } from "./auth";
+import type { QueryCtx } from "./_generated/server";
+
+// Shop zum Login-Token auflösen (Inhaber- oder Mitarbeiter-Token)
+async function shopFromToken(ctx: QueryCtx, token: string) {
+  const inhaberShop = await ctx.db
+    .query("shops")
+    .withIndex("by_adminLoginToken", q => q.eq("adminLoginToken", token))
+    .unique();
+  if (inhaberShop) return { shop: inhaberShop, role: "inhaber" as const };
+  const mitarbeiterShop = await ctx.db
+    .query("shops")
+    .withIndex("by_mitarbeiterToken", q => q.eq("mitarbeiterToken", token))
+    .unique();
+  if (mitarbeiterShop) return { shop: mitarbeiterShop, role: "mitarbeiter" as const };
+  return null;
+}
 
 // Support-Anfrage vom Betrieb (Inhaber/Mitarbeiter, auth via Login-Token).
 // Wird gespeichert + per Telegram an den Admin geschickt.
@@ -14,17 +31,9 @@ export const submitTicket = mutation({
     contact: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const inhaberShop = await ctx.db
-      .query("shops")
-      .withIndex("by_adminLoginToken", q => q.eq("adminLoginToken", args.token))
-      .unique();
-    const mitarbeiterShop = inhaberShop ? null : await ctx.db
-      .query("shops")
-      .withIndex("by_mitarbeiterToken", q => q.eq("mitarbeiterToken", args.token))
-      .unique();
-    const shop = inhaberShop ?? mitarbeiterShop;
-    if (!shop) throw new Error("Nicht eingeloggt");
-    const senderRole = inhaberShop ? "inhaber" as const : "mitarbeiter" as const;
+    const auth = await shopFromToken(ctx, args.token);
+    if (!auth) throw new Error("Nicht eingeloggt");
+    const { shop, role: senderRole } = auth;
 
     const message = args.message.trim();
     if (!message) throw new Error("Bitte beschreibe dein Anliegen");
@@ -41,6 +50,52 @@ export const submitTicket = mutation({
       message,
       contact: args.contact?.trim() || undefined,
     });
+  },
+});
+
+// Eigene Anfragen des Betriebs (inkl. Status + Admin-Antwort)
+export const listMyTickets = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const auth = await shopFromToken(ctx, args.token);
+    if (!auth) return null;
+    const tickets = await ctx.db
+      .query("supportTickets")
+      .withIndex("by_shop", q => q.eq("shopId", auth.shop._id))
+      .collect();
+    return tickets
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map(t => ({ _id: t._id, message: t.message, status: t.status, reply: t.reply ?? null, repliedAt: t.repliedAt ?? null, createdAt: t.createdAt }));
+  },
+});
+
+// ── Admin: Tickets verwalten ──────────────────────────────────────────────────
+
+export const adminListTickets = query({
+  args: { adminSecret: v.string() },
+  handler: async (ctx, { adminSecret }) => {
+    requireAdmin({ secret: adminSecret });
+    const tickets = await ctx.db.query("supportTickets").order("desc").collect();
+    return Promise.all(tickets.map(async t => {
+      const shop = await ctx.db.get(t.shopId);
+      return { ...t, shopName: shop?.name ?? "(gelöschter Shop)" };
+    }));
+  },
+});
+
+export const adminAnswerTicket = mutation({
+  args: {
+    adminSecret: v.string(),
+    ticketId:    v.id("supportTickets"),
+    reply:       v.optional(v.string()),
+    status:      v.union(v.literal("open"), v.literal("done")),
+  },
+  handler: async (ctx, { adminSecret, ticketId, reply, status }) => {
+    requireAdmin({ secret: adminSecret });
+    const patch: Record<string, unknown> = { status };
+    const trimmed = reply?.trim();
+    if (trimmed) { patch.reply = trimmed; patch.repliedAt = Date.now(); }
+    await ctx.db.patch(ticketId, patch);
   },
 });
 

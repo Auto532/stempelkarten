@@ -923,6 +923,7 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
   const [sending, setSending] = useState(false);
   const [done, setDone]       = useState(false);
   const [err, setErr]         = useState("");
+  const myTickets = useQuery(api.support.listMyTickets, open && adminToken ? { token: adminToken } : "skip");
 
   const send = async () => {
     setSending(true); setErr("");
@@ -967,6 +968,35 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
                 {sending ? "Sendet…" : "Nachricht senden"}
               </button>
             </>
+          )}
+
+          {/* Bisherige Anfragen inkl. Antwort vom Team */}
+          {myTickets && myTickets.length > 0 && (
+            <div className="space-y-2 pt-2" style={{ borderTop: `1px solid ${divColor}` }}>
+              <p className="text-xs font-semibold pt-1" style={{ color: tm }}>Deine Anfragen</p>
+              {myTickets.map(t => (
+                <div key={t._id} className="rounded-xl p-3 space-y-1.5" style={{ border: `1px solid ${divColor}` }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px]" style={{ color: tm }}>
+                      {new Date(t.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    </p>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                      style={t.status === "open"
+                        ? { background: `${ic}18`, color: ic }
+                        : { background: "rgba(34,197,94,.12)", color: "#4ade80" }}>
+                      {t.status === "open" ? "in Bearbeitung" : "beantwortet"}
+                    </span>
+                  </div>
+                  <p className="text-xs whitespace-pre-wrap" style={{ color: tx }}>{t.message}</p>
+                  {t.reply && (
+                    <div className="rounded-lg px-2.5 py-2 mt-1" style={{ background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.25)" }}>
+                      <p className="text-[9px] font-semibold text-green-400 mb-0.5">Antwort vom Loatycard-Team</p>
+                      <p className="text-xs whitespace-pre-wrap" style={{ color: tx }}>{t.reply}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

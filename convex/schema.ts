@@ -115,15 +115,18 @@ export default defineSchema({
     .index("by_shop", ["shopId"])
     .index("by_membership", ["membershipId"]),
 
-  // Support-Anfragen (Betrieb → Admin), Benachrichtigung via Telegram
+  // Support-Anfragen (Betrieb → Admin), Benachrichtigung via Telegram.
+  // Admin kann antworten (reply) — der Betrieb sieht Antwort + Status in der App.
   supportTickets: defineTable({
     shopId: v.id("shops"),
     senderRole: v.union(v.literal("inhaber"), v.literal("mitarbeiter")),
     message: v.string(),
     contact: v.optional(v.string()),
     status: v.union(v.literal("open"), v.literal("done")),
+    reply: v.optional(v.string()),
+    repliedAt: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_status", ["status"]),
+  }).index("by_status", ["status"]).index("by_shop", ["shopId"]),
 
   // Brute-Force-Schutz für den Admin-PIN (C2)
   authThrottle: defineTable({

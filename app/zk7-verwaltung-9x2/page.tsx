@@ -3376,14 +3376,146 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "shops" | "analytics" | "settings" | "partner";
+// ─── SupportTab (Tickets aus beiden Apps: Betrieb + Partner) ──────────────────
+
+type AdminTicket = {
+  _id: string; source: "betrieb" | "partner"; name: string; sub?: string | null;
+  senderRole?: string; message: string; contact?: string | null;
+  status: "open" | "done"; reply?: string | null; createdAt: number;
+};
+
+function SupportTab({ adminSecret }: { adminSecret: string }) {
+  const btTickets = useQuery(api.support.adminListTickets, { adminSecret });
+  const answerBt  = useMutation(api.support.adminAnswerTicket);
+  const [affTickets, setAffTickets] = useState<Record<string, unknown>[] | null>(null);
+  const [filter, setFilter]     = useState<"open" | "done" | "all">("open");
+  const [replyMap, setReplyMap] = useState<Record<string, string>>({});
+  const [busyId, setBusyId]     = useState<string | null>(null);
+
+  const loadAff = async () => {
+    try { setAffTickets((await affiliateQuery("support:adminListTickets", { adminSecret })) ?? []); }
+    catch { setAffTickets([]); }
+  };
+  useEffect(() => { loadAff(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const tickets: AdminTicket[] = [
+    ...(btTickets ?? []).map(t => ({
+      _id: t._id as string, source: "betrieb" as const, name: t.shopName,
+      senderRole: t.senderRole === "inhaber" ? "Inhaber" : "Mitarbeiter",
+      message: t.message, contact: t.contact ?? null, status: t.status,
+      reply: t.reply ?? null, createdAt: t.createdAt,
+    })),
+    ...((affTickets ?? []) as AdminTicket[] & { partnerName?: string; partnerEmail?: string }[]).map((t: any) => ({
+      _id: t._id as string, source: "partner" as const, name: t.partnerName as string,
+      sub: (t.partnerEmail as string) ?? null, message: t.message as string,
+      contact: (t.contact as string) ?? null, status: t.status as "open" | "done",
+      reply: (t.reply as string) ?? null, createdAt: t.createdAt as number,
+    })),
+  ].sort((a, b) => b.createdAt - a.createdAt);
+
+  const shown = tickets.filter(t => filter === "all" || t.status === filter);
+
+  const act = async (t: AdminTicket, status: "open" | "done", withReply: boolean) => {
+    setBusyId(t._id);
+    try {
+      const reply = withReply ? (replyMap[t._id]?.trim() || undefined) : undefined;
+      if (t.source === "betrieb") {
+        await answerBt({ adminSecret, ticketId: t._id as Id<"supportTickets">, reply, status });
+      } else {
+        await affiliateMutation("support:adminAnswerTicket", { adminSecret, ticketId: t._id, reply, status });
+        await loadAff();
+      }
+      if (withReply) setReplyMap(m => ({ ...m, [t._id]: "" }));
+    } finally { setBusyId(null); }
+  };
+
+  return (
+    <motion.div key="support" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+
+      {/* Filter */}
+      <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+        {([
+          { id: "open", label: `Offen (${tickets.filter(t => t.status === "open").length})` },
+          { id: "done", label: "Erledigt" },
+          { id: "all",  label: "Alle" },
+        ] as const).map(f => (
+          <button key={f.id} onClick={() => setFilter(f.id)}
+            className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+            style={filter === f.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {btTickets === undefined || affTickets === null ? (
+        <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
+          className="text-zinc-500 text-sm text-center py-10">Laden...</motion.p>
+      ) : shown.length === 0 ? (
+        <p className="text-zinc-600 text-sm text-center py-10">
+          {filter === "open" ? "Keine offenen Anfragen — alles erledigt! 🎉" : "Keine Anfragen."}
+        </p>
+      ) : shown.map(t => (
+        <div key={t._id} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2 flex-wrap">
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase"
+              style={t.source === "betrieb"
+                ? { background: "rgba(96,165,250,.15)", color: "#60a5fa" }
+                : { background: "rgba(167,139,250,.15)", color: "#a78bfa" }}>
+              {t.source === "betrieb" ? "Betrieb" : "Partner"}
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-zinc-200 truncate">
+                {t.name}{t.senderRole ? <span className="text-zinc-500 font-normal"> · {t.senderRole}</span> : null}
+              </p>
+              {t.sub && <p className="text-[10px] text-zinc-600 truncate">{t.sub}</p>}
+            </div>
+            <div className="ml-auto text-right shrink-0">
+              <p className="text-[10px] text-zinc-600">
+                {new Date(t.createdAt).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+              </p>
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${t.status === "open" ? "bg-yellow-400/15 text-yellow-400" : "bg-green-500/15 text-green-400"}`}>
+                {t.status === "open" ? "offen" : "erledigt"}
+              </span>
+            </div>
+          </div>
+          <div className="p-4 space-y-3">
+            <p className="text-sm text-zinc-300 whitespace-pre-wrap">{t.message}</p>
+            {t.contact && <p className="text-xs text-zinc-500">📞 Kontakt: <span className="text-zinc-300">{t.contact}</span></p>}
+            {t.reply && (
+              <div className="rounded-xl px-3 py-2" style={{ background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.25)" }}>
+                <p className="text-[10px] text-green-400 font-semibold mb-0.5">Deine Antwort</p>
+                <p className="text-xs text-zinc-300 whitespace-pre-wrap">{t.reply}</p>
+              </div>
+            )}
+            <textarea value={replyMap[t._id] ?? ""} onChange={e => setReplyMap(m => ({ ...m, [t._id]: e.target.value }))}
+              rows={2} placeholder={t.reply ? "Neue Antwort (ersetzt die alte)…" : "Antwort schreiben…"}
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-200 text-sm placeholder-zinc-600 focus:outline-none focus:border-amber-400/50 resize-none" />
+            <div className="flex gap-2">
+              <button onClick={() => act(t, "done", true)} disabled={busyId === t._id || !(replyMap[t._id] ?? "").trim()}
+                className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-900 text-xs font-semibold disabled:opacity-40 transition-colors">
+                Antworten & erledigen
+              </button>
+              <button onClick={() => act(t, t.status === "open" ? "done" : "open", false)} disabled={busyId === t._id}
+                className="px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 text-xs font-semibold hover:text-zinc-200 disabled:opacity-40 transition-colors">
+                {t.status === "open" ? "Erledigt ✓" : "Wieder öffnen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </motion.div>
+  );
+}
+
+type Tab = "overview" | "shops" | "analytics" | "settings" | "partner" | "support";
 
 const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "overview",   label: "Übersicht",    icon: BarChart2  },
   { id: "shops",      label: "Shops",        icon: Store      },
   { id: "analytics",  label: "Analytics",    icon: TrendingUp },
-  { id: "settings",   label: "Einstellungen", icon: Settings  },
   { id: "partner",    label: "Partner",      icon: Users      },
+  { id: "support",    label: "Support",      icon: MessageSquare },
+  { id: "settings",   label: "Settings",     icon: Settings  },
 ];
 
 export default function SuperAdminPage() {
@@ -3398,6 +3530,17 @@ export default function SuperAdminPage() {
 
   const allShops = useQuery(api.shops.listAllShops, authed && adminSecret ? { adminSecret } : "skip") as Doc<"shops">[] | undefined;
   const selectedShop = selectedShopId ? allShops?.find(s => s._id === selectedShopId) : null;
+
+  // Offene Support-Tickets (beide Apps) → roter Punkt am Support-Tab
+  const btTickets = useQuery(api.support.adminListTickets, authed && adminSecret ? { adminSecret } : "skip");
+  const [affOpenCount, setAffOpenCount] = useState(0);
+  useEffect(() => {
+    if (!authed || !adminSecret) return;
+    affiliateQuery("support:adminListTickets", { adminSecret })
+      .then((t: { status: string }[] | null) => setAffOpenCount((t ?? []).filter(x => x.status === "open").length))
+      .catch(() => {});
+  }, [authed, adminSecret, activeTab]);
+  const supportOpenCount = (btTickets?.filter(t => t.status === "open").length ?? 0) + affOpenCount;
 
   // Hardware-Back-Button: ShopWorkspace schließen oder App nicht verlassen
   const selectedShopIdRef = useRef<Id<"shops"> | null>(null);
@@ -3495,6 +3638,7 @@ export default function SuperAdminPage() {
             {activeTab === "analytics" && "Analytics"}
             {activeTab === "settings"  && "Einstellungen"}
             {activeTab === "partner"   && "Partner"}
+            {activeTab === "support"   && "Support"}
           </motion.span>
         </AnimatePresence>
         <span className="ml-auto text-[10px] text-zinc-600 uppercase tracking-widest font-medium">Admin</span>
@@ -3507,6 +3651,7 @@ export default function SuperAdminPage() {
           {activeTab === "analytics" && <AnalyticsTab  key="analytics"  adminSecret={adminSecret} />}
           {activeTab === "settings"  && <SettingsTab   key="settings"   adminSecret={adminSecret} />}
           {activeTab === "partner"   && <PartnerTab    key="partner"    adminSecret={adminSecret} />}
+          {activeTab === "support"   && <SupportTab    key="support"    adminSecret={adminSecret} />}
         </AnimatePresence>
       </div>
 
@@ -3514,7 +3659,14 @@ export default function SuperAdminPage() {
         {TABS.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)}
             className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors relative ${activeTab === id ? "text-amber-400" : "text-zinc-600 hover:text-zinc-400"}`}>
-            <Icon size={20} />
+            <span className="relative">
+              <Icon size={20} />
+              {id === "support" && supportOpenCount > 0 && (
+                <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center">
+                  {supportOpenCount > 9 ? "9+" : supportOpenCount}
+                </span>
+              )}
+            </span>
             <span className="text-[10px] font-medium">{label}</span>
             {activeTab === id && (
               <motion.div layoutId="tab-indicator" className="absolute bottom-0 w-8 h-0.5 bg-amber-400 rounded-full" />
