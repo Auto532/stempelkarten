@@ -701,7 +701,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
   const [ownerPhone, setOwnerPhone] = useState("");
   const [wantsDesign, setWantsDesign]           = useState(false);
   const [wantsBonusStamps, setWantsBonusStamps] = useState(false);
-  const [planType, setPlanType] = useState<"annual" | "monthly" | "none">("annual");
+  const [planType, setPlanType] = useState<"annual" | "monthly">("annual");
   const [payLink, setPayLink]   = useState("");
   const [copied, setCopied]     = useState(false);
   const [loading, setLoading] = useState(false);
@@ -722,34 +722,29 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         wantsBonusStamps: wantsBonusStamps || undefined,
       });
 
-      if (planType !== "none") {
-        // Vertrag im Partnerprogramm registrieren (Direktvertrieb, 0% Provision)
-        // → Zahlung läuft über den normalen Bezahllink, Umsatz landet in den Finanzen.
-        try {
-          const contract = await affiliateMutation("admin:createDirectShopContract", {
-            adminSecret,
-            shopName:            name,
-            ownerName:           ownerName   || undefined,
-            ownerEmail:          ownerEmail  || undefined,
-            ownerPhone:          ownerPhone  || undefined,
-            businessType:        brancheText || undefined,
-            planType,
-            loatycardShopId:     created.shopId,
-            loatycardShopSlug:   created.slug,
-            loatycardAdminToken: created.adminLoginToken,
-          });
-          if (contract?.paymentToken) {
-            setPayLink(`${AFFILIATE_APP_URL}/pay/${contract.paymentToken}`);
-            return;
-          }
-          setError("Shop erstellt — aber kein Bezahllink erhalten (Affiliate-App nicht konfiguriert?)");
-          return;
-        } catch (err: unknown) {
-          setError(`Shop erstellt — Vertrag fehlgeschlagen: ${err instanceof Error ? err.message : "Fehler"}`);
+      // Vertrag im Partnerprogramm registrieren (Direktvertrieb, 0% Provision)
+      // → Zahlung läuft über den normalen Bezahllink, Umsatz landet in den Finanzen.
+      try {
+        const contract = await affiliateMutation("admin:createDirectShopContract", {
+          adminSecret,
+          shopName:            name,
+          ownerName:           ownerName   || undefined,
+          ownerEmail:          ownerEmail  || undefined,
+          ownerPhone:          ownerPhone  || undefined,
+          businessType:        brancheText || undefined,
+          planType,
+          loatycardShopId:     created.shopId,
+          loatycardShopSlug:   created.slug,
+          loatycardAdminToken: created.adminLoginToken,
+        });
+        if (contract?.paymentToken) {
+          setPayLink(`${AFFILIATE_APP_URL}/pay/${contract.paymentToken}`);
           return;
         }
+        setError("Shop erstellt — aber kein Bezahllink erhalten (Affiliate-App nicht konfiguriert?)");
+      } catch (err: unknown) {
+        setError(`Shop erstellt — Vertrag fehlgeschlagen: ${err instanceof Error ? err.message : "Fehler"}`);
       }
-      onDone();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Fehler");
     } finally { setLoading(false); }
@@ -897,11 +892,10 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
       {/* Vertrag / Abo */}
       <div className="pt-2 border-t border-zinc-800 space-y-2">
         <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Vertrag (Finanzen)</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {([
-            { id: "annual",  label: "Jahresabo",  sub: "€389/Jahr"  },
-            { id: "monthly", label: "Monatsabo",  sub: "€39/Monat"  },
-            { id: "none",    label: "Ohne",       sub: "Nur testen" },
+            { id: "annual",  label: "Jahresabo",  sub: "€389/Jahr" },
+            { id: "monthly", label: "Monatsabo",  sub: "€39/Monat" },
           ] as const).map(opt => (
             <button key={opt.id} type="button" onClick={() => setPlanType(opt.id)}
               className="rounded-xl p-3 text-center transition-colors"
@@ -914,7 +908,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
           ))}
         </div>
         <p className="text-[10px] text-zinc-600">
-          Mit Vertrag bekommst du einen Bezahllink (Rabattcode dort eingebbar) und der Umsatz zählt in den Finanzen. „Ohne" = reiner Test-Shop.
+          Nach dem Erstellen bekommst du Bezahllink + QR (Rabattcode auf der Zahlungsseite eingebbar). Der Umsatz zählt nach Zahlung in den Finanzen.
         </p>
       </div>
 
