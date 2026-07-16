@@ -926,6 +926,7 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
   const [err, setErr]         = useState("");
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
   const [replyingId, setReplyingId] = useState<string | null>(null);
+  const [expandedT, setExpandedT] = useState<Record<string, boolean>>({});
   const myTickets = useQuery(api.support.listMyTickets, open && adminToken ? { token: adminToken } : "skip");
 
   const sendReply = async (ticketId: string) => {
@@ -988,12 +989,31 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
           {myTickets && myTickets.length > 0 && (
             <div className="space-y-2 pt-2" style={{ borderTop: `1px solid ${divColor}` }}>
               <p className="text-xs font-semibold pt-1" style={{ color: tm }}>Deine Anfragen</p>
-              {myTickets.map(t => (
+              {myTickets.map(t => {
+                const isTOpen = t.status === "open" || !!expandedT[t._id];
+                const num = `#${String(t.number).padStart(3, "0")}`;
+                if (!isTOpen) {
+                  // Abgeschlossen: nur Nummer — Klick öffnet den Verlauf
+                  return (
+                    <button key={t._id} type="button"
+                      onClick={() => setExpandedT(e => ({ ...e, [t._id]: true }))}
+                      className="w-full rounded-xl px-3 py-2.5 flex items-center gap-2 text-left"
+                      style={{ border: `1px solid ${divColor}` }}>
+                      <span className="text-xs font-mono font-bold" style={{ color: tm }}>Ticket {num}</span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded ml-auto"
+                        style={{ background: "rgba(34,197,94,.12)", color: "#4ade80" }}>abgeschlossen</span>
+                      <span className="text-[10px]" style={{ color: tm }}>▸</span>
+                    </button>
+                  );
+                }
+                return (
                 <div key={t._id} className="rounded-xl p-3 space-y-2" style={{ border: `1px solid ${divColor}` }}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[10px]" style={{ color: tm }}>
-                      {new Date(t.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                    </p>
+                    <button type="button"
+                      onClick={() => { if (t.status !== "open") setExpandedT(e => ({ ...e, [t._id]: false })); }}
+                      className="text-[10px] font-mono font-bold text-left" style={{ color: tm }}>
+                      Ticket {num} · {new Date(t.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    </button>
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
                       style={t.status === "open"
                         ? { background: `${ic}18`, color: ic }
@@ -1031,7 +1051,8 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
                     <p className="text-[10px]" style={{ color: tm }}>Ticket abgeschlossen — bei neuem Anliegen einfach oben eine neue Anfrage senden.</p>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

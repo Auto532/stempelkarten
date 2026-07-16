@@ -3380,7 +3380,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
 
 type TicketMsg = { from: "user" | "admin"; text: string; at: number };
 type AdminTicket = {
-  _id: string; source: "betrieb" | "partner"; name: string; sub?: string | null;
+  _id: string; number: number; source: "betrieb" | "partner"; name: string; sub?: string | null;
   senderRole?: string; contact?: string | null;
   status: "open" | "done"; createdAt: number; thread: TicketMsg[];
 };
@@ -3392,6 +3392,8 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
   const [filter, setFilter]     = useState<"open" | "done" | "all">("open");
   const [replyMap, setReplyMap] = useState<Record<string, string>>({});
   const [busyId, setBusyId]     = useState<string | null>(null);
+  // Geschlossene Tickets sind eingeklappt (nur "Ticket #001") — Klick öffnet
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const loadAff = async () => {
     try { setAffTickets((await affiliateQuery("support:adminListTickets", { adminSecret })) ?? []); }
@@ -3401,13 +3403,13 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
 
   const tickets: AdminTicket[] = [
     ...(btTickets ?? []).map(t => ({
-      _id: t._id as string, source: "betrieb" as const, name: t.shopName,
+      _id: t._id as string, number: t.number, source: "betrieb" as const, name: t.shopName,
       senderRole: t.senderRole === "inhaber" ? "Inhaber" : "Mitarbeiter",
       contact: t.contact ?? null, status: t.status,
       createdAt: t.createdAt, thread: t.thread as TicketMsg[],
     })),
     ...((affTickets ?? []) as any[]).map((t: any) => ({
-      _id: t._id as string, source: "partner" as const, name: t.partnerName as string,
+      _id: t._id as string, number: (t.number as number) ?? 0, source: "partner" as const, name: t.partnerName as string,
       sub: (t.partnerEmail as string) ?? null,
       contact: (t.contact as string) ?? null, status: t.status as "open" | "done",
       createdAt: t.createdAt as number, thread: (t.thread ?? []) as TicketMsg[],
@@ -3456,30 +3458,44 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
         <p className="text-zinc-600 text-sm text-center py-10">
           {filter === "open" ? "Keine offenen Anfragen — alles erledigt! 🎉" : "Keine Anfragen."}
         </p>
-      ) : shown.map(t => (
+      ) : shown.map(t => {
+        const isOpen = t.status === "open" || !!expanded[t._id];
+        const num = `#${String(t.number).padStart(3, "0")}`;
+        return (
         <div key={t._id} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2 flex-wrap">
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase"
+          <button type="button"
+            onClick={() => { if (t.status === "done") setExpanded(e => ({ ...e, [t._id]: !e[t._id] })); }}
+            className={`w-full px-4 py-3 flex items-center gap-2 flex-wrap text-left ${isOpen ? "border-b border-zinc-800" : ""} ${t.status === "done" ? "cursor-pointer hover:bg-zinc-800/40 transition-colors" : "cursor-default"}`}>
+            <span className="text-[10px] font-bold font-mono text-zinc-500 shrink-0">Ticket {num}</span>
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shrink-0"
               style={t.source === "betrieb"
                 ? { background: "rgba(96,165,250,.15)", color: "#60a5fa" }
                 : { background: "rgba(167,139,250,.15)", color: "#a78bfa" }}>
               {t.source === "betrieb" ? "Betrieb" : "Partner"}
             </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-zinc-200 truncate">
-                {t.name}{t.senderRole ? <span className="text-zinc-500 font-normal"> · {t.senderRole}</span> : null}
-              </p>
-              {t.sub && <p className="text-[10px] text-zinc-600 truncate">{t.sub}</p>}
+            {isOpen && (
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-zinc-200 truncate">
+                  {t.name}{t.senderRole ? <span className="text-zinc-500 font-normal"> · {t.senderRole}</span> : null}
+                </p>
+                {t.sub && <p className="text-[10px] text-zinc-600 truncate">{t.sub}</p>}
+              </div>
+            )}
+            <div className="ml-auto text-right shrink-0 flex items-center gap-2">
+              <div>
+                <p className="text-[10px] text-zinc-600">
+                  {new Date(t.createdAt).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                </p>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${t.status === "open" ? "bg-yellow-400/15 text-yellow-400" : "bg-green-500/15 text-green-400"}`}>
+                  {t.status === "open" ? "offen" : "erledigt"}
+                </span>
+              </div>
+              {t.status === "done" && (
+                <ChevronRight size={14} className={`text-zinc-600 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+              )}
             </div>
-            <div className="ml-auto text-right shrink-0">
-              <p className="text-[10px] text-zinc-600">
-                {new Date(t.createdAt).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-              </p>
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${t.status === "open" ? "bg-yellow-400/15 text-yellow-400" : "bg-green-500/15 text-green-400"}`}>
-                {t.status === "open" ? "offen" : "erledigt"}
-              </span>
-            </div>
-          </div>
+          </button>
+          {isOpen && (
           <div className="p-4 space-y-3">
             {/* Verlauf als Chat */}
             <div className="space-y-2">
@@ -3511,8 +3527,10 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
               </button>
             </div>
           </div>
+          )}
         </div>
-      ))}
+        );
+      })}
     </motion.div>
   );
 }

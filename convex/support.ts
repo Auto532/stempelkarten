@@ -63,19 +63,28 @@ function buildThread(t: { message: string; createdAt: number; reply?: string; re
   ];
 }
 
+// Fortlaufende Ticketnummern (#001 = ältestes Ticket, app-weit — Admin und
+// Absender sehen dieselbe Nummer)
+async function ticketNumbers(ctx: QueryCtx): Promise<Map<string, number>> {
+  const all = await ctx.db.query("supportTickets").collect();
+  all.sort((a, b) => a.createdAt - b.createdAt);
+  return new Map(all.map((t, i) => [t._id as string, i + 1]));
+}
+
 // Eigene Anfragen des Betriebs (kompletter Verlauf + Status)
 export const listMyTickets = query({
   args: { token: v.string() },
   handler: async (ctx, args) => {
     const auth = await shopFromToken(ctx, args.token);
     if (!auth) return null;
+    const numbers = await ticketNumbers(ctx);
     const tickets = await ctx.db
       .query("supportTickets")
       .withIndex("by_shop", q => q.eq("shopId", auth.shop._id))
       .collect();
     return tickets
       .sort((a, b) => b.createdAt - a.createdAt)
-      .map(t => ({ _id: t._id, status: t.status, createdAt: t.createdAt, thread: buildThread(t) }));
+      .map(t => ({ _id: t._id, number: numbers.get(t._id as string) ?? 0, status: t.status, createdAt: t.createdAt, thread: buildThread(t) }));
   },
 });
 
@@ -110,11 +119,13 @@ export const adminListTickets = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
     requireAdmin({ secret: adminSecret });
+    const numbers = await ticketNumbers(ctx);
     const tickets = await ctx.db.query("supportTickets").order("desc").collect();
     return Promise.all(tickets.map(async t => {
       const shop = await ctx.db.get(t.shopId);
       return {
-        _id: t._id, senderRole: t.senderRole, contact: t.contact ?? null,
+        _id: t._id, number: numbers.get(t._id as string) ?? 0,
+        senderRole: t.senderRole, contact: t.contact ?? null,
         status: t.status, createdAt: t.createdAt,
         shopName: shop?.name ?? "(gelöschter Shop)",
         thread: buildThread(t),
