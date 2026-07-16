@@ -316,7 +316,14 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
   const handleDeleteShop = async () => {
     if (!window.confirm(`Shop „${shop.name}" wirklich KOMPLETT löschen? Alle Kundenkarten, Stempel und Nachrichten dieses Shops werden unwiderruflich gelöscht.`)) return;
     setDeleting(true);
-    try { await deleteShop({ shopId: shop._id, adminSecret }); onDeleted(); }
+    try {
+      await deleteShop({ shopId: shop._id, adminSecret });
+      // Sync: zugehörigen Lead + Vertrag + Provisionen in der Affiliate-App
+      // mitlöschen, damit der Shop auch beim Partner/in den Finanzen verschwindet.
+      try { await affiliateMutation("admin:deleteLeadForShop", { adminSecret, loatycardShopId: shop._id }); }
+      catch { /* Shop ist gelöscht — Affiliate-Sync-Fehler nicht blockierend */ }
+      onDeleted();
+    }
     catch (e) { alert(e instanceof Error ? e.message : "Fehler beim Löschen"); setDeleting(false); }
   };
 
