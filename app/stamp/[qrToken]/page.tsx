@@ -527,12 +527,7 @@ export default function StampPage() {
 
         ) : showTierChoice ? (
           <motion.div key="choice" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center">
-              <p className="text-xs text-zinc-400 mb-1">
-                Stufe {activeTiers.indexOf(exactTier!) + 1} von {activeTiers.length} erreicht
-              </p>
-              <p className="text-amber-400 font-semibold">{exactTier!.text}</p>
-            </div>
+            {/* Weiterstempeln ist der Normalfall → groß & gelb; Einlösen klein darunter */}
             <button onClick={handleStamp} disabled={loading}
               className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-colors">
               {loading ? <Spinner /> : (
@@ -543,23 +538,23 @@ export default function StampPage() {
               )}
             </button>
             <button onClick={() => handleRedeem(exactTier!.text)} disabled={loading}
-              className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 border border-zinc-700 text-zinc-500 font-medium rounded-2xl flex items-center justify-center gap-2 transition-colors text-sm">
-              {loading ? <Spinner /> : <><Gift size={15} /> Jetzt einlösen</>}
+              className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 border border-zinc-700 text-zinc-400 font-medium rounded-2xl flex items-center justify-center gap-2 transition-colors text-sm">
+              {loading ? <Spinner /> : <><Gift size={15} className="shrink-0" /> <span className="truncate">Jetzt einlösen · {exactTier!.text}</span></>}
             </button>
+            <p className="text-[11px] text-zinc-500 text-center">
+              Stufe {activeTiers.indexOf(exactTier!) + 1} von {activeTiers.length} erreicht
+            </p>
           </motion.div>
 
         ) : showRedeem ? (
           <motion.div key="reward" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-3 text-center">
-              <p className="text-amber-400 font-semibold">🎉 {topTier.text}</p>
-            </div>
             <button onClick={handleStamp} disabled={loading}
               className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-base">
               {loading ? <Spinner /> : <><Stamp size={20} /> Stempel geben</>}
             </button>
             <button onClick={() => handleRedeem(topTier.text)} disabled={loading}
               className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 border border-zinc-700 text-zinc-400 font-medium rounded-2xl flex items-center justify-center gap-2 transition-colors text-sm">
-              {loading ? <Spinner /> : <><Gift size={15} /> Jetzt einlösen</>}
+              {loading ? <Spinner /> : <><Gift size={15} className="shrink-0" /> <span className="truncate">Belohnung einlösen · {topTier.text}</span></>}
             </button>
           </motion.div>
 
