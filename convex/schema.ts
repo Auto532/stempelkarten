@@ -115,6 +115,16 @@ export default defineSchema({
     .index("by_shop", ["shopId"])
     .index("by_membership", ["membershipId"]),
 
+  // Support-Anfragen (Betrieb → Admin), Benachrichtigung via Telegram
+  supportTickets: defineTable({
+    shopId: v.id("shops"),
+    senderRole: v.union(v.literal("inhaber"), v.literal("mitarbeiter")),
+    message: v.string(),
+    contact: v.optional(v.string()),
+    status: v.union(v.literal("open"), v.literal("done")),
+    createdAt: v.number(),
+  }).index("by_status", ["status"]),
+
   // Brute-Force-Schutz für den Admin-PIN (C2)
   authThrottle: defineTable({
     key: v.string(),

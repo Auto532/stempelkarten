@@ -552,6 +552,8 @@ export default function BetriebDashboard() {
           </AnimatePresence>
         </div>
 
+        <SupportCard adminToken={adminToken} card={card} divColor={div} tx={tx} tm={tm} ic={ic} inp={inp} />
+
       </div>
     );
   }
@@ -904,6 +906,70 @@ export default function BetriebDashboard() {
           Drucken / Druckvorschau
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── Support (Hilfe-Anfrage an Loatycard, kommt per Telegram beim Admin an) ───
+
+function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
+  adminToken: string; card: React.CSSProperties; divColor: string;
+  tx: string; tm: string; ic: string; inp: React.CSSProperties;
+}) {
+  const submit = useMutation(api.support.submitTicket);
+  const [open, setOpen]       = useState(false);
+  const [msg, setMsg]         = useState("");
+  const [contact, setContact] = useState("");
+  const [sending, setSending] = useState(false);
+  const [done, setDone]       = useState(false);
+  const [err, setErr]         = useState("");
+
+  const send = async () => {
+    setSending(true); setErr("");
+    try {
+      await submit({ token: adminToken, message: msg, contact: contact || undefined });
+      setDone(true); setMsg(""); setContact("");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Fehler beim Senden");
+    } finally { setSending(false); }
+  };
+
+  return (
+    <div className="rounded-2xl overflow-hidden mt-5" style={card}>
+      <button type="button" onClick={() => { setOpen(o => !o); setDone(false); }}
+        className="w-full flex items-center gap-2.5 px-5 py-4 text-left">
+        <span className="font-semibold text-sm" style={{ color: tx }}>Hilfe & Support</span>
+        <span className="ml-auto text-xs" style={{ color: tm }}>{open ? "schließen" : "Problem melden"}</span>
+      </button>
+      {open && (
+        <div className="px-5 pb-5 space-y-3" style={{ borderTop: `1px solid ${divColor}` }}>
+          {done ? (
+            <p className="text-sm pt-3" style={{ color: ic }}>
+              Nachricht gesendet — wir melden uns so schnell wie möglich bei dir!
+            </p>
+          ) : (
+            <>
+              <p className="text-xs pt-3" style={{ color: tm }}>
+                Beschreib dein Problem oder deine Frage — die Nachricht geht direkt an das Loatycard-Team.
+              </p>
+              <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={4}
+                placeholder="Was können wir für dich tun?"
+                className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none resize-none placeholder-zinc-600"
+                style={inp} />
+              <input value={contact} onChange={e => setContact(e.target.value)}
+                placeholder="Rückruf-Nummer oder E-Mail (optional)"
+                className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none placeholder-zinc-600"
+                style={inp} />
+              {err && <p className="text-xs text-red-400">{err}</p>}
+              <button type="button" onClick={send} disabled={sending || !msg.trim()}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 transition-opacity"
+                style={{ background: ic, color: "#111" }}>
+                {sending ? "Sendet…" : "Nachricht senden"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
