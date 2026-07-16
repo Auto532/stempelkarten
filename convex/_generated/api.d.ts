@@ -19,6 +19,7 @@ import type * as messages from "../messages.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as seed from "../seed.js";
 import type * as shops from "../shops.js";
+import type * as support from "../support.js";
 
 import type {
   ApiFromModules,
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   rateLimit: typeof rateLimit;
   seed: typeof seed;
   shops: typeof shops;
+  support: typeof support;
 }>;
 
 /**
