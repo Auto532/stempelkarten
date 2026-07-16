@@ -40,6 +40,29 @@ export default defineSchema({
     datenschutzText: v.optional(v.string()),
     stampIcon: v.optional(v.string()),
     theme: v.optional(v.string()),
+    // Config-Design (99€-Produkt): DB-basiertes Design, gerendert von der
+    // generischen Theme-Komponente (app/me/themes/configTheme.tsx) — kein
+    // Code/Deploy pro Shop. Ein gesetztes coded Theme (shops.theme) hat Vorrang.
+    // *Url-Felder werden serverseitig aus den Storage-IDs aufgelöst (adminSetDesignConfig).
+    designConfig: v.optional(v.object({
+      // Farben (Hex #rrggbb — Alpha-Ableitungen macht der Renderer)
+      accent:   v.string(),
+      text:     v.string(),
+      textBody: v.string(),
+      cardBg:   v.string(),
+      // Hintergrund
+      bgType:     v.union(v.literal("color"), v.literal("gradient"), v.literal("image")),
+      bgColor:    v.optional(v.string()),
+      bgColor2:   v.optional(v.string()),
+      bgImageId:  v.optional(v.id("_storage")),
+      bgImageUrl: v.optional(v.string()),
+      // Logo (auf der Karte statt/über dem Shopnamen)
+      logoId:  v.optional(v.id("_storage")),
+      logoUrl: v.optional(v.string()),
+      // Stempel & Kartenstil
+      stampIcon: v.optional(v.string()),
+      cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"))),
+    })),
     stampValue: v.optional(v.number()),
     priceInfo: v.optional(v.string()),
     createdAt: v.number(),

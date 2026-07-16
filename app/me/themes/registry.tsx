@@ -2,14 +2,38 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { BeatesGrillBackground, BeatesGrillLoyaltyCard, BeatesGrillRewardBanner, BeatesGrillMilestonesSection } from "./beatesGrill";
-import { AsiaTasteBackground, AsiaTasteLoyaltyCard, AsiaTasteRewardBanner, AsiaTasteMilestonesSection } from "./asiaTaste";
-import { BakeryLoyaltyCard, BakeryRewardBanner, BakeryMilestonesSection } from "./bakery";
-import { BarberLoyaltyCard, BarberRewardBanner, BarberMilestonesSection } from "./barber";
-import { EiszauberBackground, EiszauberLoyaltyCard, EiszauberRewardBanner, EiszauberMilestonesSection } from "./eiszauber";
-import { EntenhausBackground, EntenhausLoyaltyCard, EntenhausRewardBanner, EntenhausMilestonesSection } from "./entenhaus";
-import { Block13Background, Block13LoyaltyCard, Block13RewardBanner, Block13MilestonesSection } from "./block13";
+import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
+
+// Coded Themes werden dynamisch geladen: Kunden laden nur den Code des Themes
+// ihres Shops — nicht alle Themes aller Shops (Bundle bleibt klein, egal wie
+// viele Themes dazukommen).
+const BeatesGrillBackground        = dynamic(() => import("./beatesGrill").then(m => m.BeatesGrillBackground));
+const BeatesGrillLoyaltyCard       = dynamic(() => import("./beatesGrill").then(m => m.BeatesGrillLoyaltyCard));
+const BeatesGrillRewardBanner      = dynamic(() => import("./beatesGrill").then(m => m.BeatesGrillRewardBanner));
+const BeatesGrillMilestonesSection = dynamic(() => import("./beatesGrill").then(m => m.BeatesGrillMilestonesSection));
+const AsiaTasteBackground          = dynamic(() => import("./asiaTaste").then(m => m.AsiaTasteBackground));
+const AsiaTasteLoyaltyCard         = dynamic(() => import("./asiaTaste").then(m => m.AsiaTasteLoyaltyCard));
+const AsiaTasteRewardBanner        = dynamic(() => import("./asiaTaste").then(m => m.AsiaTasteRewardBanner));
+const AsiaTasteMilestonesSection   = dynamic(() => import("./asiaTaste").then(m => m.AsiaTasteMilestonesSection));
+const BakeryLoyaltyCard            = dynamic(() => import("./bakery").then(m => m.BakeryLoyaltyCard));
+const BakeryRewardBanner           = dynamic(() => import("./bakery").then(m => m.BakeryRewardBanner));
+const BakeryMilestonesSection      = dynamic(() => import("./bakery").then(m => m.BakeryMilestonesSection));
+const BarberLoyaltyCard            = dynamic(() => import("./barber").then(m => m.BarberLoyaltyCard));
+const BarberRewardBanner           = dynamic(() => import("./barber").then(m => m.BarberRewardBanner));
+const BarberMilestonesSection      = dynamic(() => import("./barber").then(m => m.BarberMilestonesSection));
+const EiszauberBackground          = dynamic(() => import("./eiszauber").then(m => m.EiszauberBackground));
+const EiszauberLoyaltyCard         = dynamic(() => import("./eiszauber").then(m => m.EiszauberLoyaltyCard));
+const EiszauberRewardBanner        = dynamic(() => import("./eiszauber").then(m => m.EiszauberRewardBanner));
+const EiszauberMilestonesSection   = dynamic(() => import("./eiszauber").then(m => m.EiszauberMilestonesSection));
+const EntenhausBackground          = dynamic(() => import("./entenhaus").then(m => m.EntenhausBackground));
+const EntenhausLoyaltyCard         = dynamic(() => import("./entenhaus").then(m => m.EntenhausLoyaltyCard));
+const EntenhausRewardBanner        = dynamic(() => import("./entenhaus").then(m => m.EntenhausRewardBanner));
+const EntenhausMilestonesSection   = dynamic(() => import("./entenhaus").then(m => m.EntenhausMilestonesSection));
+const Block13Background            = dynamic(() => import("./block13").then(m => m.Block13Background));
+const Block13LoyaltyCard           = dynamic(() => import("./block13").then(m => m.Block13LoyaltyCard));
+const Block13RewardBanner          = dynamic(() => import("./block13").then(m => m.Block13RewardBanner));
+const Block13MilestonesSection     = dynamic(() => import("./block13").then(m => m.Block13MilestonesSection));
 
 type Star = { id: number; x: number; y: number; size: number; delay: number; dur: number };
 
@@ -109,6 +133,7 @@ export interface ThemeMilestonesProps {
 }
 
 export interface ThemeConfig {
+  label: string;
   colors: ThemeColors;
   Background: ComponentType;
   Card: ComponentType<ThemeCardProps>;
@@ -135,6 +160,7 @@ export const DEFAULT_COLORS: ThemeColors = {
 
 const THEMES: Record<string, ThemeConfig> = {
   "bakery": {
+    label: "Bäckerei",
     colors: {
       accent:      "#d97706",
       accentDim:   "#b45309",
@@ -157,6 +183,7 @@ const THEMES: Record<string, ThemeConfig> = {
     Milestones: BakeryMilestonesSection,
   },
   "asia-taste": {
+    label: "Asia Taste",
     colors: {
       accent:      "#cf6a35",
       accentDim:   "#85907f",
@@ -179,6 +206,7 @@ const THEMES: Record<string, ThemeConfig> = {
     Milestones: AsiaTasteMilestonesSection,
   },
   "barber": {
+    label: "Barbershop",
     colors: {
       accent:      "#d7d2c6",
       accentDim:   "#8d877b",
@@ -201,6 +229,7 @@ const THEMES: Record<string, ThemeConfig> = {
     Milestones: BarberMilestonesSection,
   },
   "beates-grill": {
+    label: "Beate's Grill",
     colors: {
       accent:      "#E8A020",
       accentDim:   "#A06815",
@@ -223,6 +252,7 @@ const THEMES: Record<string, ThemeConfig> = {
     Milestones: BeatesGrillMilestonesSection,
   },
   "entenhaus": {
+    label: "Entenhaus",
     colors: {
       accent:      "#C9A560",
       accentDim:   "#7E6738",
@@ -245,6 +275,7 @@ const THEMES: Record<string, ThemeConfig> = {
     Milestones: EntenhausMilestonesSection,
   },
   "block13": {
+    label: "Block 13",
     colors: {
       accent:      "#c9a227",
       accentDim:   "#8a6f1b",
@@ -267,6 +298,7 @@ const THEMES: Record<string, ThemeConfig> = {
     Milestones: Block13MilestonesSection,
   },
   "eiszauber": {
+    label: "Eiszauber",
     colors: {
       accent:      "#ff4fa0",
       accentDim:   "#c93d82",
@@ -290,9 +322,34 @@ const THEMES: Record<string, ThemeConfig> = {
   },
 };
 
-type ShopLike = { customDesignEnabled?: boolean; theme?: string } | null | undefined;
+// Für Admin-Menüs: eine Quelle statt zwei — beim Registrieren eines neuen
+// Themes taucht es automatisch in der Auswahl auf.
+export const THEME_LIST = Object.entries(THEMES).map(([id, t]) => ({
+  id, label: t.label, color: t.colors.accent,
+}));
+
+import { makeConfigTheme, type ShopDesignConfig } from "./configTheme";
+
+// Config-Themes cachen, damit getShopTheme bei jedem Render dieselben
+// Komponenten-Referenzen liefert (sonst remountet React die Karte ständig).
+const configThemeCache = new Map<string, ThemeConfig>();
+function getConfigTheme(cfg: ShopDesignConfig): ThemeConfig {
+  const key = JSON.stringify(cfg);
+  let t = configThemeCache.get(key);
+  if (!t) { t = makeConfigTheme(cfg); configThemeCache.set(key, t); }
+  return t;
+}
+
+type ShopLike = {
+  customDesignEnabled?: boolean;
+  theme?: string;
+  designConfig?: ShopDesignConfig;
+} | null | undefined;
 
 export function getShopTheme(shop: ShopLike): ThemeConfig | null {
-  if (!shop?.customDesignEnabled || !shop.theme) return null;
-  return THEMES[shop.theme] ?? null;
+  if (!shop?.customDesignEnabled) return null;
+  // Coded Theme (Signature) hat Vorrang; sonst Config-Design aus der DB.
+  if (shop.theme && THEMES[shop.theme]) return THEMES[shop.theme];
+  if (shop.designConfig) return getConfigTheme(shop.designConfig);
+  return null;
 }

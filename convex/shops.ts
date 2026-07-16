@@ -212,6 +212,58 @@ export const adminSetFeatures = mutation({
   },
 });
 
+// ── Config-Design (Admin-Editor) ──────────────────────────────────────────────
+
+// Upload-URL für Logo/Hintergrundbild (Convex File Storage), admin-gated.
+export const adminGenerateUploadUrl = mutation({
+  args: { adminSecret: v.string() },
+  handler: async (ctx, { adminSecret }) => {
+    requireAdmin({ secret: adminSecret });
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// Speichert das Config-Design eines Shops. Bild-URLs werden hier serverseitig
+// aus den Storage-IDs aufgelöst und mitgespeichert, damit die Kunden-Seiten
+// keine extra Storage-Queries brauchen. config = null löscht das Design.
+export const adminSetDesignConfig = mutation({
+  args: {
+    shopId:      v.id("shops"),
+    adminSecret: v.string(),
+    config: v.union(v.null(), v.object({
+      accent:    v.string(),
+      text:      v.string(),
+      textBody:  v.string(),
+      cardBg:    v.string(),
+      bgType:    v.union(v.literal("color"), v.literal("gradient"), v.literal("image")),
+      bgColor:   v.optional(v.string()),
+      bgColor2:  v.optional(v.string()),
+      bgImageId: v.optional(v.id("_storage")),
+      logoId:    v.optional(v.id("_storage")),
+      stampIcon: v.optional(v.string()),
+      cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"))),
+    })),
+  },
+  handler: async (ctx, { shopId, adminSecret, config }) => {
+    requireAdmin({ secret: adminSecret });
+
+    if (config === null) {
+      await ctx.db.patch(shopId, { designConfig: undefined });
+      return;
+    }
+
+    const bgImageUrl = config.bgImageId ? (await ctx.storage.getUrl(config.bgImageId)) ?? undefined : undefined;
+    const logoUrl    = config.logoId    ? (await ctx.storage.getUrl(config.logoId))    ?? undefined : undefined;
+
+    await ctx.db.patch(shopId, {
+      designConfig: { ...config, bgImageUrl, logoUrl },
+      // Ein aktives Signature-Theme würde den Editor überdecken — beim Speichern
+      // des Config-Designs wird es deshalb entfernt (was du speicherst, siehst du).
+      theme: undefined,
+    });
+  },
+});
+
 // Shop komplett löschen (Admin) — inkl. aller shop-bezogenen Daten.
 // Kunden bleiben erhalten (können in anderen Shops Mitgliedschaften haben).
 export const adminDeleteShop = mutation({

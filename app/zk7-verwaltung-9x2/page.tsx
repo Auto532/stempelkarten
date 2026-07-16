@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +11,8 @@ import {
   Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
+import { THEME_LIST } from "@/app/me/themes/registry";
+import { makeConfigTheme, type ShopDesignConfig } from "@/app/me/themes/configTheme";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
@@ -563,17 +565,9 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
       {/* Design */}
       {shop.customDesignEnabled && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
-          <p className="text-sm font-semibold text-zinc-200">Design</p>
+          <p className="text-sm font-semibold text-zinc-200">Signature-Themes</p>
           <div className="flex gap-1.5 flex-wrap">
-            {[
-              { id: "beates-grill", label: "Beate's Grill", color: "#E8A020" },
-              { id: "asia-taste",   label: "Asia Taste",    color: "#D2603A" },
-              { id: "bakery",       label: "Bäckerei",      color: "#d97706" },
-              { id: "barber",       label: "Barbershop",    color: "#cca352" },
-              { id: "block13",      label: "Block 13",      color: "#c9a227" },
-              { id: "eiszauber",    label: "Eiszauber",     color: "#ff4fa0" },
-              { id: "entenhaus",    label: "Entenhaus",     color: "#C9A560" },
-            ].map(({ id, label, color }) => (
+            {THEME_LIST.map(({ id, label, color }) => (
               <button key={id} onClick={() => handleSetTheme(id, color)} disabled={!!settingTheme}
                 className="text-[11px] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
                 style={shop.theme === id
@@ -593,6 +587,9 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
           {shop.theme && <p className="text-[10px] text-zinc-600">Aktiv: {shop.theme}</p>}
         </div>
       )}
+
+      {/* Design-Editor (Config-Design) */}
+      {shop.customDesignEnabled && <DesignEditor shop={shop} adminSecret={adminSecret} />}
 
       {/* Rechtliche Texte */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
@@ -689,6 +686,258 @@ function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops">; admi
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─── DesignEditor (Config-Design, 99€-Produkt) ────────────────────────────────
+// Baut das Kunden-Design aus DB-Daten zusammen: Farben, Hintergrund, Logo,
+// Stempel-Icon, Kartenstil — mit Live-Vorschau. Kein Code/Deploy pro Shop.
+
+function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
+  const generateUploadUrl = useMutation(api.shops.adminGenerateUploadUrl);
+  const setDesignConfig   = useMutation(api.shops.adminSetDesignConfig);
+
+  const dc = shop.designConfig;
+  const [open, setOpen] = useState(!!dc);
+
+  // Farben
+  const [accent, setAccent]     = useState(dc?.accent   ?? shop.accentColor ?? "#fbbf24");
+  const [text, setText]         = useState(dc?.text     ?? "#f4f4f5");
+  const [textBody, setTextBody] = useState(dc?.textBody ?? "#a1a1aa");
+  const [cardBg, setCardBg]     = useState(dc?.cardBg   ?? "#18181b");
+  // Hintergrund
+  const [bgType, setBgType]     = useState<"color" | "gradient" | "image">(dc?.bgType ?? "color");
+  const [bgColor, setBgColor]   = useState(dc?.bgColor  ?? "#09090b");
+  const [bgColor2, setBgColor2] = useState(dc?.bgColor2 ?? "#1c1917");
+  const [bgImageId, setBgImageId]     = useState<Id<"_storage"> | undefined>(dc?.bgImageId);
+  const [bgPreviewUrl, setBgPreviewUrl] = useState<string | undefined>(dc?.bgImageUrl);
+  // Logo
+  const [logoId, setLogoId]           = useState<Id<"_storage"> | undefined>(dc?.logoId);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
+  // Stempel & Stil
+  const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
+  const [cardStyle, setCardStyle] = useState<"classic" | "glow">(dc?.cardStyle ?? "glow");
+
+  const [uploading, setUploading] = useState<"logo" | "bg" | null>(null);
+  const [saving, setSaving]       = useState(false);
+  const [saved, setSaved]         = useState(false);
+  const [err, setErr]             = useState("");
+
+  const uploadFile = async (file: File): Promise<Id<"_storage">> => {
+    const url = await generateUploadUrl({ adminSecret });
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+    if (!res.ok) throw new Error("Upload fehlgeschlagen");
+    const { storageId } = await res.json();
+    return storageId as Id<"_storage">;
+  };
+
+  const handleUpload = (kind: "logo" | "bg") => async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(kind); setErr("");
+    try {
+      const id = await uploadFile(file);
+      const preview = URL.createObjectURL(file);
+      if (kind === "logo") { setLogoId(id); setLogoPreviewUrl(preview); }
+      else { setBgImageId(id); setBgPreviewUrl(preview); setBgType("image"); }
+    } catch (ex: unknown) {
+      setErr(ex instanceof Error ? ex.message : "Upload fehlgeschlagen");
+    } finally { setUploading(null); e.target.value = ""; }
+  };
+
+  // Live-Vorschau: dieselbe Komponente, die auch die Kunden sehen
+  const previewCfg: ShopDesignConfig = useMemo(() => ({
+    accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
+    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, stampIcon: icon, cardStyle,
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, icon, cardStyle]);
+  const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
+
+  const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
+    ? { backgroundImage: `url('${bgPreviewUrl}')`, backgroundSize: "cover", backgroundPosition: "center" }
+    : bgType === "gradient"
+      ? { background: `linear-gradient(180deg, ${bgColor} 0%, ${bgColor2} 100%)` }
+      : { background: bgColor };
+
+  const handleSave = async () => {
+    setSaving(true); setErr(""); setSaved(false);
+    try {
+      await setDesignConfig({
+        shopId: shop._id, adminSecret,
+        config: {
+          accent, text, textBody, cardBg, bgType,
+          bgColor, bgColor2, bgImageId, logoId,
+          stampIcon: icon, cardStyle,
+        },
+      });
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+    } catch (ex: unknown) {
+      setErr(ex instanceof Error ? ex.message : "Fehler beim Speichern");
+    } finally { setSaving(false); }
+  };
+
+  const handleRemove = async () => {
+    if (!window.confirm("Eigenes Design entfernen? Der Shop nutzt dann wieder den Standard-Look.")) return;
+    setSaving(true); setErr("");
+    try { await setDesignConfig({ shopId: shop._id, adminSecret, config: null }); }
+    catch (ex: unknown) { setErr(ex instanceof Error ? ex.message : "Fehler"); }
+    finally { setSaving(false); }
+  };
+
+  const ColorField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
+    <div className="flex items-center justify-between gap-2 bg-zinc-800/50 rounded-xl px-3 py-2">
+      <span className="text-xs text-zinc-400">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[10px] font-mono text-zinc-600">{value}</span>
+        <input type="color" value={value} onChange={e => onChange(e.target.value)}
+          className="w-7 h-7 rounded-lg border border-zinc-700 bg-transparent cursor-pointer" />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-3 flex items-center gap-2 text-left">
+        <Palette size={14} className={dc ? "text-amber-400" : "text-zinc-500"} />
+        <span className="text-sm font-semibold text-zinc-200">Design-Editor</span>
+        {dc && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-400">aktiv</span>}
+        <ChevronRight size={14} className={`ml-auto text-zinc-600 transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-4 border-t border-zinc-800 pt-4">
+          {shop.theme && (
+            <p className="text-[10px] text-yellow-400 bg-yellow-400/10 border border-yellow-400/25 rounded-lg px-2.5 py-2">
+              Signature-Theme „{shop.theme}" ist aktiv und überdeckt den Editor. Beim Speichern hier wird es automatisch ersetzt.
+            </p>
+          )}
+
+          {/* Farben */}
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Farben</p>
+            <ColorField label="Akzentfarbe"  value={accent}   onChange={setAccent} />
+            <ColorField label="Überschrift"  value={text}     onChange={setText} />
+            <ColorField label="Text"         value={textBody} onChange={setTextBody} />
+            <ColorField label="Kartenfläche" value={cardBg}   onChange={setCardBg} />
+          </div>
+
+          {/* Hintergrund */}
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Hintergrund</p>
+            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+              {([
+                { id: "color",    label: "Farbe"   },
+                { id: "gradient", label: "Verlauf" },
+                { id: "image",    label: "Foto"    },
+              ] as const).map(t => (
+                <button key={t.id} type="button" onClick={() => setBgType(t.id)}
+                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                  style={bgType === t.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {bgType !== "image" && <ColorField label={bgType === "gradient" ? "Farbe oben" : "Hintergrundfarbe"} value={bgColor} onChange={setBgColor} />}
+            {bgType === "gradient" && <ColorField label="Farbe unten" value={bgColor2} onChange={setBgColor2} />}
+            {bgType === "image" && (
+              <label className="block">
+                <span className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-700 transition-colors">
+                  {uploading === "bg" ? "Lädt hoch…" : bgPreviewUrl ? "Hintergrundfoto ändern" : "Hintergrundfoto hochladen"}
+                </span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleUpload("bg")} disabled={uploading !== null} />
+              </label>
+            )}
+          </div>
+
+          {/* Logo */}
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Logo (statt Shopname auf der Karte)</p>
+            <div className="flex items-center gap-2">
+              <label className="flex-1">
+                <span className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-700 transition-colors">
+                  {uploading === "logo" ? "Lädt hoch…" : logoPreviewUrl ? "Logo ändern" : "Logo hochladen"}
+                </span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleUpload("logo")} disabled={uploading !== null} />
+              </label>
+              {logoPreviewUrl && (
+                <button type="button" onClick={() => { setLogoId(undefined); setLogoPreviewUrl(undefined); }}
+                  className="px-2.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-500 hover:text-red-400 text-xs transition-colors">✕</button>
+              )}
+            </div>
+          </div>
+
+          {/* Stempel-Icon */}
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Stempel-Icon</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {Object.entries(STAMP_ICONS).map(([key, IconComp]) => (
+                <button key={key} type="button" onClick={() => setIcon(key)}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
+                  style={icon === key
+                    ? { background: `${accent}22`, border: `1px solid ${accent}66` }
+                    : { background: "#27272a", border: "1px solid #3f3f46" }}>
+                  <IconComp size={15} style={{ color: icon === key ? accent : "#71717a" }} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Kartenstil */}
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Kartenstil</p>
+            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+              {([
+                { id: "glow",    label: "Glow (leuchtende Stempel)" },
+                { id: "classic", label: "Klassisch (flach)"         },
+              ] as const).map(s => (
+                <button key={s.id} type="button" onClick={() => setCardStyle(s.id)}
+                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                  style={cardStyle === s.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Live-Vorschau */}
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Vorschau (so sieht es der Kunde)</p>
+            <div className="rounded-2xl p-4 space-y-3 border border-zinc-800" style={previewBg}>
+              <previewTheme.Card
+                shopName={shop.name}
+                stampsRequired={shop.stampsRequired}
+                currentStamps={Math.min(4, shop.stampsRequired)}
+                animateIndex={null}
+                qrToken="preview"
+                onShowQR={() => {}}
+                rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
+                stampValue={shop.stampValue}
+                cardNumber={1}
+              />
+              <previewTheme.Banner
+                rewardText={shop.rewardText}
+                stampsRequired={shop.stampsRequired}
+                rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
+              />
+            </div>
+          </div>
+
+          {err && <p className="text-red-400 text-xs">{err}</p>}
+          <div className="flex gap-2">
+            <button type="button" onClick={handleSave} disabled={saving || uploading !== null}
+              className="flex-1 py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 text-sm font-semibold rounded-xl transition-colors">
+              {saving ? "Speichert…" : saved ? "Gespeichert ✓" : "Design speichern"}
+            </button>
+            {dc && (
+              <button type="button" onClick={handleRemove} disabled={saving}
+                className="px-4 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-red-400 text-sm transition-colors disabled:opacity-50">
+                Entfernen
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
