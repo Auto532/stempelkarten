@@ -6,6 +6,22 @@ import { motion } from "framer-motion";
 import {
   Gift, Stamp, Scissors, Coffee, Pizza, Dumbbell, Flower2,
   ShoppingBag, Car, Utensils, BookOpen, Flame, Star, Bike, Shirt,
+  // Essen & Trinken
+  Beer, Wine, Martini, CupSoda, IceCream, Cake, Croissant, Cookie,
+  Candy, Apple, Cherry, Fish, Beef, Drumstick, Salad, Soup, Sandwich,
+  Popcorn, Milk, Egg,
+  // Beauty & Wellness
+  Sparkles, Heart, Sun, Moon, Leaf, Droplets, Bath, Brush, Palette,
+  // Tiere
+  PawPrint, Dog, Cat,
+  // Freizeit & Kultur
+  Gamepad2, Music, Guitar, Mic, Camera, Ticket, Trophy, Target, Rocket,
+  // Lifestyle & Handel
+  Crown, Gem, Watch, Glasses, Footprints, Baby, Smile,
+  // Handwerk & Service
+  Wrench, Hammer, Key, Home, Plane, Anchor, Smartphone, Laptop,
+  // Sonstiges
+  Snowflake, Zap, Umbrella, TreePine, Mountain,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -16,6 +32,7 @@ export type CardTier = { stamps: number; text: string; enabled: boolean };
 // ─── Icon-System ──────────────────────────────────────────────────────────────
 
 export const STAMP_ICONS: Record<string, LucideIcon> = {
+  // Klassiker (bestehende Keys nicht ändern — liegen in der DB)
   scissors: Scissors,
   coffee: Coffee,
   pizza: Pizza,
@@ -30,6 +47,75 @@ export const STAMP_ICONS: Record<string, LucideIcon> = {
   bike: Bike,
   shirt: Shirt,
   stamp: Stamp,
+  // Essen & Trinken
+  beer: Beer,
+  wine: Wine,
+  cocktail: Martini,
+  soda: CupSoda,
+  icecream: IceCream,
+  cake: Cake,
+  croissant: Croissant,
+  cookie: Cookie,
+  candy: Candy,
+  apple: Apple,
+  cherry: Cherry,
+  fish: Fish,
+  beef: Beef,
+  chicken: Drumstick,
+  salad: Salad,
+  soup: Soup,
+  sandwich: Sandwich,
+  popcorn: Popcorn,
+  milk: Milk,
+  egg: Egg,
+  // Beauty & Wellness
+  sparkles: Sparkles,
+  heart: Heart,
+  sun: Sun,
+  moon: Moon,
+  leaf: Leaf,
+  droplets: Droplets,
+  bath: Bath,
+  brush: Brush,
+  palette: Palette,
+  // Tiere
+  paw: PawPrint,
+  dog: Dog,
+  cat: Cat,
+  // Freizeit & Kultur
+  gamepad: Gamepad2,
+  music: Music,
+  guitar: Guitar,
+  mic: Mic,
+  camera: Camera,
+  ticket: Ticket,
+  trophy: Trophy,
+  target: Target,
+  rocket: Rocket,
+  // Lifestyle & Handel
+  gift: Gift,
+  crown: Crown,
+  gem: Gem,
+  watch: Watch,
+  glasses: Glasses,
+  footprints: Footprints,
+  baby: Baby,
+  smile: Smile,
+  // Handwerk & Service
+  wrench: Wrench,
+  hammer: Hammer,
+  key: Key,
+  home: Home,
+  plane: Plane,
+  anchor: Anchor,
+  smartphone: Smartphone,
+  laptop: Laptop,
+  // Sonstiges
+  snowflake: Snowflake,
+  zap: Zap,
+  umbrella: Umbrella,
+  tree: TreePine,
+  mountain: Mountain,
 };
 
 export function getStampIcon(key?: string | null): LucideIcon {

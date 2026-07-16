@@ -694,6 +694,25 @@ function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops">; admi
 // Baut das Kunden-Design aus DB-Daten zusammen: Farben, Hintergrund, Logo,
 // Stempel-Icon, Kartenstil — mit Live-Vorschau. Kein Code/Deploy pro Shop.
 
+// Fertige Vorlagen als Startpunkt — setzen Farben/Hintergrund/Stil, danach
+// beliebig anpassbar. Logo und Icon bleiben unberührt.
+const DESIGN_PRESETS: {
+  name: string; accent: string; text: string; textBody: string; cardBg: string;
+  bgType: "color" | "gradient"; bgColor: string; bgColor2?: string;
+  cardStyle: "classic" | "glow";
+}[] = [
+  { name: "Mitternacht Gold", accent: "#fbbf24", text: "#f4f4f5", textBody: "#a1a1aa", cardBg: "#18181b", bgType: "gradient", bgColor: "#09090b", bgColor2: "#1c1917", cardStyle: "glow" },
+  { name: "Schwarz-Gold",     accent: "#c9a227", text: "#f2ede4", textBody: "#a89f8d", cardBg: "#17150f", bgType: "color",    bgColor: "#0d0c0a",                       cardStyle: "glow" },
+  { name: "Ozean",            accent: "#60a5fa", text: "#eff6ff", textBody: "#94a3b8", cardBg: "#0f172a", bgType: "gradient", bgColor: "#020617", bgColor2: "#0f1e3a", cardStyle: "glow" },
+  { name: "Wald",             accent: "#4ade80", text: "#f0fdf4", textBody: "#9ca3af", cardBg: "#0c1a12", bgType: "gradient", bgColor: "#050d08", bgColor2: "#10241a", cardStyle: "glow" },
+  { name: "Royal",            accent: "#a78bfa", text: "#f5f3ff", textBody: "#a5a1b8", cardBg: "#171225", bgType: "gradient", bgColor: "#0c0813", bgColor2: "#1e1633", cardStyle: "glow" },
+  { name: "Feuer",            accent: "#f97316", text: "#fff7ed", textBody: "#cbb5a0", cardBg: "#1c0f08", bgType: "gradient", bgColor: "#120702", bgColor2: "#241008", cardStyle: "glow" },
+  { name: "Türkis",           accent: "#2dd4bf", text: "#f0fdfa", textBody: "#94b8b3", cardBg: "#0a1a18", bgType: "gradient", bgColor: "#04100e", bgColor2: "#0e2420", cardStyle: "glow" },
+  { name: "Silber",           accent: "#d7d2c6", text: "#f1e9d6", textBody: "#8d877b", cardBg: "#141414", bgType: "color",    bgColor: "#0b0b0b",                       cardStyle: "glow" },
+  { name: "Rosé (hell)",      accent: "#ec4899", text: "#2c1020", textBody: "#8c6578", cardBg: "#fff7fb", bgType: "gradient", bgColor: "#ffeef7", bgColor2: "#ffd6e9", cardStyle: "classic" },
+  { name: "Café Creme (hell)",accent: "#b45309", text: "#451a03", textBody: "#78350f", cardBg: "#fffbeb", bgType: "gradient", bgColor: "#fef3c7", bgColor2: "#fde68a", cardStyle: "classic" },
+];
+
 function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const generateUploadUrl = useMutation(api.shops.adminGenerateUploadUrl);
   const setDesignConfig   = useMutation(api.shops.adminSetDesignConfig);
@@ -813,6 +832,30 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
             </p>
           )}
 
+          {/* Vorlagen */}
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Vorlagen (Startpunkt, danach anpassen)</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {DESIGN_PRESETS.map(p => (
+                <button key={p.name} type="button"
+                  onClick={() => {
+                    setAccent(p.accent); setText(p.text); setTextBody(p.textBody); setCardBg(p.cardBg);
+                    setBgType(p.bgType); setBgColor(p.bgColor); setBgColor2(p.bgColor2 ?? p.bgColor);
+                    setCardStyle(p.cardStyle);
+                  }}
+                  className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-colors hover:border-zinc-600"
+                  style={{ background: p.cardBg, border: `1px solid ${p.accent}55` }}>
+                  <span className="flex shrink-0 -space-x-1">
+                    <span className="w-4 h-4 rounded-full border border-black/20" style={{ background: p.accent }} />
+                    <span className="w-4 h-4 rounded-full border border-black/20" style={{ background: p.bgColor }} />
+                    <span className="w-4 h-4 rounded-full border border-black/20" style={{ background: p.text }} />
+                  </span>
+                  <span className="text-[10px] font-semibold truncate" style={{ color: p.text }}>{p.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Farben */}
           <div className="space-y-1.5">
             <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Farben</p>
@@ -870,7 +913,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
           {/* Stempel-Icon */}
           <div className="space-y-1.5">
             <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Stempel-Icon</p>
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap max-h-40 overflow-y-auto pr-1">
               {Object.entries(STAMP_ICONS).map(([key, IconComp]) => (
                 <button key={key} type="button" onClick={() => setIcon(key)}
                   className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
