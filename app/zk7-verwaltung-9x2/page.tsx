@@ -776,6 +776,11 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
           wird bezahlt — Rabattcode kann direkt auf der Zahlungsseite eingegeben werden. Nach der Zahlung
           erscheint der Umsatz automatisch in den Finanzen.
         </p>
+        {/* Zahlungs-QR: Inhaber scannt und landet auf der Zahlungsseite */}
+        <div className="flex flex-col items-center gap-2 py-1">
+          <QRImage value={payLink} size={160} />
+          <p className="text-[10px] text-zinc-600">QR scannen → Zahlungsseite öffnet sich</p>
+        </div>
         <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-xs text-zinc-300 break-all">{payLink}</div>
         <div className="flex gap-2">
           <button type="button" onClick={copyPayLink}
@@ -2507,7 +2512,15 @@ const PARTNER_FIELD_LABELS: Record<string, string> = {
   name: "Name", company: "Firma", taxId: "Steuernr.", vatId: "USt-IdNr.",
   dateOfBirth: "Geburtsdatum", bankIban: "IBAN", bankBic: "BIC", bankName: "Bank",
   phone: "Telefon", address: "Adresse", zip: "PLZ", city: "Stadt", country: "Land",
+  businessType: "Kontotyp",
 };
+
+function fmtPartnerVal(key: string, val: unknown): string {
+  if (key === "businessType") {
+    return val === "business" ? "Gewerbe" : val === "private" ? "Privat" : "—";
+  }
+  return val === undefined || val === null || val === "" ? "—" : String(val);
+}
 
 function PModalSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -2588,13 +2601,25 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
             {pending && (
               <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(251,191,36,.08)", border: "1px solid rgba(251,191,36,.3)" }}>
                 <p className="text-xs font-semibold text-yellow-400">Änderungen warten auf Freigabe</p>
+                {pending.businessType === "business" && a.businessType !== "business" && (
+                  <div className="rounded-lg px-2.5 py-2" style={{ background: "rgba(249,115,22,.12)", border: "1px solid rgba(249,115,22,.4)" }}>
+                    <p className="text-[11px] font-bold text-orange-400">⚠ Wechsel Privat → Gewerbe</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">Firmenname und USt-IdNr./Steuernr. prüfen — steuerlich relevant (Provisions-Abrechnung).</p>
+                  </div>
+                )}
+                {pending.businessType === "private" && a.businessType === "business" && (
+                  <div className="rounded-lg px-2.5 py-2" style={{ background: "rgba(249,115,22,.12)", border: "1px solid rgba(249,115,22,.4)" }}>
+                    <p className="text-[11px] font-bold text-orange-400">⚠ Wechsel Gewerbe → Privat</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">Prüfen, ob das plausibel ist — steuerlich relevant (Provisions-Abrechnung).</p>
+                  </div>
+                )}
                 <div className="space-y-1">
                   {Object.keys(pending).filter(k => k !== "submittedAt").map(k => (
                     <div key={k} className="text-[11px] flex flex-wrap items-center gap-1">
                       <span className="text-zinc-500">{PARTNER_FIELD_LABELS[k] ?? k}:</span>
-                      <span className="text-zinc-500 line-through">{String(a[k] ?? "—")}</span>
+                      <span className="text-zinc-500 line-through">{fmtPartnerVal(k, a[k])}</span>
                       <span className="text-zinc-600">→</span>
-                      <span className="text-green-400 font-medium">{String(pending[k])}</span>
+                      <span className="text-green-400 font-medium">{fmtPartnerVal(k, pending[k])}</span>
                     </div>
                   ))}
                 </div>
