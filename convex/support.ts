@@ -53,7 +53,17 @@ export const submitTicket = mutation({
   },
 });
 
-// Eigene Anfragen des Betriebs (inkl. Status + Admin-Antwort)
+// Kompletter Verlauf: Erstnachricht + Legacy-Antwort + Thread, chronologisch
+type ThreadMsg = { from: "user" | "admin"; text: string; at: number };
+function buildThread(t: { message: string; createdAt: number; reply?: string; repliedAt?: number; thread?: ThreadMsg[] }): ThreadMsg[] {
+  return [
+    { from: "user", text: t.message, at: t.createdAt },
+    ...(t.reply ? [{ from: "admin" as const, text: t.reply, at: t.repliedAt ?? t.createdAt }] : []),
+    ...(t.thread ?? []),
+  ];
+}
+
+// Eigene Anfragen des Betriebs (kompletter Verlauf + Status)
 export const listMyTickets = query({
   args: { token: v.string() },
   handler: async (ctx, args) => {
@@ -65,7 +75,32 @@ export const listMyTickets = query({
       .collect();
     return tickets
       .sort((a, b) => b.createdAt - a.createdAt)
-      .map(t => ({ _id: t._id, message: t.message, status: t.status, reply: t.reply ?? null, repliedAt: t.repliedAt ?? null, createdAt: t.createdAt }));
+      .map(t => ({ _id: t._id, status: t.status, createdAt: t.createdAt, thread: buildThread(t) }));
+  },
+});
+
+// Betrieb antwortet im Ticket (solange nicht geschlossen; Antwort auf
+// geschlossenes Ticket öffnet es wieder)
+export const replyTicket = mutation({
+  args: { token: v.string(), ticketId: v.id("supportTickets"), message: v.string() },
+  handler: async (ctx, args) => {
+    const auth = await shopFromToken(ctx, args.token);
+    if (!auth) throw new Error("Nicht eingeloggt");
+    const ticket = await ctx.db.get(args.ticketId);
+    if (!ticket || ticket.shopId !== auth.shop._id) throw new Error("Ticket nicht gefunden");
+    const message = args.message.trim();
+    if (!message) throw new Error("Nachricht ist leer");
+    if (message.length > 2000) throw new Error("Nachricht zu lang (max. 2000 Zeichen)");
+
+    await ctx.db.patch(args.ticketId, {
+      thread: [...(ticket.thread ?? []), { from: "user" as const, text: message, at: Date.now() }],
+      status: "open",
+    });
+
+    await ctx.scheduler.runAfter(0, internal.support.notifySupportTelegram, {
+      from:    `Betrieb: ${auth.shop.name} — neue Antwort im Ticket`,
+      message,
+    });
   },
 });
 
@@ -78,23 +113,35 @@ export const adminListTickets = query({
     const tickets = await ctx.db.query("supportTickets").order("desc").collect();
     return Promise.all(tickets.map(async t => {
       const shop = await ctx.db.get(t.shopId);
-      return { ...t, shopName: shop?.name ?? "(gelöschter Shop)" };
+      return {
+        _id: t._id, senderRole: t.senderRole, contact: t.contact ?? null,
+        status: t.status, createdAt: t.createdAt,
+        shopName: shop?.name ?? "(gelöschter Shop)",
+        thread: buildThread(t),
+      };
     }));
   },
 });
 
+// Antwort anhängen (Ticket bleibt offen) und/oder Status setzen
 export const adminAnswerTicket = mutation({
   args: {
     adminSecret: v.string(),
     ticketId:    v.id("supportTickets"),
     reply:       v.optional(v.string()),
-    status:      v.union(v.literal("open"), v.literal("done")),
+    status:      v.optional(v.union(v.literal("open"), v.literal("done"))),
   },
   handler: async (ctx, { adminSecret, ticketId, reply, status }) => {
     requireAdmin({ secret: adminSecret });
-    const patch: Record<string, unknown> = { status };
+    const ticket = await ctx.db.get(ticketId);
+    if (!ticket) throw new Error("Ticket nicht gefunden");
+    const patch: Record<string, unknown> = {};
     const trimmed = reply?.trim();
-    if (trimmed) { patch.reply = trimmed; patch.repliedAt = Date.now(); }
+    if (trimmed) {
+      patch.thread = [...(ticket.thread ?? []), { from: "admin" as const, text: trimmed, at: Date.now() }];
+    }
+    if (status) patch.status = status;
+    if (Object.keys(patch).length === 0) return;
     await ctx.db.patch(ticketId, patch);
   },
 });

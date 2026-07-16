@@ -3378,10 +3378,11 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
 
 // ─── SupportTab (Tickets aus beiden Apps: Betrieb + Partner) ──────────────────
 
+type TicketMsg = { from: "user" | "admin"; text: string; at: number };
 type AdminTicket = {
   _id: string; source: "betrieb" | "partner"; name: string; sub?: string | null;
-  senderRole?: string; message: string; contact?: string | null;
-  status: "open" | "done"; reply?: string | null; createdAt: number;
+  senderRole?: string; contact?: string | null;
+  status: "open" | "done"; createdAt: number; thread: TicketMsg[];
 };
 
 function SupportTab({ adminSecret }: { adminSecret: string }) {
@@ -3402,30 +3403,31 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
     ...(btTickets ?? []).map(t => ({
       _id: t._id as string, source: "betrieb" as const, name: t.shopName,
       senderRole: t.senderRole === "inhaber" ? "Inhaber" : "Mitarbeiter",
-      message: t.message, contact: t.contact ?? null, status: t.status,
-      reply: t.reply ?? null, createdAt: t.createdAt,
+      contact: t.contact ?? null, status: t.status,
+      createdAt: t.createdAt, thread: t.thread as TicketMsg[],
     })),
-    ...((affTickets ?? []) as AdminTicket[] & { partnerName?: string; partnerEmail?: string }[]).map((t: any) => ({
+    ...((affTickets ?? []) as any[]).map((t: any) => ({
       _id: t._id as string, source: "partner" as const, name: t.partnerName as string,
-      sub: (t.partnerEmail as string) ?? null, message: t.message as string,
+      sub: (t.partnerEmail as string) ?? null,
       contact: (t.contact as string) ?? null, status: t.status as "open" | "done",
-      reply: (t.reply as string) ?? null, createdAt: t.createdAt as number,
+      createdAt: t.createdAt as number, thread: (t.thread ?? []) as TicketMsg[],
     })),
   ].sort((a, b) => b.createdAt - a.createdAt);
 
   const shown = tickets.filter(t => filter === "all" || t.status === filter);
 
-  const act = async (t: AdminTicket, status: "open" | "done", withReply: boolean) => {
+  // Antworten hält das Ticket offen — geschlossen wird nur explizit.
+  const act = async (t: AdminTicket, opts: { reply?: boolean; status?: "open" | "done" }) => {
     setBusyId(t._id);
     try {
-      const reply = withReply ? (replyMap[t._id]?.trim() || undefined) : undefined;
+      const reply = opts.reply ? (replyMap[t._id]?.trim() || undefined) : undefined;
       if (t.source === "betrieb") {
-        await answerBt({ adminSecret, ticketId: t._id as Id<"supportTickets">, reply, status });
+        await answerBt({ adminSecret, ticketId: t._id as Id<"supportTickets">, reply, status: opts.status });
       } else {
-        await affiliateMutation("support:adminAnswerTicket", { adminSecret, ticketId: t._id, reply, status });
+        await affiliateMutation("support:adminAnswerTicket", { adminSecret, ticketId: t._id, reply, status: opts.status });
         await loadAff();
       }
-      if (withReply) setReplyMap(m => ({ ...m, [t._id]: "" }));
+      if (opts.reply) setReplyMap(m => ({ ...m, [t._id]: "" }));
     } finally { setBusyId(null); }
   };
 
@@ -3479,25 +3481,33 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
             </div>
           </div>
           <div className="p-4 space-y-3">
-            <p className="text-sm text-zinc-300 whitespace-pre-wrap">{t.message}</p>
+            {/* Verlauf als Chat */}
+            <div className="space-y-2">
+              {t.thread.map((m, i) => (
+                <div key={i} className={`flex ${m.from === "admin" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[85%] rounded-xl px-3 py-2 ${m.from === "admin"
+                    ? "bg-amber-400/10 border border-amber-400/25"
+                    : "bg-zinc-800 border border-zinc-700"}`}>
+                    <p className={`text-[9px] font-semibold mb-0.5 ${m.from === "admin" ? "text-amber-400" : "text-zinc-500"}`}>
+                      {m.from === "admin" ? "Du" : t.name} · {new Date(m.at).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                    <p className="text-xs text-zinc-200 whitespace-pre-wrap">{m.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
             {t.contact && <p className="text-xs text-zinc-500">📞 Kontakt: <span className="text-zinc-300">{t.contact}</span></p>}
-            {t.reply && (
-              <div className="rounded-xl px-3 py-2" style={{ background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.25)" }}>
-                <p className="text-[10px] text-green-400 font-semibold mb-0.5">Deine Antwort</p>
-                <p className="text-xs text-zinc-300 whitespace-pre-wrap">{t.reply}</p>
-              </div>
-            )}
             <textarea value={replyMap[t._id] ?? ""} onChange={e => setReplyMap(m => ({ ...m, [t._id]: e.target.value }))}
-              rows={2} placeholder={t.reply ? "Neue Antwort (ersetzt die alte)…" : "Antwort schreiben…"}
+              rows={2} placeholder="Antwort schreiben…"
               className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-zinc-200 text-sm placeholder-zinc-600 focus:outline-none focus:border-amber-400/50 resize-none" />
             <div className="flex gap-2">
-              <button onClick={() => act(t, "done", true)} disabled={busyId === t._id || !(replyMap[t._id] ?? "").trim()}
+              <button onClick={() => act(t, { reply: true })} disabled={busyId === t._id || !(replyMap[t._id] ?? "").trim()}
                 className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-900 text-xs font-semibold disabled:opacity-40 transition-colors">
-                Antworten & erledigen
+                Antwort senden
               </button>
-              <button onClick={() => act(t, t.status === "open" ? "done" : "open", false)} disabled={busyId === t._id}
+              <button onClick={() => act(t, { status: t.status === "open" ? "done" : "open" })} disabled={busyId === t._id}
                 className="px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 text-xs font-semibold hover:text-zinc-200 disabled:opacity-40 transition-colors">
-                {t.status === "open" ? "Erledigt ✓" : "Wieder öffnen"}
+                {t.status === "open" ? "Ticket schließen" : "Wieder öffnen"}
               </button>
             </div>
           </div>

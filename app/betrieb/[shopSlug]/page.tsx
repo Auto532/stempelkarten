@@ -917,13 +917,27 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
   tx: string; tm: string; ic: string; inp: React.CSSProperties;
 }) {
   const submit = useMutation(api.support.submitTicket);
+  const reply  = useMutation(api.support.replyTicket);
   const [open, setOpen]       = useState(false);
   const [msg, setMsg]         = useState("");
   const [contact, setContact] = useState("");
   const [sending, setSending] = useState(false);
   const [done, setDone]       = useState(false);
   const [err, setErr]         = useState("");
+  const [replyMap, setReplyMap] = useState<Record<string, string>>({});
+  const [replyingId, setReplyingId] = useState<string | null>(null);
   const myTickets = useQuery(api.support.listMyTickets, open && adminToken ? { token: adminToken } : "skip");
+
+  const sendReply = async (ticketId: string) => {
+    const text = (replyMap[ticketId] ?? "").trim();
+    if (!text) return;
+    setReplyingId(ticketId);
+    try {
+      await reply({ token: adminToken, ticketId: ticketId as Parameters<typeof reply>[0]["ticketId"], message: text });
+      setReplyMap(m => ({ ...m, [ticketId]: "" }));
+    } catch { /* Fehler still — Query refresht */ }
+    finally { setReplyingId(null); }
+  };
 
   const send = async () => {
     setSending(true); setErr("");
@@ -970,12 +984,12 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
             </>
           )}
 
-          {/* Bisherige Anfragen inkl. Antwort vom Team */}
+          {/* Bisherige Anfragen: Verlauf + Antworten bis zur Schließung */}
           {myTickets && myTickets.length > 0 && (
             <div className="space-y-2 pt-2" style={{ borderTop: `1px solid ${divColor}` }}>
               <p className="text-xs font-semibold pt-1" style={{ color: tm }}>Deine Anfragen</p>
               {myTickets.map(t => (
-                <div key={t._id} className="rounded-xl p-3 space-y-1.5" style={{ border: `1px solid ${divColor}` }}>
+                <div key={t._id} className="rounded-xl p-3 space-y-2" style={{ border: `1px solid ${divColor}` }}>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-[10px]" style={{ color: tm }}>
                       {new Date(t.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
@@ -984,15 +998,37 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
                       style={t.status === "open"
                         ? { background: `${ic}18`, color: ic }
                         : { background: "rgba(34,197,94,.12)", color: "#4ade80" }}>
-                      {t.status === "open" ? "in Bearbeitung" : "beantwortet"}
+                      {t.status === "open" ? "offen" : "abgeschlossen"}
                     </span>
                   </div>
-                  <p className="text-xs whitespace-pre-wrap" style={{ color: tx }}>{t.message}</p>
-                  {t.reply && (
-                    <div className="rounded-lg px-2.5 py-2 mt-1" style={{ background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.25)" }}>
-                      <p className="text-[9px] font-semibold text-green-400 mb-0.5">Antwort vom Loatycard-Team</p>
-                      <p className="text-xs whitespace-pre-wrap" style={{ color: tx }}>{t.reply}</p>
+                  {t.thread.map((m, i) => (
+                    <div key={i} className={`flex ${m.from === "admin" ? "justify-start" : "justify-end"}`}>
+                      <div className="max-w-[85%] rounded-lg px-2.5 py-1.5"
+                        style={m.from === "admin"
+                          ? { background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.25)" }
+                          : { background: `${ic}10`, border: `1px solid ${ic}30` }}>
+                        <p className="text-[9px] font-semibold mb-0.5" style={{ color: m.from === "admin" ? "#4ade80" : ic }}>
+                          {m.from === "admin" ? "Loatycard-Team" : "Du"}
+                        </p>
+                        <p className="text-xs whitespace-pre-wrap" style={{ color: tx }}>{m.text}</p>
+                      </div>
                     </div>
+                  ))}
+                  {t.status === "open" ? (
+                    <div className="flex gap-2 pt-1">
+                      <input value={replyMap[t._id] ?? ""} onChange={e => setReplyMap(m => ({ ...m, [t._id]: e.target.value }))}
+                        placeholder="Antworten…"
+                        className="flex-1 px-3 py-2 rounded-lg text-xs focus:outline-none placeholder-zinc-600"
+                        style={inp} />
+                      <button type="button" onClick={() => sendReply(t._id)}
+                        disabled={replyingId === t._id || !(replyMap[t._id] ?? "").trim()}
+                        className="px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-40"
+                        style={{ background: ic, color: "#111" }}>
+                        {replyingId === t._id ? "…" : "Senden"}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-[10px]" style={{ color: tm }}>Ticket abgeschlossen — bei neuem Anliegen einfach oben eine neue Anfrage senden.</p>
                   )}
                 </div>
               ))}
