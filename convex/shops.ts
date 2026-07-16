@@ -292,7 +292,7 @@ export const createShop = mutation({
       });
     }
 
-    return shopId;
+    return { shopId, slug: shopArgs.slug, adminLoginToken };
   },
 });
 

@@ -701,6 +701,9 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
   const [ownerPhone, setOwnerPhone] = useState("");
   const [wantsDesign, setWantsDesign]           = useState(false);
   const [wantsBonusStamps, setWantsBonusStamps] = useState(false);
+  const [planType, setPlanType] = useState<"annual" | "monthly" | "none">("annual");
+  const [payLink, setPayLink]   = useState("");
+  const [copied, setCopied]     = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -709,7 +712,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setLoading(true);
     try {
-      await createShop({
+      const created = await createShop({
         adminSecret, name, slug, stampsRequired, rewardText, stampIcon,
         stampValue:       stampValue === "" ? undefined : Number(stampValue),
         ownerName:        ownerName  || undefined,
@@ -718,11 +721,75 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         wantsDesign:      wantsDesign      || undefined,
         wantsBonusStamps: wantsBonusStamps || undefined,
       });
+
+      if (planType !== "none") {
+        // Vertrag im Partnerprogramm registrieren (Direktvertrieb, 0% Provision)
+        // → Zahlung läuft über den normalen Bezahllink, Umsatz landet in den Finanzen.
+        try {
+          const contract = await affiliateMutation("admin:createDirectShopContract", {
+            adminSecret,
+            shopName:            name,
+            ownerName:           ownerName   || undefined,
+            ownerEmail:          ownerEmail  || undefined,
+            ownerPhone:          ownerPhone  || undefined,
+            businessType:        brancheText || undefined,
+            planType,
+            loatycardShopId:     created.shopId,
+            loatycardShopSlug:   created.slug,
+            loatycardAdminToken: created.adminLoginToken,
+          });
+          if (contract?.paymentToken) {
+            setPayLink(`${AFFILIATE_APP_URL}/pay/${contract.paymentToken}`);
+            return;
+          }
+          setError("Shop erstellt — aber kein Bezahllink erhalten (Affiliate-App nicht konfiguriert?)");
+          return;
+        } catch (err: unknown) {
+          setError(`Shop erstellt — Vertrag fehlgeschlagen: ${err instanceof Error ? err.message : "Fehler"}`);
+          return;
+        }
+      }
       onDone();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Fehler");
     } finally { setLoading(false); }
   };
+
+  const copyPayLink = async () => {
+    try { await navigator.clipboard.writeText(payLink); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {}
+  };
+
+  if (payLink) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4 mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3">
+              <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h2 className="font-semibold text-zinc-100">Shop erstellt</h2>
+        </div>
+        <p className="text-sm text-zinc-400">
+          Vertrag ({planType === "annual" ? "Jahresabo" : "Monatsabo"}) ist angelegt. Über den Bezahllink
+          wird bezahlt — Rabattcode kann direkt auf der Zahlungsseite eingegeben werden. Nach der Zahlung
+          erscheint der Umsatz automatisch in den Finanzen.
+        </p>
+        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-xs text-zinc-300 break-all">{payLink}</div>
+        <div className="flex gap-2">
+          <button type="button" onClick={copyPayLink}
+            className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-sm font-semibold rounded-xl transition-colors">
+            {copied ? "Kopiert ✓" : "Link kopieren"}
+          </button>
+          <button type="button" onClick={onDone}
+            className="flex-1 py-2.5 bg-amber-400 hover:bg-amber-300 text-zinc-900 text-sm font-semibold rounded-xl transition-colors">
+            Fertig
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.form onSubmit={handleCreate} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -820,6 +887,30 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Vertrag / Abo */}
+      <div className="pt-2 border-t border-zinc-800 space-y-2">
+        <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Vertrag (Finanzen)</p>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { id: "annual",  label: "Jahresabo",  sub: "€389/Jahr"  },
+            { id: "monthly", label: "Monatsabo",  sub: "€39/Monat"  },
+            { id: "none",    label: "Ohne",       sub: "Nur testen" },
+          ] as const).map(opt => (
+            <button key={opt.id} type="button" onClick={() => setPlanType(opt.id)}
+              className="rounded-xl p-3 text-center transition-colors"
+              style={planType === opt.id
+                ? { background: "rgba(251,191,36,.12)", border: "1px solid rgba(251,191,36,.4)" }
+                : { background: "rgb(39,39,42)",        border: "1px solid rgb(63,63,70)" }}>
+              <p className={`text-sm font-semibold leading-none ${planType === opt.id ? "text-amber-400" : "text-zinc-100"}`}>{opt.label}</p>
+              <p className="text-[10px] text-zinc-500 mt-1">{opt.sub}</p>
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] text-zinc-600">
+          Mit Vertrag bekommst du einen Bezahllink (Rabattcode dort eingebbar) und der Umsatz zählt in den Finanzen. „Ohne" = reiner Test-Shop.
+        </p>
       </div>
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
