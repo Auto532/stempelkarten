@@ -1107,11 +1107,40 @@ function GrowthCard({ label, value, prev, color, period }: {
   );
 }
 
+type EarningsSummary = {
+  revenueTotal: number; commTotal: number; commPaid: number;
+  commConfirmed: number; commPending: number; netEarnings: number; activeContracts: number;
+};
+
+type PaymentRow = {
+  date: number; shopName: string; planType: "annual" | "monthly"; paymentNumber: number;
+  paidAmount: number; commission: number; commissionStatus: string; direct: boolean;
+  discountCode: string | null;
+};
+
+function groupPayments(payments: PaymentRow[], mode: "month" | "year") {
+  const map = new Map<string, { label: string; sort: number; count: number; revenue: number; commission: number }>();
+  for (const p of payments) {
+    const d = new Date(p.date);
+    const key = mode === "month"
+      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      : String(d.getFullYear());
+    const g = map.get(key) ?? {
+      label: mode === "month"
+        ? d.toLocaleDateString("de-DE", { month: "long", year: "numeric" })
+        : String(d.getFullYear()),
+      sort:  mode === "month" ? d.getFullYear() * 12 + d.getMonth() : d.getFullYear(),
+      count: 0, revenue: 0, commission: 0,
+    };
+    g.count++; g.revenue += p.paidAmount; g.commission += p.commission;
+    map.set(key, g);
+  }
+  return Array.from(map.values()).sort((a, b) => b.sort - a.sort);
+}
+
 function EarningsCard({ adminSecret }: { adminSecret: string }) {
-  const [data, setData] = useState<null | {
-    revenueTotal: number; commTotal: number; commPaid: number;
-    commConfirmed: number; commPending: number; netEarnings: number; activeContracts: number;
-  }>(null);
+  const [data, setData] = useState<null | EarningsSummary>(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
     if (!adminSecret) return;
@@ -1124,44 +1153,380 @@ function EarningsCard({ adminSecret }: { adminSecret: string }) {
   if (!data) return null;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
-        <TrendingUp size={14} className="text-green-400" />
-        <span className="text-sm font-semibold text-zinc-200">Meine Einnahmen</span>
-      </div>
-      <div className="p-4 space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-zinc-800/50 rounded-xl p-3">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Gesamtumsatz</p>
-            <p className="text-2xl font-bold text-green-400">€{data.revenueTotal.toFixed(2)}</p>
-            <p className="text-[10px] text-zinc-600 mt-0.5">{data.activeContracts} aktive Verträge</p>
-          </div>
-          <div className="bg-zinc-800/50 rounded-xl p-3">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Mein Anteil</p>
-            <p className="text-2xl font-bold text-amber-400">€{data.netEarnings.toFixed(2)}</p>
-            <p className="text-[10px] text-zinc-600 mt-0.5">nach Provisionen</p>
-          </div>
+    <>
+      <button type="button" onClick={() => setShowDetail(true)}
+        className="w-full text-left bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl overflow-hidden transition-colors">
+        <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
+          <TrendingUp size={14} className="text-green-400" />
+          <span className="text-sm font-semibold text-zinc-200">Finanzen</span>
+          <span className="ml-auto flex items-center gap-1 text-[10px] text-zinc-500">
+            Details <ChevronRight size={12} />
+          </span>
         </div>
-        <div className="border-t border-zinc-800 pt-3 space-y-2">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Provisionen an Partner</p>
-          {[
-            { label: "Ausstehend",  value: data.commPending,   color: "text-yellow-400" },
-            { label: "Bestätigt",   value: data.commConfirmed, color: "text-blue-400"   },
-            { label: "Ausgezahlt",  value: data.commPaid,      color: "text-zinc-400"   },
-          ].map(r => (
-            <div key={r.label} className="flex items-center justify-between">
-              <span className="text-xs text-zinc-500">{r.label}</span>
-              <span className={`text-sm font-semibold ${r.color}`}>€{r.value.toFixed(2)}</span>
+        <div className="p-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-zinc-800/50 rounded-xl p-3">
+              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Gesamtumsatz</p>
+              <p className="text-2xl font-bold text-green-400">€{data.revenueTotal.toFixed(2)}</p>
+              <p className="text-[10px] text-zinc-600 mt-0.5">{data.activeContracts} aktive Verträge</p>
             </div>
-          ))}
-          <div className="flex items-center justify-between pt-1 border-t border-zinc-800">
-            <span className="text-xs text-zinc-400 font-semibold">Gesamt Provisionen</span>
-            <span className="text-sm font-bold text-red-400">– €{data.commTotal.toFixed(2)}</span>
+            <div className="bg-zinc-800/50 rounded-xl p-3">
+              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Mein Anteil</p>
+              <p className="text-2xl font-bold text-amber-400">€{data.netEarnings.toFixed(2)}</p>
+              <p className="text-[10px] text-zinc-600 mt-0.5">nach Provisionen</p>
+            </div>
+          </div>
+          <div className="border-t border-zinc-800 pt-3 space-y-2">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Provisionen an Partner</p>
+            {[
+              { label: "Ausstehend",  value: data.commPending,   color: "text-yellow-400" },
+              { label: "Bestätigt",   value: data.commConfirmed, color: "text-blue-400"   },
+              { label: "Ausgezahlt",  value: data.commPaid,      color: "text-zinc-400"   },
+            ].map(r => (
+              <div key={r.label} className="flex items-center justify-between">
+                <span className="text-xs text-zinc-500">{r.label}</span>
+                <span className={`text-sm font-semibold ${r.color}`}>€{r.value.toFixed(2)}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between pt-1 border-t border-zinc-800">
+              <span className="text-xs text-zinc-400 font-semibold">Gesamt Provisionen</span>
+              <span className="text-sm font-bold text-red-400">– €{data.commTotal.toFixed(2)}</span>
+            </div>
           </div>
         </div>
-      </div>
+      </button>
+
+      <AnimatePresence>
+        {showDetail && (
+          <FinanceDetailModal adminSecret={adminSecret} summary={data} onClose={() => setShowDetail(false)} />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// ─── Finanzen-Detailansicht (Monate / Jahre / Zahlungen + PDF-Export) ─────────
+
+function FinanceDetailModal({ adminSecret, summary, onClose }: {
+  adminSecret: string; summary: EarningsSummary; onClose: () => void;
+}) {
+  const [payments, setPayments] = useState<PaymentRow[] | null>(null);
+  const [err, setErr]           = useState("");
+  const [view, setView]         = useState<"month" | "year" | "list">("month");
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    affiliateQuery("admin:getEarningsDetail", { adminSecret })
+      .then(setPayments)
+      .catch((e: unknown) => setErr(e instanceof Error ? e.message : "Fehler beim Laden"));
+  }, [adminSecret]);
+
+  const handlePdf = async () => {
+    if (!payments) return;
+    setExporting(true);
+    try { await exportFinancePdf(summary, payments); }
+    finally { setExporting(false); }
+  };
+
+  const groups = payments ? groupPayments(payments, view === "year" ? "year" : "month") : [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 sm:p-4" onClick={onClose}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+        className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl"
+        onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="sticky top-0 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-4 py-3 flex items-center gap-2 z-10">
+          <TrendingUp size={16} className="text-green-400" />
+          <h2 className="font-semibold text-zinc-100">Finanzen</h2>
+          <button type="button" onClick={handlePdf} disabled={!payments || exporting}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-400 text-xs font-semibold hover:bg-amber-400/20 disabled:opacity-40 transition-colors">
+            <FileText size={13} /> {exporting ? "Erstelle…" : "PDF"}
+          </button>
+          <button type="button" onClick={onClose} className="text-zinc-500 hover:text-zinc-300 p-1"><X size={18} /></button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Zusammenfassung */}
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Umsatz",      value: summary.revenueTotal, color: "text-green-400" },
+              { label: "Provisionen", value: summary.commTotal,    color: "text-red-400"   },
+              { label: "Mein Anteil", value: summary.netEarnings,  color: "text-amber-400" },
+            ].map(s => (
+              <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                <p className={`text-base font-bold ${s.color}`}>€{s.value.toFixed(2)}</p>
+                <p className="text-[10px] text-zinc-500 mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-zinc-600 -mt-2">
+            {summary.activeContracts} aktive Verträge · {payments ? `${payments.length} Zahlungen` : "…"}
+          </p>
+
+          {/* Ansicht wählen */}
+          <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+            {([
+              { id: "month", label: "Monatlich" },
+              { id: "year",  label: "Jährlich"  },
+              { id: "list",  label: "Zahlungen" },
+            ] as const).map(t => (
+              <button key={t.id} type="button" onClick={() => setView(t.id)}
+                className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                style={view === t.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {err && <p className="text-red-400 text-sm">{err}</p>}
+          {!payments && !err && (
+            <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
+              className="text-zinc-500 text-sm text-center py-8">Laden...</motion.p>
+          )}
+          {payments && payments.length === 0 && (
+            <p className="text-zinc-600 text-sm text-center py-8">Noch keine Zahlungen.</p>
+          )}
+
+          {/* Monats-/Jahresübersicht */}
+          {payments && payments.length > 0 && view !== "list" && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-4 py-2 border-b border-zinc-800 text-[10px] text-zinc-500 uppercase tracking-wider">
+                <span>{view === "year" ? "Jahr" : "Monat"}</span>
+                <span className="text-right w-14">Umsatz</span>
+                <span className="text-right w-14">Prov.</span>
+                <span className="text-right w-14">Netto</span>
+              </div>
+              <div className="divide-y divide-zinc-800/50">
+                {groups.map(g => (
+                  <div key={g.label} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-4 py-2.5 items-center">
+                    <div className="min-w-0">
+                      <p className="text-sm text-zinc-200 truncate">{g.label}</p>
+                      <p className="text-[10px] text-zinc-600">{g.count} Zahlung{g.count !== 1 ? "en" : ""}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-green-400 text-right w-14">€{g.revenue.toFixed(0)}</span>
+                    <span className="text-xs font-semibold text-red-400 text-right w-14">€{g.commission.toFixed(0)}</span>
+                    <span className="text-xs font-bold text-amber-400 text-right w-14">€{(g.revenue - g.commission).toFixed(0)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Einzelne Zahlungen */}
+          {payments && payments.length > 0 && view === "list" && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden divide-y divide-zinc-800/50">
+              {payments.map((p, i) => (
+                <div key={i} className="px-4 py-2.5 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-200 truncate">{p.shopName}</p>
+                    <p className="text-[10px] text-zinc-600">
+                      {new Date(p.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                      {" · "}{p.planType === "annual" ? "Jahresabo" : "Monatsabo"} · #{p.paymentNumber}
+                      {p.direct && <span className="text-blue-400"> · Direkt</span>}
+                      {p.discountCode && <span className="text-purple-400"> · {p.discountCode}</span>}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-green-400">€{p.paidAmount.toFixed(2)}</p>
+                    <p className="text-[10px] text-zinc-600">{p.commission > 0 ? `– €${p.commission.toFixed(2)} Prov.` : "keine Prov."}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
+}
+
+// ─── Finanzbericht als PDF ────────────────────────────────────────────────────
+
+async function exportFinancePdf(summary: EarningsSummary, payments: PaymentRow[]) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210;
+  const accent: [number, number, number] = [251, 191, 36];
+  const dark: [number, number, number]   = [18, 18, 18];
+  const mid: [number, number, number]    = [80, 80, 80];
+  const light: [number, number, number]  = [245, 245, 245];
+  const green: [number, number, number]  = [22, 130, 60];
+  const red: [number, number, number]    = [180, 50, 50];
+
+  const euro = (n: number) => `€${n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const today = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" });
+
+  // ── Header ──────────────────────────────────────────────────────────────────
+  doc.setFillColor(...accent);
+  doc.rect(0, 0, W, 36, "F");
+  doc.setFillColor(...dark);
+  doc.rect(0, 0, 5, 36, "F");
+  doc.setTextColor(...dark);
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text("Finanzbericht", 13, 16);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Loatycard  ·  Stand: ${today}`, 13, 26);
+
+  // ── Zusammenfassung ─────────────────────────────────────────────────────────
+  let y = 46;
+  const bx = [13, 77, 141] as const;
+  const bw = 60; const bh = 24;
+  const boxes = [
+    { label: "Gesamtumsatz",          value: euro(summary.revenueTotal), color: green  },
+    { label: "Provisionen an Partner", value: euro(summary.commTotal),   color: red    },
+    { label: "Mein Anteil (Netto)",    value: euro(summary.netEarnings), color: accent },
+  ];
+  boxes.forEach(({ label, value, color }, i) => {
+    doc.setFillColor(...light);
+    doc.rect(bx[i], y, bw, bh, "F");
+    doc.setDrawColor(220, 220, 220);
+    doc.rect(bx[i], y, bw, bh, "S");
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...color);
+    doc.text(value, bx[i] + bw / 2, y + 12, { align: "center" });
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...mid);
+    doc.text(label, bx[i] + bw / 2, y + 20, { align: "center" });
+  });
+  y += bh + 7;
+
+  doc.setFontSize(8);
+  doc.setTextColor(...mid);
+  doc.text(
+    `${summary.activeContracts} aktive Verträge  ·  ${payments.length} Zahlungen  ·  ` +
+    `Provisionen: ${euro(summary.commPending)} ausstehend, ${euro(summary.commConfirmed)} bestätigt, ${euro(summary.commPaid)} ausgezahlt`,
+    13, y
+  );
+  y += 8;
+
+  // ── Tabellen-Helfer ─────────────────────────────────────────────────────────
+  const ensureSpace = (needed: number) => {
+    if (y + needed > 278) { doc.addPage(); y = 20; }
+  };
+  const sectionTitle = (title: string) => {
+    ensureSpace(20);
+    doc.setDrawColor(220, 220, 220);
+    doc.line(13, y, W - 13, y);
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...dark);
+    doc.text(title, 13, y);
+    y += 7;
+  };
+  const tableHead = (cols: { label: string; x: number; align?: "right" }[]) => {
+    doc.setFillColor(...light);
+    doc.rect(13, y - 4, W - 26, 6, "F");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...mid);
+    cols.forEach(c => doc.text(c.label, c.x, y, c.align ? { align: c.align } : undefined));
+    y += 6;
+    doc.setFont("helvetica", "normal");
+  };
+
+  // ── Monats-/Jahresübersicht ─────────────────────────────────────────────────
+  for (const mode of ["month", "year"] as const) {
+    const groups = groupPayments(payments, mode);
+    if (groups.length === 0) continue;
+    if (mode === "year" && groups.length < 2) continue; // Jahresübersicht erst ab 2 Jahren sinnvoll
+    sectionTitle(mode === "month" ? "Monatsübersicht" : "Jahresübersicht");
+    tableHead([
+      { label: mode === "month" ? "Monat" : "Jahr", x: 15 },
+      { label: "Zahlungen",   x: 105, align: "right" },
+      { label: "Umsatz",      x: 135, align: "right" },
+      { label: "Provisionen", x: 165, align: "right" },
+      { label: "Netto",       x: W - 15, align: "right" },
+    ]);
+    groups.forEach((g, i) => {
+      ensureSpace(8);
+      if (i % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(13, y - 3.5, W - 26, 5.5, "F");
+      }
+      doc.setTextColor(...dark);
+      doc.text(g.label, 15, y);
+      doc.setTextColor(...mid);
+      doc.text(String(g.count), 105, y, { align: "right" });
+      doc.setTextColor(...green);
+      doc.text(euro(g.revenue), 135, y, { align: "right" });
+      doc.setTextColor(...red);
+      doc.text(g.commission > 0 ? `- ${euro(g.commission)}` : "—", 165, y, { align: "right" });
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...dark);
+      doc.text(euro(g.revenue - g.commission), W - 15, y, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      y += 5.5;
+    });
+    y += 4;
+  }
+
+  // ── Einzelne Zahlungen ──────────────────────────────────────────────────────
+  if (payments.length > 0) {
+    sectionTitle("Einzelne Zahlungen");
+    tableHead([
+      { label: "Datum",     x: 15 },
+      { label: "Shop",      x: 38 },
+      { label: "Modell",    x: 100 },
+      { label: "Betrag",    x: 152, align: "right" },
+      { label: "Provision", x: W - 15, align: "right" },
+    ]);
+    payments.forEach((p, i) => {
+      ensureSpace(8);
+      if (i % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(13, y - 3.5, W - 26, 5.5, "F");
+      }
+      doc.setTextColor(...mid);
+      doc.text(new Date(p.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }), 15, y);
+      doc.setTextColor(...dark);
+      doc.text(p.shopName.slice(0, 32), 38, y);
+      doc.setTextColor(...mid);
+      const model = `${p.planType === "annual" ? "Jahresabo" : "Monatsabo"} #${p.paymentNumber}`
+        + (p.discountCode ? ` · ${p.discountCode}` : "") + (p.direct ? " · Direkt" : "");
+      doc.text(model, 100, y);
+      doc.setTextColor(...green);
+      doc.text(euro(p.paidAmount), 152, y, { align: "right" });
+      doc.setTextColor(...(p.commission > 0 ? red : mid));
+      doc.text(p.commission > 0 ? `- ${euro(p.commission)}` : "—", W - 15, y, { align: "right" });
+      y += 5.5;
+    });
+  }
+
+  // ── Footer (jede Seite) ──────────────────────────────────────────────────────
+  const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFillColor(...accent);
+    doc.rect(0, 289, W, 8, "F");
+    doc.setFillColor(...dark);
+    doc.rect(0, 289, 5, 8, "F");
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...dark);
+    doc.text("Loatycard · Finanzbericht", 13, 294);
+    doc.text(`Seite ${p} / ${pageCount}`, W - 13, 294, { align: "right" });
+  }
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  const blob = doc.output("blob");
+  const file = new File([blob], `loatycard-finanzbericht-${stamp}.pdf`, { type: "application/pdf" });
+  if (typeof navigator !== "undefined" && (navigator as Navigator & { share?: (data: object) => Promise<void> }).share) {
+    try {
+      await (navigator as Navigator & { share: (d: object) => Promise<void> }).share({ files: [file], title: "Finanzbericht" });
+      return;
+    } catch { /* fallback to download */ }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = file.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
