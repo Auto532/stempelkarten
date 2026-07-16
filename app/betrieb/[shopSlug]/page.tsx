@@ -22,8 +22,16 @@ const Scanner = dynamic(
   { ssr: false, loading: () => <div className="aspect-square bg-zinc-900 rounded-2xl animate-pulse" /> }
 );
 
-async function printQR(shopName: string, url: string) {
-  const dataUrl = await QRCode.toDataURL(url, { width: 400, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
+// Shop-Name/URL escapen — printQR baut ein HTML-Dokument, unescaped wäre das
+// eine XSS-Lücke (Shop-Namen kommen auch aus dem Partner-Formular)
+function escHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+async function printQR(rawShopName: string, rawUrl: string) {
+  const shopName = escHtml(rawShopName);
+  const url = escHtml(rawUrl);
+  const dataUrl = await QRCode.toDataURL(rawUrl, { width: 400, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
   const w = window.open("", "_blank", "width=520,height=640");
   if (!w) return;
   w.document.write(`<!DOCTYPE html><html><head><title>${shopName} – QR Code</title>

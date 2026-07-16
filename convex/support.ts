@@ -157,6 +157,12 @@ export const adminAnswerTicket = mutation({
   },
 });
 
+// User-Input escapen — sonst kann eingeschleustes HTML die Telegram-Nachricht
+// fälschen oder den Versand scheitern lassen (parse_mode: "HTML").
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 export const notifySupportTelegram = internalAction({
   args: { from: v.string(), message: v.string(), contact: v.optional(v.string()) },
   handler: async (_ctx, args) => {
@@ -168,9 +174,9 @@ export const notifySupportTelegram = internalAction({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId, parse_mode: "HTML",
-        text: `🆘 <b>Support-Anfrage</b>\n\n👤 <b>Von:</b> ${args.from}` +
-          (args.contact ? `\n📞 <b>Kontakt:</b> ${args.contact}` : "") +
-          `\n\n💬 ${args.message}`,
+        text: `🆘 <b>Support-Anfrage</b>\n\n👤 <b>Von:</b> ${escapeHtml(args.from)}` +
+          (args.contact ? `\n📞 <b>Kontakt:</b> ${escapeHtml(args.contact)}` : "") +
+          `\n\n💬 ${escapeHtml(args.message)}`,
       }),
     }).catch(() => {});
   },
