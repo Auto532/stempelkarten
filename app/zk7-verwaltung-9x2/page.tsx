@@ -684,31 +684,72 @@ function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops">; admi
 // Baut das Kunden-Design aus DB-Daten zusammen: Farben, Hintergrund, Logo,
 // Stempel-Icon, Kartenstil — mit Live-Vorschau. Kein Code/Deploy pro Shop.
 
-// Fertige Vorlagen als Startpunkt — setzen Farben/Hintergrund/Stil, danach
-// beliebig anpassbar. Logo, Icon und Verzierung bleiben unberührt.
-// Palette bewusst gedeckt/dezent statt grell (Feedback 2026-07-17).
-const DESIGN_PRESETS: {
-  name: string; accent: string; text: string; textBody: string; cardBg: string;
-  bgType: "color" | "gradient"; bgColor: string; bgColor2?: string;
-  cardStyle: "classic" | "glow";
-}[] = [
-  { name: "Gold",       accent: "#c9a560", text: "#f0e9db", textBody: "#9c937f", cardBg: "#191511", bgType: "gradient", bgColor: "#0e0c09", bgColor2: "#1b1712", cardStyle: "glow" },
-  { name: "Silber",     accent: "#d7d2c6", text: "#f1e9d6", textBody: "#8d877b", cardBg: "#141414", bgType: "color",    bgColor: "#0b0b0b",                     cardStyle: "glow" },
-  { name: "Kupfer",     accent: "#b57e5e", text: "#f3ebe4", textBody: "#a08a7c", cardBg: "#1a120d", bgType: "gradient", bgColor: "#100a06", bgColor2: "#1d150f", cardStyle: "glow" },
-  { name: "Terracotta", accent: "#c67d5b", text: "#f5ece5", textBody: "#a89184", cardBg: "#1c1310", bgType: "gradient", bgColor: "#110b08", bgColor2: "#201511", cardStyle: "glow" },
-  { name: "Bordeaux",   accent: "#a4586a", text: "#f4e9ec", textBody: "#a18a90", cardBg: "#1c1114", bgType: "gradient", bgColor: "#120a0c", bgColor2: "#201317", cardStyle: "glow" },
-  { name: "Altrosa",    accent: "#c69fa5", text: "#f6edee", textBody: "#a2898d", cardBg: "#1d1416", bgType: "gradient", bgColor: "#120c0d", bgColor2: "#201618", cardStyle: "glow" },
-  { name: "Salbei",     accent: "#9caf88", text: "#edf1e7", textBody: "#93a089", cardBg: "#141a12", bgType: "gradient", bgColor: "#0b0f09", bgColor2: "#161d13", cardStyle: "glow" },
-  { name: "Olive",      accent: "#a8a678", text: "#f1f0e4", textBody: "#9d9c85", cardBg: "#17170f", bgType: "gradient", bgColor: "#0e0e08", bgColor2: "#1a1a11", cardStyle: "glow" },
-  { name: "Petrol",     accent: "#6aa5a8", text: "#e8f1f1", textBody: "#8aa3a3", cardBg: "#0f1b1c", bgType: "gradient", bgColor: "#081112", bgColor2: "#122021", cardStyle: "glow" },
-  { name: "Graublau",   accent: "#8ba3b8", text: "#eaf0f5", textBody: "#8f9aa5", cardBg: "#131920", bgType: "gradient", bgColor: "#0b0f14", bgColor2: "#151c24", cardStyle: "glow" },
-  { name: "Lavendel",   accent: "#a596c7", text: "#efecf6", textBody: "#99929f", cardBg: "#161320", bgType: "gradient", bgColor: "#0d0b13", bgColor2: "#191525", cardStyle: "glow" },
-  { name: "Nachtblau",  accent: "#7d92c4", text: "#eaeef7", textBody: "#8d94a8", cardBg: "#121624", bgType: "gradient", bgColor: "#0a0d16", bgColor2: "#151a29", cardStyle: "glow" },
-  { name: "Creme hell",  accent: "#8a6d3b", text: "#3f2d12", textBody: "#7d6a4a", cardBg: "#fdf9f0", bgType: "gradient", bgColor: "#f7f1e3", bgColor2: "#efe4cc", cardStyle: "classic" },
-  { name: "Salbei hell", accent: "#6b7f5e", text: "#26301f", textBody: "#5f6f55", cardBg: "#f6f8f2", bgType: "gradient", bgColor: "#eef2e6", bgColor2: "#dde5d2", cardStyle: "classic" },
-  { name: "Rosé hell",   accent: "#b76e79", text: "#3a2228", textBody: "#8a6b71", cardBg: "#fdf5f6", bgType: "gradient", bgColor: "#f9edef", bgColor2: "#f0dadd", cardStyle: "classic" },
-  { name: "Himmel hell", accent: "#5b7c99", text: "#1f2d3a", textBody: "#5d7183", cardBg: "#f4f8fb", bgType: "gradient", bgColor: "#ecf2f7", bgColor2: "#dbe6ef", cardStyle: "classic" },
+// Farbpalette: gedeckte Töne quer durch alle Farbbereiche. Ein Klick leitet
+// daraus ein komplettes, dezentes Farbschema ab (Karte, Hintergrund, Texte) —
+// keine benannten Vorlagen mehr, nur Farbton wählen + Feinschliff darunter.
+const COLOR_PALETTE = [
+  "#c9a560", "#b08d57", "#b57e5e", "#b5694a", "#c67d5b", "#b87070",
+  "#c69fa5", "#a4586a", "#96566e", "#8b6b8f", "#a596c7", "#8b7bbf",
+  "#7d92c4", "#5b89b4", "#8ba3b8", "#6e8fa3", "#6aa5a8", "#4a9494",
+  "#5f9e7a", "#9caf88", "#7a8f4a", "#a8a678", "#b8a98a", "#d7d2c6",
 ];
+
+function hexToHsl(hex: string): [number, number, number] {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h: number;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [h, s, l];
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const to = (t: number) => Math.round(hue2rgb(p, q, t) * 255).toString(16).padStart(2, "0");
+  return `#${to(h + 1 / 3)}${to(h)}${to(h - 1 / 3)}`;
+}
+
+// Leitet aus einem Palettenton ein stimmiges, gedecktes Schema ab. Sättigung
+// wird gedeckelt, damit auch kräftige Töne dezent bleiben; im Hell-Modus wird
+// die Akzentfarbe bei Bedarf abgedunkelt (Kontrast auf hellem Grund).
+function deriveScheme(base: string, mode: "dark" | "light") {
+  const [h, s, l] = hexToHsl(base);
+  const sat = Math.min(s, 0.45);
+  if (mode === "dark") {
+    return {
+      accent:   base,
+      text:     hslToHex(h, sat * 0.35, 0.92),
+      textBody: hslToHex(h, sat * 0.3, 0.62),
+      cardBg:   hslToHex(h, sat * 0.5, 0.09),
+      bgColor:  hslToHex(h, sat * 0.5, 0.05),
+      bgColor2: hslToHex(h, sat * 0.5, 0.11),
+    };
+  }
+  return {
+    accent:   l > 0.55 ? hslToHex(h, Math.min(s + 0.08, 0.5), 0.42) : base,
+    text:     hslToHex(h, sat * 0.7, 0.16),
+    textBody: hslToHex(h, sat * 0.45, 0.4),
+    cardBg:   hslToHex(h, sat * 0.5, 0.975),
+    bgColor:  hslToHex(h, sat * 0.55, 0.94),
+    bgColor2: hslToHex(h, sat * 0.6, 0.88),
+  };
+}
 
 function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const generateUploadUrl = useMutation(api.shops.adminGenerateUploadUrl);
@@ -735,6 +776,16 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
   const [cardStyle, setCardStyle] = useState<"classic" | "glow">(dc?.cardStyle ?? "glow");
   const [decor, setDecor]         = useState<"none" | "lines" | "full">(dc?.decor ?? "none");
+  // Farbpalette: gewählter Grundton + Hell/Dunkel für das abgeleitete Schema
+  const [paletteSel, setPaletteSel]   = useState<string | null>(null);
+  const [paletteMode, setPaletteMode] = useState<"dark" | "light">("dark");
+
+  const applyPalette = (base: string, mode: "dark" | "light" = paletteMode) => {
+    const s = deriveScheme(base, mode);
+    setPaletteSel(base);
+    setAccent(s.accent); setText(s.text); setTextBody(s.textBody); setCardBg(s.cardBg);
+    setBgType("gradient"); setBgColor(s.bgColor); setBgColor2(s.bgColor2);
+  };
 
   const [uploading, setUploading] = useState<"logo" | "bg" | null>(null);
   const [saving, setSaving]       = useState(false);
@@ -838,27 +889,36 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
             </p>
           )}
 
-          {/* Vorlagen */}
-          <Section title="Vorlagen (Startpunkt, danach anpassen)">
-            <div className="grid grid-cols-3 gap-1.5">
-              {DESIGN_PRESETS.map(p => (
-                <button key={p.name} type="button"
-                  onClick={() => {
-                    setAccent(p.accent); setText(p.text); setTextBody(p.textBody); setCardBg(p.cardBg);
-                    setBgType(p.bgType); setBgColor(p.bgColor); setBgColor2(p.bgColor2 ?? p.bgColor);
-                    setCardStyle(p.cardStyle);
-                  }}
-                  className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:border-zinc-500"
-                  style={{ background: p.cardBg, border: `1px solid ${p.accent}44` }}>
-                  <span className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/20" style={{ background: p.accent }} />
-                  <span className="text-[9px] font-semibold truncate" style={{ color: p.text }}>{p.name}</span>
+          {/* Farbpalette: Ton anklicken → komplettes dezentes Schema */}
+          <Section title="Farbpalette (Ton wählen, setzt das ganze Schema)">
+            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+              {([
+                { id: "dark",  label: "Dunkel" },
+                { id: "light", label: "Hell"   },
+              ] as const).map(m => (
+                <button key={m.id} type="button"
+                  onClick={() => { setPaletteMode(m.id); if (paletteSel) applyPalette(paletteSel, m.id); }}
+                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                  style={paletteMode === m.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+                  {m.label}
                 </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-8 gap-1.5">
+              {COLOR_PALETTE.map(c => (
+                <button key={c} type="button" onClick={() => applyPalette(c)}
+                  className="aspect-square rounded-full transition-transform hover:scale-110"
+                  style={{
+                    background: c,
+                    border: paletteSel === c ? "2px solid #fff" : "2px solid rgba(0,0,0,.35)",
+                    boxShadow: paletteSel === c ? `0 0 8px ${c}88` : undefined,
+                  }} />
               ))}
             </div>
           </Section>
 
-          {/* Farben */}
-          <Section title="Farben">
+          {/* Farben (Feinschliff) */}
+          <Section title="Farben (Feinschliff)">
             <div className="grid grid-cols-2 gap-1.5">
               <ColorField label="Akzentfarbe"  value={accent}   onChange={setAccent} />
               <ColorField label="Überschrift"  value={text}     onChange={setText} />
