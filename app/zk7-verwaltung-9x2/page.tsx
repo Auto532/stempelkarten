@@ -761,52 +761,20 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-// Eigener Farbwähler statt des nativen Browser-Pickers: aufklappbare
-// HSL-Regler (Ton/Sättigung/Helligkeit) mit gedeckten Verläufen + Hex-Eingabe.
+// Auswahlfarben für die Farbfelder: gedeckte Töne + Neutral-/Hell-/Dunkeltöne
+// (für Text- und Flächenfarben), Stil wie die Akzentfarben-Auswahl in /me.
+const FIELD_COLORS = [
+  ...COLOR_PALETTE,
+  "#f4f4f5", "#f0e9db", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b", "#0b0b0d",
+];
+
+// Farbfeld wie im /me-Bereich: aufklappbares Swatch-Grid + Benutzerdefiniert.
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
-  // Lokales HSL, damit der Farbton beim Regeln nicht "springt"
-  // (bei Sättigung 0 ginge er sonst durch die Hex-Rückrechnung verloren)
-  const [hsl, setHsl] = useState<[number, number, number]>([0, 0, 0.5]);
-  const [hexDraft, setHexDraft] = useState(value);
-
-  const toggle = () => {
-    if (!open) { setHsl(hexToHsl(value)); setHexDraft(value); }
-    setOpen(o => !o);
-  };
-
-  const setPart = (i: 0 | 1 | 2, v: number) => {
-    const next: [number, number, number] = [...hsl];
-    next[i] = v;
-    setHsl(next);
-    const hex = hslToHex(next[0], next[1], next[2]);
-    setHexDraft(hex);
-    onChange(hex);
-  };
-
-  const applyHex = (raw: string) => {
-    const hex = raw.startsWith("#") ? raw : `#${raw}`;
-    if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-      setHsl(hexToHsl(hex));
-      setHexDraft(hex.toLowerCase());
-      onChange(hex.toLowerCase());
-    } else setHexDraft(value);
-  };
-
-  const [h, s, l] = hsl;
-  const hue = Math.round(h * 360);
-  const sliders: { label: string; value: number; max: number; onInput: (v: number) => void; track: string }[] = [
-    { label: "Ton", value: hue, max: 360, onInput: v => setPart(0, v / 360),
-      track: `linear-gradient(90deg, ${[0, 60, 120, 180, 240, 300, 360].map(d => `hsl(${d},45%,55%)`).join(",")})` },
-    { label: "Sättigung", value: Math.round(s * 100), max: 100, onInput: v => setPart(1, v / 100),
-      track: `linear-gradient(90deg, hsl(${hue},0%,${Math.round(l * 100)}%), hsl(${hue},80%,${Math.round(l * 100)}%))` },
-    { label: "Helligkeit", value: Math.round(l * 100), max: 100, onInput: v => setPart(2, v / 100),
-      track: `linear-gradient(90deg, #000, hsl(${hue},${Math.round(s * 100)}%,50%), #fff)` },
-  ];
-
+  const sel = value.toLowerCase();
   return (
     <div className="bg-zinc-800/50 rounded-xl">
-      <button type="button" onClick={toggle}
+      <button type="button" onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5">
         <div className="min-w-0 text-left">
           <p className="text-[11px] text-zinc-400 truncate">{label}</p>
@@ -817,22 +785,22 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
       </button>
       {open && (
         <div className="px-2.5 pb-2.5 space-y-1.5">
-          {sliders.map(sl => (
-            <div key={sl.label} className="flex items-center gap-2">
-              <span className="text-[9px] text-zinc-500 w-12 shrink-0">{sl.label}</span>
-              <input type="range" min={0} max={sl.max} value={sl.value}
-                onChange={e => sl.onInput(Number(e.target.value))}
-                className="color-slider flex-1" style={{ background: sl.track }} />
-            </div>
-          ))}
-          <div className="flex items-center gap-2 pt-0.5">
-            <span className="text-[9px] text-zinc-500 w-12 shrink-0">Hex</span>
-            <input type="text" value={hexDraft} spellCheck={false}
-              onChange={e => setHexDraft(e.target.value)}
-              onBlur={e => applyHex(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") applyHex((e.target as HTMLInputElement).value); }}
-              className="flex-1 min-w-0 px-2 py-1 bg-zinc-900 border border-zinc-700 rounded-lg text-[10px] font-mono text-zinc-300 focus:outline-none focus:border-amber-400/50" />
+          <div className="grid grid-cols-8 gap-1.5">
+            {FIELD_COLORS.map(c => (
+              <button key={c} type="button" onClick={() => onChange(c)}
+                className="aspect-square rounded-lg transition-transform hover:scale-110"
+                style={{
+                  background: c,
+                  border: sel === c ? "2px solid #fff" : "2px solid rgba(0,0,0,.35)",
+                  boxShadow: sel === c ? "0 0 8px rgba(255,255,255,.25)" : undefined,
+                }} />
+            ))}
           </div>
+          <label className="flex items-center justify-center gap-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-[10px] font-semibold text-zinc-400 cursor-pointer hover:text-zinc-200 hover:border-zinc-600 transition-colors">
+            Benutzerdefiniert
+            <input type="color" value={value} onChange={e => onChange(e.target.value)}
+              className="w-5 h-5 rounded border-0 bg-transparent cursor-pointer" />
+          </label>
         </div>
       )}
     </div>
@@ -988,12 +956,10 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
 
           {/* Farben (Feinschliff) */}
           <Section title="Farben (Feinschliff)">
-            <div className="grid grid-cols-2 gap-1.5">
-              <ColorField label="Akzentfarbe"  value={accent}   onChange={setAccent} />
-              <ColorField label="Überschrift"  value={text}     onChange={setText} />
-              <ColorField label="Text"         value={textBody} onChange={setTextBody} />
-              <ColorField label="Kartenfläche" value={cardBg}   onChange={setCardBg} />
-            </div>
+            <ColorField label="Akzentfarbe"  value={accent}   onChange={setAccent} />
+            <ColorField label="Überschrift"  value={text}     onChange={setText} />
+            <ColorField label="Text"         value={textBody} onChange={setTextBody} />
+            <ColorField label="Kartenfläche" value={cardBg}   onChange={setCardBg} />
           </Section>
 
           {/* Hintergrund */}
@@ -1012,10 +978,10 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
               ))}
             </div>
             {bgType !== "image" && (
-              <div className="grid grid-cols-2 gap-1.5">
+              <>
                 <ColorField label={bgType === "gradient" ? "Farbe oben" : "Hintergrundfarbe"} value={bgColor} onChange={setBgColor} />
                 {bgType === "gradient" && <ColorField label="Farbe unten" value={bgColor2} onChange={setBgColor2} />}
-              </div>
+              </>
             )}
             {bgType === "image" && (
               <label className="block">
