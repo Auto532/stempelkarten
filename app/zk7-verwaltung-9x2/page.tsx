@@ -11,7 +11,7 @@ import {
   Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
-import { makeConfigTheme, type ShopDesignConfig } from "@/app/me/themes/configTheme";
+import { makeConfigTheme, normalizeDecor, type ShopDesignConfig } from "@/app/me/themes/configTheme";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
@@ -830,8 +830,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
-  const [cardStyle, setCardStyle] = useState<"classic" | "glow">(dc?.cardStyle ?? "glow");
-  const [decor, setDecor]         = useState<"none" | "lines" | "full">(dc?.decor ?? "none");
+  const [cardStyle, setCardStyle] = useState<"classic" | "glow" | "paper">(dc?.cardStyle ?? "glow");
+  const [decor, setDecor]         = useState<"none" | "thin" | "double" | "swirl">(normalizeDecor(dc?.decor));
   // Farbpalette: gewählter Grundton + Hell/Dunkel für das abgeleitete Schema
   const [paletteSel, setPaletteSel]   = useState<string | null>(null);
   const [paletteMode, setPaletteMode] = useState<"dark" | "light">("dark");
@@ -1020,12 +1020,13 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
             </div>
           </Section>
 
-          {/* Kartenstil & Verzierung */}
-          <Section title="Kartenstil & Verzierung">
+          {/* Kartenstil: digital leuchtend, flach oder wie eine physische Papierkarte */}
+          <Section title="Kartenstil">
             <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
               {([
-                { id: "glow",    label: "Glow (leuchtende Stempel)" },
-                { id: "classic", label: "Klassisch (flach)"         },
+                { id: "glow",    label: "Digital (Glow)" },
+                { id: "classic", label: "Klassisch"      },
+                { id: "paper",   label: "Papier"         },
               ] as const).map(s => (
                 <button key={s.id} type="button" onClick={() => setCardStyle(s.id)}
                   className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
@@ -1034,12 +1035,16 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                 </button>
               ))}
             </div>
-            {/* Deko-Linien in Akzentfarbe, wie beim Entenhaus-Theme */}
+          </Section>
+
+          {/* Ecken-Verzierung in Akzentfarbe */}
+          <Section title="Ecken">
             <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
               {([
-                { id: "none",  label: "Ohne Deko"     },
-                { id: "lines", label: "Zierlinien"    },
-                { id: "full",  label: "Linien + Ecken" },
+                { id: "none",   label: "Ohne"        },
+                { id: "thin",   label: "Fein"        },
+                { id: "double", label: "Doppelt"     },
+                { id: "swirl",  label: "Geschwungen" },
               ] as const).map(d => (
                 <button key={d.id} type="button" onClick={() => setDecor(d.id)}
                   className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"

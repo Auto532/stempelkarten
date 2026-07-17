@@ -241,8 +241,8 @@ export const adminSetDesignConfig = mutation({
       bgImageId: v.optional(v.id("_storage")),
       logoId:    v.optional(v.id("_storage")),
       stampIcon: v.optional(v.string()),
-      cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"))),
-      decor:     v.optional(v.union(v.literal("none"), v.literal("lines"), v.literal("full"))),
+      cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"), v.literal("paper"))),
+      decor:     v.optional(v.string()),
     })),
   },
   handler: async (ctx, { shopId, adminSecret, config }) => {

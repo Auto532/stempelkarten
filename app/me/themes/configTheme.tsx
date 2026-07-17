@@ -25,9 +25,10 @@ export interface ShopDesignConfig {
   bgImageUrl?: string;
   logoUrl?:  string;
   stampIcon?: string;
-  cardStyle?: "classic" | "glow";
-  // Verzierung in Akzentfarbe: Zierlinie ("lines") bzw. zusätzlich Eck-Ornamente ("full")
-  decor?: "none" | "lines" | "full";
+  cardStyle?: "classic" | "glow" | "paper";
+  // Ecken-Verzierung in Akzentfarbe: "none" | "thin" | "double" | "swirl"
+  // (Altwerte: "full" → thin, "lines" → none)
+  decor?: string;
 }
 
 // Hex #rrggbb + Alpha-Suffix (z.B. "28"). Nicht-Hex-Werte unverändert lassen.
@@ -72,34 +73,45 @@ function makeBackground(cfg: ShopDesignConfig) {
   };
 }
 
-// Zierlinie mit Raute in der Mitte (Entenhaus-Stil, aber in Akzentfarbe)
-function OrnamentDivider({ color }: { color: string }) {
-  const line = `linear-gradient(90deg, transparent, ${color} 50%, transparent)`;
-  return (
-    <div className="flex items-center gap-2 mb-4" style={{ opacity: 0.55 }}>
-      <div className="flex-1 h-px" style={{ background: line }} />
-      <div className="w-1.5 h-1.5 shrink-0" style={{ background: color, transform: "rotate(45deg)" }} />
-      <div className="flex-1 h-px" style={{ background: line }} />
-    </div>
-  );
+// Ecken-Verzierung: Altwerte aus der ersten Version auf die neuen Stile mappen
+export function normalizeDecor(decor?: string): "none" | "thin" | "double" | "swirl" {
+  if (decor === "thin" || decor === "double" || decor === "swirl") return decor;
+  if (decor === "full") return "thin";
+  return "none";
 }
 
-// Eck-Ornament (dünner abgerundeter Winkel), wird 4× rotiert platziert
-function CornerOrnament({ color }: { color: string }) {
+// Eck-Ornament in Akzentfarbe, wird 4× rotiert platziert
+function CornerOrnament({ color, variant }: { color: string; variant: "thin" | "double" | "swirl" }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"
-      style={{ width: 22, height: 22, color, opacity: 0.5 }}>
-      <path d="M2 14 V4 C2 2.9 2.9 2 4 2 H14" />
+      style={{ width: 22, height: 22, color, opacity: 0.55 }}>
+      {variant === "thin" && <path d="M2 14 V4 C2 2.9 2.9 2 4 2 H14" />}
+      {variant === "double" && (
+        <>
+          <path d="M2 16 V4 C2 2.9 2.9 2 4 2 H16" />
+          <path d="M6 14 V7 C6 6.45 6.45 6 7 6 H14" strokeWidth="1" />
+        </>
+      )}
+      {variant === "swirl" && (
+        <>
+          <path d="M2 18 C2 7 7 2 18 2" />
+          <circle cx="20" cy="2" r="1.4" fill="currentColor" stroke="none" />
+          <circle cx="2" cy="20" r="1.4" fill="currentColor" stroke="none" />
+        </>
+      )}
     </svg>
   );
 }
 
 function makeCard(cfg: ShopDesignConfig) {
   const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
-  const glow = cfg.cardStyle !== "classic"; // Default: glow
-  const lines   = cfg.decor === "lines" || cfg.decor === "full";
-  const corners = cfg.decor === "full";
+  const paper = cfg.cardStyle === "paper";
+  const glow  = !paper && cfg.cardStyle !== "classic"; // Default: glow
+  const corner = normalizeDecor(cfg.decor);
+  const cornerOffset = paper ? 14 : 9; // beim Papier-Look nicht in den Innenrahmen ragen
   const Icon = getStampIcon(cfg.stampIcon);
+  // Papier-Korn als eingebettetes SVG-Rauschen — keine Bild-Assets nötig
+  const paperNoise = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E")`;
 
   return function ConfigLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
     const activeTiers = rewardTiers?.some(t => t.enabled)
@@ -108,16 +120,24 @@ function makeCard(cfg: ShopDesignConfig) {
     const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
 
     return (
-      <div className="relative rounded-3xl overflow-hidden"
-        style={{ background: C, border: `1px solid ${alpha(A, "30")}`, boxShadow: glow ? `0 8px 32px ${alpha(A, "12")}` : undefined }}>
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${alpha(A, "0C")}, transparent)` }} />
-        {corners && (
+      <div className={`relative overflow-hidden ${paper ? "rounded-2xl" : "rounded-3xl"}`}
+        style={paper
+          ? { background: `${C} ${paperNoise}`, boxShadow: "0 1px 2px rgba(0,0,0,.25), 0 12px 28px -8px rgba(0,0,0,.35)" }
+          : { background: C, border: `1px solid ${alpha(A, "30")}`, boxShadow: glow ? `0 8px 32px ${alpha(A, "12")}` : undefined }}>
+        {paper ? (
+          /* gestrichelter Innenrahmen wie bei gedruckten Karten */
+          <div className="absolute inset-2 pointer-events-none rounded-xl"
+            style={{ border: `1.5px dashed ${alpha(A, "50")}` }} />
+        ) : (
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${alpha(A, "0C")}, transparent)` }} />
+        )}
+        {corner !== "none" && (
           <>
-            <div className="absolute pointer-events-none" style={{ top: 9, left: 9 }}><CornerOrnament color={A} /></div>
-            <div className="absolute pointer-events-none" style={{ top: 9, right: 9, transform: "rotate(90deg)" }}><CornerOrnament color={A} /></div>
-            <div className="absolute pointer-events-none" style={{ bottom: 9, right: 9, transform: "rotate(180deg)" }}><CornerOrnament color={A} /></div>
-            <div className="absolute pointer-events-none" style={{ bottom: 9, left: 9, transform: "rotate(270deg)" }}><CornerOrnament color={A} /></div>
+            <div className="absolute pointer-events-none" style={{ top: cornerOffset, left: cornerOffset }}><CornerOrnament color={A} variant={corner} /></div>
+            <div className="absolute pointer-events-none" style={{ top: cornerOffset, right: cornerOffset, transform: "rotate(90deg)" }}><CornerOrnament color={A} variant={corner} /></div>
+            <div className="absolute pointer-events-none" style={{ bottom: cornerOffset, right: cornerOffset, transform: "rotate(180deg)" }}><CornerOrnament color={A} variant={corner} /></div>
+            <div className="absolute pointer-events-none" style={{ bottom: cornerOffset, left: cornerOffset, transform: "rotate(270deg)" }}><CornerOrnament color={A} variant={corner} /></div>
           </>
         )}
         <div className="relative p-6">
@@ -145,12 +165,13 @@ function makeCard(cfg: ShopDesignConfig) {
             </div>
             {!hideQR && onShowQR && (
               <button onClick={onShowQR} className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
+                style={paper
+                  ? { background: "transparent", border: `1.5px dashed ${alpha(A, "50")}` }
+                  : { background: C, border: `1px solid ${alpha(A, "30")}` }}>
                 <QrCode size={26} style={{ color: A }} />
               </button>
             )}
           </div>
-          {lines && <OrnamentDivider color={A} />}
           <div className="flex flex-wrap gap-2 mb-4">
             {Array.from({ length: maxStamps }).map((_, i) => {
               const filled = i < currentStamps;
@@ -161,13 +182,18 @@ function makeCard(cfg: ShopDesignConfig) {
                   animate={isAnimating ? { scale: [1, 1.4, 1] } : {}}
                   transition={{ duration: 0.5 }}
                   className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={filled
-                    ? glow
-                      ? { background: `linear-gradient(135deg, ${A}, ${alpha(A, "99")})`, boxShadow: `0 0 10px ${alpha(A, "50")}`, border: `1px solid ${alpha(A, "60")}` }
-                      : { background: A, border: `1px solid ${alpha(A, "60")}` }
-                    : isTier ? { border: `1px solid ${alpha(A, "40")}`, background: C }
-                    : { border: `1px solid ${alpha(A, "22")}`, background: alpha(C, "88") }}>
-                  {filled && <Icon size={13} style={{ color: C }} />}
+                  style={paper
+                    // Papier: leere Felder gestrichelt, gefüllte wie ein Stempelabdruck in Akzentfarbe
+                    ? filled
+                      ? { border: `2px solid ${A}`, background: alpha(A, "16") }
+                      : { border: `1.5px dashed ${alpha(A, isTier ? "66" : "40")}`, background: "transparent" }
+                    : filled
+                      ? glow
+                        ? { background: `linear-gradient(135deg, ${A}, ${alpha(A, "99")})`, boxShadow: `0 0 10px ${alpha(A, "50")}`, border: `1px solid ${alpha(A, "60")}` }
+                        : { background: A, border: `1px solid ${alpha(A, "60")}` }
+                      : isTier ? { border: `1px solid ${alpha(A, "40")}`, background: C }
+                      : { border: `1px solid ${alpha(A, "22")}`, background: alpha(C, "88") }}>
+                  {filled && <Icon size={13} style={{ color: paper ? A : C }} />}
                   {!filled && isTier && <Gift size={11} style={{ color: alpha(A, "70") }} />}
                 </motion.div>
               );
@@ -199,12 +225,6 @@ function makeCard(cfg: ShopDesignConfig) {
 
 function makeBanner(cfg: ShopDesignConfig) {
   const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
-  const lines = cfg.decor === "lines" || cfg.decor === "full";
-  // Schmale Akzent-Leiste am linken Rand (Entenhaus-Stil)
-  const AccentBar = () => lines
-    ? <div className="absolute left-0 top-0 bottom-0 w-[3px]"
-        style={{ background: `linear-gradient(180deg, ${A}, ${alpha(A, "33")})` }} />
-    : null;
 
   return function ConfigRewardBanner({ rewardText, stampsRequired, rewardTiers }: ThemeBannerProps) {
     // Basis-Stufe immer einschließen, auch wenn Bonus-Stufen aktiv sind
@@ -213,8 +233,7 @@ function makeBanner(cfg: ShopDesignConfig) {
       : [];
     if (activeTiers.length > 0) {
       return (
-        <div className="relative overflow-hidden rounded-2xl px-4 py-3 space-y-2.5" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
-          <AccentBar />
+        <div className="rounded-2xl px-4 py-3 space-y-2.5" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
           <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: TB }}>Belohnungen</p>
           {activeTiers.map((tier, i) => (
             <div key={i} className="flex items-center gap-3">
@@ -230,8 +249,7 @@ function makeBanner(cfg: ShopDesignConfig) {
       );
     }
     return (
-      <div className="relative overflow-hidden rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
-        <AccentBar />
+      <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
         <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: alpha(A, "18"), border: `1px solid ${alpha(A, "30")}` }}>
           <Gift size={16} style={{ color: A }} />

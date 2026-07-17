@@ -59,11 +59,12 @@ export default defineSchema({
       // Logo (auf der Karte statt/über dem Shopnamen)
       logoId:  v.optional(v.id("_storage")),
       logoUrl: v.optional(v.string()),
-      // Stempel & Kartenstil
+      // Stempel & Kartenstil (glow/classic/paper)
       stampIcon: v.optional(v.string()),
-      cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"))),
-      // Verzierung: Zierlinie/Eck-Ornamente in Akzentfarbe (wie Entenhaus)
-      decor: v.optional(v.union(v.literal("none"), v.literal("lines"), v.literal("full"))),
+      cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"), v.literal("paper"))),
+      // Ecken-Verzierung in Akzentfarbe: none/thin/double/swirl
+      // (Altwerte "lines"/"full" werden vom Renderer gemappt)
+      decor: v.optional(v.string()),
     })),
     stampValue: v.optional(v.number()),
     priceInfo: v.optional(v.string()),
