@@ -11,6 +11,7 @@ import {
   Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
+import { THEME_LIST } from "@/app/me/themes/registry";
 import { makeConfigTheme, normalizeDecor, type ShopDesignConfig } from "@/app/me/themes/configTheme";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import QRCode from "qrcode";
@@ -357,6 +358,7 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
   const [togglingBonus, setTogglingBonus]           = useState(false);
   const [togglingDesign, setTogglingDesign]         = useState(false);
   const [togglingMilestones, setTogglingMilestones] = useState(false);
+  const [settingTheme, setSettingTheme]             = useState<string | null>(null);
   const [clearingTheme, setClearingTheme]           = useState(false);
 
   const handleSaveContent = async () => {
@@ -395,6 +397,12 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
     setLoading(true);
     try { await adminSetFeatures({ shopId: shop._id, adminSecret, [key]: value }); }
     finally { setLoading(false); }
+  };
+
+  const handleSetTheme = async (themeName: string, accentColor: string) => {
+    setSettingTheme(themeName);
+    try { await adminSetFeatures({ shopId: shop._id, adminSecret, theme: themeName, accentColor }); }
+    finally { setSettingTheme(null); }
   };
 
   const addTier = () => {
@@ -562,19 +570,28 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
         </div>
       </div>
 
-      {/* Design: Signature-Theme nur noch als kompakte Status-Zeile, wenn eins
-          aktiv ist — die Themen-Auswahl-Liste ist raus (nahm nur Platz weg). */}
-      {shop.customDesignEnabled && shop.theme && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center gap-2.5">
-          <Palette size={14} className="text-amber-400 shrink-0" />
-          <p className="text-sm text-zinc-300 min-w-0 truncate">
-            Signature-Theme <span className="font-semibold text-zinc-100">{shop.theme}</span> aktiv
-          </p>
-          <button onClick={async () => { setClearingTheme(true); try { await adminSetFeatures({ shopId: shop._id, adminSecret, clearTheme: true }); } finally { setClearingTheme(false); } }}
-            disabled={clearingTheme}
-            className="ml-auto shrink-0 text-[11px] px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-40">
-            {clearingTheme ? "..." : "✕ Entfernen"}
-          </button>
+      {/* Signature-Themes */}
+      {shop.customDesignEnabled && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+          <p className="text-sm font-semibold text-zinc-200">Signature-Themes</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {THEME_LIST.map(({ id, label, color }) => (
+              <button key={id} onClick={() => handleSetTheme(id, color)} disabled={!!settingTheme}
+                className="text-[11px] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+                style={shop.theme === id
+                  ? { background: color + "33", border: `1px solid ${color}88`, color }
+                  : { background: "#27272a", border: "1px solid #3f3f46", color: "#71717a" }}>
+                {settingTheme === id ? "..." : label}
+              </button>
+            ))}
+            {shop.theme && (
+              <button onClick={async () => { setClearingTheme(true); try { await adminSetFeatures({ shopId: shop._id, adminSecret, clearTheme: true }); } finally { setClearingTheme(false); } }}
+                disabled={clearingTheme}
+                className="text-[11px] px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-40">
+                {clearingTheme ? "..." : "✕ Entfernen"}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -830,7 +847,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
-  const [cardStyle, setCardStyle] = useState<"classic" | "glow" | "paper">(dc?.cardStyle ?? "glow");
+  // Glow gibt es nicht mehr — Altwert "glow" wird als Klassisch weitergeführt
+  const [cardStyle, setCardStyle] = useState<"classic" | "paper">(dc?.cardStyle === "paper" ? "paper" : "classic");
   const [decor, setDecor]         = useState<"none" | "thin" | "double" | "swirl">(normalizeDecor(dc?.decor));
   // Farbpalette: gewählter Grundton + Hell/Dunkel für das abgeleitete Schema
   const [paletteSel, setPaletteSel]   = useState<string | null>(null);
@@ -1024,9 +1042,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
           <Section title="Kartenstil">
             <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
               {([
-                { id: "glow",    label: "Digital (Glow)" },
-                { id: "classic", label: "Klassisch"      },
-                { id: "paper",   label: "Papier"         },
+                { id: "classic", label: "Klassisch" },
+                { id: "paper",   label: "Papier"    },
               ] as const).map(s => (
                 <button key={s.id} type="button" onClick={() => setCardStyle(s.id)}
                   className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"

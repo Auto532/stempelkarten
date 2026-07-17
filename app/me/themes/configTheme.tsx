@@ -25,6 +25,7 @@ export interface ShopDesignConfig {
   bgImageUrl?: string;
   logoUrl?:  string;
   stampIcon?: string;
+  // "glow" existiert nur noch als Altwert in der DB und rendert wie "classic"
   cardStyle?: "classic" | "glow" | "paper";
   // Ecken-Verzierung in Akzentfarbe: "none" | "thin" | "double" | "swirl"
   // (Altwerte: "full" → thin, "lines" → none)
@@ -106,7 +107,6 @@ function CornerOrnament({ color, variant }: { color: string; variant: "thin" | "
 function makeCard(cfg: ShopDesignConfig) {
   const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
   const paper = cfg.cardStyle === "paper";
-  const glow  = !paper && cfg.cardStyle !== "classic"; // Default: glow
   const corner = normalizeDecor(cfg.decor);
   const cornerOffset = paper ? 14 : 9; // beim Papier-Look nicht in den Innenrahmen ragen
   const Icon = getStampIcon(cfg.stampIcon);
@@ -123,7 +123,7 @@ function makeCard(cfg: ShopDesignConfig) {
       <div className={`relative overflow-hidden ${paper ? "rounded-2xl" : "rounded-3xl"}`}
         style={paper
           ? { background: `${C} ${paperNoise}`, boxShadow: "0 1px 2px rgba(0,0,0,.25), 0 12px 28px -8px rgba(0,0,0,.35)" }
-          : { background: C, border: `1px solid ${alpha(A, "30")}`, boxShadow: glow ? `0 8px 32px ${alpha(A, "12")}` : undefined }}>
+          : { background: C, border: `1px solid ${alpha(A, "30")}` }}>
         {paper ? (
           /* gestrichelter Innenrahmen wie bei gedruckten Karten */
           <div className="absolute inset-2 pointer-events-none rounded-xl"
@@ -188,9 +188,7 @@ function makeCard(cfg: ShopDesignConfig) {
                       ? { border: `2px solid ${A}`, background: alpha(A, "16") }
                       : { border: `1.5px dashed ${alpha(A, isTier ? "66" : "40")}`, background: "transparent" }
                     : filled
-                      ? glow
-                        ? { background: `linear-gradient(135deg, ${A}, ${alpha(A, "99")})`, boxShadow: `0 0 10px ${alpha(A, "50")}`, border: `1px solid ${alpha(A, "60")}` }
-                        : { background: A, border: `1px solid ${alpha(A, "60")}` }
+                      ? { background: A, border: `1px solid ${alpha(A, "60")}` }
                       : isTier ? { border: `1px solid ${alpha(A, "40")}`, background: C }
                       : { border: `1px solid ${alpha(A, "22")}`, background: alpha(C, "88") }}>
                   {filled && <Icon size={13} style={{ color: paper ? A : C }} />}
@@ -209,7 +207,7 @@ function makeCard(cfg: ShopDesignConfig) {
                 animate={{ width: `${Math.min(currentStamps / maxStamps * 100, 100)}%` }}
                 transition={{ duration: 0.7, ease: "easeOut" }}
                 className="h-full rounded-full"
-                style={{ background: glow ? `linear-gradient(to right, ${A}, ${alpha(A, "99")})` : A }} />
+                style={{ background: A }} />
             </div>
             {stampValue ? (
               <p className="text-[10px] mt-1.5" style={{ color: TB }}>
