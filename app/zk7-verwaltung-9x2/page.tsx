@@ -751,6 +751,94 @@ function deriveScheme(base: string, mode: "dark" | "light") {
   };
 }
 
+// Gruppiert die Editor-Bereiche optisch (Übersichtlichkeit)
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-zinc-950/40 border border-zinc-800 rounded-xl p-3 space-y-2">
+      <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+// Eigener Farbwähler statt des nativen Browser-Pickers: aufklappbare
+// HSL-Regler (Ton/Sättigung/Helligkeit) mit gedeckten Verläufen + Hex-Eingabe.
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  // Lokales HSL, damit der Farbton beim Regeln nicht "springt"
+  // (bei Sättigung 0 ginge er sonst durch die Hex-Rückrechnung verloren)
+  const [hsl, setHsl] = useState<[number, number, number]>([0, 0, 0.5]);
+  const [hexDraft, setHexDraft] = useState(value);
+
+  const toggle = () => {
+    if (!open) { setHsl(hexToHsl(value)); setHexDraft(value); }
+    setOpen(o => !o);
+  };
+
+  const setPart = (i: 0 | 1 | 2, v: number) => {
+    const next: [number, number, number] = [...hsl];
+    next[i] = v;
+    setHsl(next);
+    const hex = hslToHex(next[0], next[1], next[2]);
+    setHexDraft(hex);
+    onChange(hex);
+  };
+
+  const applyHex = (raw: string) => {
+    const hex = raw.startsWith("#") ? raw : `#${raw}`;
+    if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+      setHsl(hexToHsl(hex));
+      setHexDraft(hex.toLowerCase());
+      onChange(hex.toLowerCase());
+    } else setHexDraft(value);
+  };
+
+  const [h, s, l] = hsl;
+  const hue = Math.round(h * 360);
+  const sliders: { label: string; value: number; max: number; onInput: (v: number) => void; track: string }[] = [
+    { label: "Ton", value: hue, max: 360, onInput: v => setPart(0, v / 360),
+      track: `linear-gradient(90deg, ${[0, 60, 120, 180, 240, 300, 360].map(d => `hsl(${d},45%,55%)`).join(",")})` },
+    { label: "Sättigung", value: Math.round(s * 100), max: 100, onInput: v => setPart(1, v / 100),
+      track: `linear-gradient(90deg, hsl(${hue},0%,${Math.round(l * 100)}%), hsl(${hue},80%,${Math.round(l * 100)}%))` },
+    { label: "Helligkeit", value: Math.round(l * 100), max: 100, onInput: v => setPart(2, v / 100),
+      track: `linear-gradient(90deg, #000, hsl(${hue},${Math.round(s * 100)}%,50%), #fff)` },
+  ];
+
+  return (
+    <div className="bg-zinc-800/50 rounded-xl">
+      <button type="button" onClick={toggle}
+        className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5">
+        <div className="min-w-0 text-left">
+          <p className="text-[11px] text-zinc-400 truncate">{label}</p>
+          <p className="text-[9px] font-mono text-zinc-600">{value}</p>
+        </div>
+        <span className="w-7 h-7 shrink-0 rounded-lg border"
+          style={{ background: value, borderColor: open ? "#a1a1aa" : "#3f3f46" }} />
+      </button>
+      {open && (
+        <div className="px-2.5 pb-2.5 space-y-1.5">
+          {sliders.map(sl => (
+            <div key={sl.label} className="flex items-center gap-2">
+              <span className="text-[9px] text-zinc-500 w-12 shrink-0">{sl.label}</span>
+              <input type="range" min={0} max={sl.max} value={sl.value}
+                onChange={e => sl.onInput(Number(e.target.value))}
+                className="color-slider flex-1" style={{ background: sl.track }} />
+            </div>
+          ))}
+          <div className="flex items-center gap-2 pt-0.5">
+            <span className="text-[9px] text-zinc-500 w-12 shrink-0">Hex</span>
+            <input type="text" value={hexDraft} spellCheck={false}
+              onChange={e => setHexDraft(e.target.value)}
+              onBlur={e => applyHex(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") applyHex((e.target as HTMLInputElement).value); }}
+              className="flex-1 min-w-0 px-2 py-1 bg-zinc-900 border border-zinc-700 rounded-lg text-[10px] font-mono text-zinc-300 focus:outline-none focus:border-amber-400/50" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const generateUploadUrl = useMutation(api.shops.adminGenerateUploadUrl);
   const setDesignConfig   = useMutation(api.shops.adminSetDesignConfig);
@@ -851,25 +939,6 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
     catch (ex: unknown) { setErr(ex instanceof Error ? ex.message : "Fehler"); }
     finally { setSaving(false); }
   };
-
-  const ColorField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
-    <div className="flex items-center justify-between gap-2 bg-zinc-800/50 rounded-xl px-2.5 py-1.5">
-      <div className="min-w-0">
-        <p className="text-[11px] text-zinc-400 truncate">{label}</p>
-        <p className="text-[9px] font-mono text-zinc-600">{value}</p>
-      </div>
-      <input type="color" value={value} onChange={e => onChange(e.target.value)}
-        className="w-7 h-7 shrink-0 rounded-lg border border-zinc-700 bg-transparent cursor-pointer" />
-    </div>
-  );
-
-  // Gruppiert die Editor-Bereiche optisch (Übersichtlichkeit)
-  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="bg-zinc-950/40 border border-zinc-800 rounded-xl p-3 space-y-2">
-      <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">{title}</p>
-      {children}
-    </div>
-  );
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
