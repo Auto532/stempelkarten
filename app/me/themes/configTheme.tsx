@@ -74,6 +74,10 @@ function makeBackground(cfg: ShopDesignConfig) {
   };
 }
 
+// Papier-Look: Karte immer in warmem Papierweiß mit dunkler "Tinten"-Schrift,
+// unabhängig vom Farbschema — nur die Akzentfarbe bleibt (Stempel/Rahmen).
+const PAPER = { bg: "#f6f1e7", text: "#33291c", body: "#7d7261" };
+
 // Ecken-Verzierung: Altwerte aus der ersten Version auf die neuen Stile mappen
 export function normalizeDecor(decor?: string): "none" | "thin" | "double" | "swirl" {
   if (decor === "thin" || decor === "double" || decor === "swirl") return decor;
@@ -105,13 +109,16 @@ function CornerOrnament({ color, variant }: { color: string; variant: "thin" | "
 }
 
 function makeCard(cfg: ShopDesignConfig) {
-  const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
   const paper = cfg.cardStyle === "paper";
+  const A = cfg.accent;
+  const T  = paper ? PAPER.text : cfg.text;
+  const TB = paper ? PAPER.body : cfg.textBody;
+  const C  = paper ? PAPER.bg   : cfg.cardBg;
   const corner = normalizeDecor(cfg.decor);
   const cornerOffset = paper ? 14 : 9; // beim Papier-Look nicht in den Innenrahmen ragen
   const Icon = getStampIcon(cfg.stampIcon);
   // Papier-Korn als eingebettetes SVG-Rauschen — keine Bild-Assets nötig
-  const paperNoise = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E")`;
+  const paperNoise = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.09'/%3E%3C/svg%3E")`;
 
   return function ConfigLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
     const activeTiers = rewardTiers?.some(t => t.enabled)
@@ -122,7 +129,7 @@ function makeCard(cfg: ShopDesignConfig) {
     return (
       <div className={`relative overflow-hidden ${paper ? "rounded-2xl" : "rounded-3xl"}`}
         style={paper
-          ? { background: `${C} ${paperNoise}`, boxShadow: "0 1px 2px rgba(0,0,0,.25), 0 12px 28px -8px rgba(0,0,0,.35)" }
+          ? { background: `${C} ${paperNoise}`, border: "1px solid rgba(0,0,0,.08)", boxShadow: "0 1px 2px rgba(0,0,0,.25), 0 14px 30px -10px rgba(0,0,0,.4)" }
           : { background: C, border: `1px solid ${alpha(A, "30")}` }}>
         {paper ? (
           /* gestrichelter Innenrahmen wie bei gedruckten Karten */
@@ -222,7 +229,11 @@ function makeCard(cfg: ShopDesignConfig) {
 }
 
 function makeBanner(cfg: ShopDesignConfig) {
-  const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
+  const paper = cfg.cardStyle === "paper";
+  const A = cfg.accent;
+  const T  = paper ? PAPER.text : cfg.text;
+  const TB = paper ? PAPER.body : cfg.textBody;
+  const C  = paper ? PAPER.bg   : cfg.cardBg;
 
   return function ConfigRewardBanner({ rewardText, stampsRequired, rewardTiers }: ThemeBannerProps) {
     // Basis-Stufe immer einschließen, auch wenn Bonus-Stufen aktiv sind
@@ -262,7 +273,11 @@ function makeBanner(cfg: ShopDesignConfig) {
 }
 
 function makeMilestones(cfg: ShopDesignConfig) {
-  const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
+  const paper = cfg.cardStyle === "paper";
+  const A = cfg.accent;
+  const T  = paper ? PAPER.text : cfg.text;
+  const TB = paper ? PAPER.body : cfg.textBody;
+  const C  = paper ? PAPER.bg   : cfg.cardBg;
 
   return function ConfigMilestonesSection({ milestones, totalStampsEver }: ThemeMilestonesProps) {
     const active = milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);
