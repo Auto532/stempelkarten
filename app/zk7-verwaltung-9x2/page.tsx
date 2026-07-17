@@ -11,7 +11,6 @@ import {
   Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
-import { THEME_LIST } from "@/app/me/themes/registry";
 import { makeConfigTheme, type ShopDesignConfig } from "@/app/me/themes/configTheme";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import QRCode from "qrcode";
@@ -358,7 +357,6 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
   const [togglingBonus, setTogglingBonus]           = useState(false);
   const [togglingDesign, setTogglingDesign]         = useState(false);
   const [togglingMilestones, setTogglingMilestones] = useState(false);
-  const [settingTheme, setSettingTheme]             = useState<string | null>(null);
   const [clearingTheme, setClearingTheme]           = useState(false);
 
   const handleSaveContent = async () => {
@@ -397,12 +395,6 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
     setLoading(true);
     try { await adminSetFeatures({ shopId: shop._id, adminSecret, [key]: value }); }
     finally { setLoading(false); }
-  };
-
-  const handleSetTheme = async (themeName: string, accentColor: string) => {
-    setSettingTheme(themeName);
-    try { await adminSetFeatures({ shopId: shop._id, adminSecret, theme: themeName, accentColor }); }
-    finally { setSettingTheme(null); }
   };
 
   const addTier = () => {
@@ -570,29 +562,19 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
         </div>
       </div>
 
-      {/* Design */}
-      {shop.customDesignEnabled && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
-          <p className="text-sm font-semibold text-zinc-200">Signature-Themes</p>
-          <div className="flex gap-1.5 flex-wrap">
-            {THEME_LIST.map(({ id, label, color }) => (
-              <button key={id} onClick={() => handleSetTheme(id, color)} disabled={!!settingTheme}
-                className="text-[11px] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
-                style={shop.theme === id
-                  ? { background: color + "33", border: `1px solid ${color}88`, color }
-                  : { background: "#27272a", border: "1px solid #3f3f46", color: "#71717a" }}>
-                {settingTheme === id ? "..." : label}
-              </button>
-            ))}
-            {shop.theme && (
-              <button onClick={async () => { setClearingTheme(true); try { await adminSetFeatures({ shopId: shop._id, adminSecret, clearTheme: true }); } finally { setClearingTheme(false); } }}
-                disabled={clearingTheme}
-                className="text-[11px] px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-40">
-                {clearingTheme ? "..." : "✕ Entfernen"}
-              </button>
-            )}
-          </div>
-          {shop.theme && <p className="text-[10px] text-zinc-600">Aktiv: {shop.theme}</p>}
+      {/* Design: Signature-Theme nur noch als kompakte Status-Zeile, wenn eins
+          aktiv ist — die Themen-Auswahl-Liste ist raus (nahm nur Platz weg). */}
+      {shop.customDesignEnabled && shop.theme && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center gap-2.5">
+          <Palette size={14} className="text-amber-400 shrink-0" />
+          <p className="text-sm text-zinc-300 min-w-0 truncate">
+            Signature-Theme <span className="font-semibold text-zinc-100">{shop.theme}</span> aktiv
+          </p>
+          <button onClick={async () => { setClearingTheme(true); try { await adminSetFeatures({ shopId: shop._id, adminSecret, clearTheme: true }); } finally { setClearingTheme(false); } }}
+            disabled={clearingTheme}
+            className="ml-auto shrink-0 text-[11px] px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-40">
+            {clearingTheme ? "..." : "✕ Entfernen"}
+          </button>
         </div>
       )}
 
@@ -703,22 +685,29 @@ function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops">; admi
 // Stempel-Icon, Kartenstil — mit Live-Vorschau. Kein Code/Deploy pro Shop.
 
 // Fertige Vorlagen als Startpunkt — setzen Farben/Hintergrund/Stil, danach
-// beliebig anpassbar. Logo und Icon bleiben unberührt.
+// beliebig anpassbar. Logo, Icon und Verzierung bleiben unberührt.
+// Palette bewusst gedeckt/dezent statt grell (Feedback 2026-07-17).
 const DESIGN_PRESETS: {
   name: string; accent: string; text: string; textBody: string; cardBg: string;
   bgType: "color" | "gradient"; bgColor: string; bgColor2?: string;
   cardStyle: "classic" | "glow";
 }[] = [
-  { name: "Mitternacht Gold", accent: "#fbbf24", text: "#f4f4f5", textBody: "#a1a1aa", cardBg: "#18181b", bgType: "gradient", bgColor: "#09090b", bgColor2: "#1c1917", cardStyle: "glow" },
-  { name: "Schwarz-Gold",     accent: "#c9a227", text: "#f2ede4", textBody: "#a89f8d", cardBg: "#17150f", bgType: "color",    bgColor: "#0d0c0a",                       cardStyle: "glow" },
-  { name: "Ozean",            accent: "#60a5fa", text: "#eff6ff", textBody: "#94a3b8", cardBg: "#0f172a", bgType: "gradient", bgColor: "#020617", bgColor2: "#0f1e3a", cardStyle: "glow" },
-  { name: "Wald",             accent: "#4ade80", text: "#f0fdf4", textBody: "#9ca3af", cardBg: "#0c1a12", bgType: "gradient", bgColor: "#050d08", bgColor2: "#10241a", cardStyle: "glow" },
-  { name: "Royal",            accent: "#a78bfa", text: "#f5f3ff", textBody: "#a5a1b8", cardBg: "#171225", bgType: "gradient", bgColor: "#0c0813", bgColor2: "#1e1633", cardStyle: "glow" },
-  { name: "Feuer",            accent: "#f97316", text: "#fff7ed", textBody: "#cbb5a0", cardBg: "#1c0f08", bgType: "gradient", bgColor: "#120702", bgColor2: "#241008", cardStyle: "glow" },
-  { name: "Türkis",           accent: "#2dd4bf", text: "#f0fdfa", textBody: "#94b8b3", cardBg: "#0a1a18", bgType: "gradient", bgColor: "#04100e", bgColor2: "#0e2420", cardStyle: "glow" },
-  { name: "Silber",           accent: "#d7d2c6", text: "#f1e9d6", textBody: "#8d877b", cardBg: "#141414", bgType: "color",    bgColor: "#0b0b0b",                       cardStyle: "glow" },
-  { name: "Rosé (hell)",      accent: "#ec4899", text: "#2c1020", textBody: "#8c6578", cardBg: "#fff7fb", bgType: "gradient", bgColor: "#ffeef7", bgColor2: "#ffd6e9", cardStyle: "classic" },
-  { name: "Café Creme (hell)",accent: "#b45309", text: "#451a03", textBody: "#78350f", cardBg: "#fffbeb", bgType: "gradient", bgColor: "#fef3c7", bgColor2: "#fde68a", cardStyle: "classic" },
+  { name: "Gold",       accent: "#c9a560", text: "#f0e9db", textBody: "#9c937f", cardBg: "#191511", bgType: "gradient", bgColor: "#0e0c09", bgColor2: "#1b1712", cardStyle: "glow" },
+  { name: "Silber",     accent: "#d7d2c6", text: "#f1e9d6", textBody: "#8d877b", cardBg: "#141414", bgType: "color",    bgColor: "#0b0b0b",                     cardStyle: "glow" },
+  { name: "Kupfer",     accent: "#b57e5e", text: "#f3ebe4", textBody: "#a08a7c", cardBg: "#1a120d", bgType: "gradient", bgColor: "#100a06", bgColor2: "#1d150f", cardStyle: "glow" },
+  { name: "Terracotta", accent: "#c67d5b", text: "#f5ece5", textBody: "#a89184", cardBg: "#1c1310", bgType: "gradient", bgColor: "#110b08", bgColor2: "#201511", cardStyle: "glow" },
+  { name: "Bordeaux",   accent: "#a4586a", text: "#f4e9ec", textBody: "#a18a90", cardBg: "#1c1114", bgType: "gradient", bgColor: "#120a0c", bgColor2: "#201317", cardStyle: "glow" },
+  { name: "Altrosa",    accent: "#c69fa5", text: "#f6edee", textBody: "#a2898d", cardBg: "#1d1416", bgType: "gradient", bgColor: "#120c0d", bgColor2: "#201618", cardStyle: "glow" },
+  { name: "Salbei",     accent: "#9caf88", text: "#edf1e7", textBody: "#93a089", cardBg: "#141a12", bgType: "gradient", bgColor: "#0b0f09", bgColor2: "#161d13", cardStyle: "glow" },
+  { name: "Olive",      accent: "#a8a678", text: "#f1f0e4", textBody: "#9d9c85", cardBg: "#17170f", bgType: "gradient", bgColor: "#0e0e08", bgColor2: "#1a1a11", cardStyle: "glow" },
+  { name: "Petrol",     accent: "#6aa5a8", text: "#e8f1f1", textBody: "#8aa3a3", cardBg: "#0f1b1c", bgType: "gradient", bgColor: "#081112", bgColor2: "#122021", cardStyle: "glow" },
+  { name: "Graublau",   accent: "#8ba3b8", text: "#eaf0f5", textBody: "#8f9aa5", cardBg: "#131920", bgType: "gradient", bgColor: "#0b0f14", bgColor2: "#151c24", cardStyle: "glow" },
+  { name: "Lavendel",   accent: "#a596c7", text: "#efecf6", textBody: "#99929f", cardBg: "#161320", bgType: "gradient", bgColor: "#0d0b13", bgColor2: "#191525", cardStyle: "glow" },
+  { name: "Nachtblau",  accent: "#7d92c4", text: "#eaeef7", textBody: "#8d94a8", cardBg: "#121624", bgType: "gradient", bgColor: "#0a0d16", bgColor2: "#151a29", cardStyle: "glow" },
+  { name: "Creme hell",  accent: "#8a6d3b", text: "#3f2d12", textBody: "#7d6a4a", cardBg: "#fdf9f0", bgType: "gradient", bgColor: "#f7f1e3", bgColor2: "#efe4cc", cardStyle: "classic" },
+  { name: "Salbei hell", accent: "#6b7f5e", text: "#26301f", textBody: "#5f6f55", cardBg: "#f6f8f2", bgType: "gradient", bgColor: "#eef2e6", bgColor2: "#dde5d2", cardStyle: "classic" },
+  { name: "Rosé hell",   accent: "#b76e79", text: "#3a2228", textBody: "#8a6b71", cardBg: "#fdf5f6", bgType: "gradient", bgColor: "#f9edef", bgColor2: "#f0dadd", cardStyle: "classic" },
+  { name: "Himmel hell", accent: "#5b7c99", text: "#1f2d3a", textBody: "#5d7183", cardBg: "#f4f8fb", bgType: "gradient", bgColor: "#ecf2f7", bgColor2: "#dbe6ef", cardStyle: "classic" },
 ];
 
 function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
@@ -745,6 +734,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
   const [cardStyle, setCardStyle] = useState<"classic" | "glow">(dc?.cardStyle ?? "glow");
+  const [decor, setDecor]         = useState<"none" | "lines" | "full">(dc?.decor ?? "none");
 
   const [uploading, setUploading] = useState<"logo" | "bg" | null>(null);
   const [saving, setSaving]       = useState(false);
@@ -776,8 +766,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Live-Vorschau: dieselbe Komponente, die auch die Kunden sehen
   const previewCfg: ShopDesignConfig = useMemo(() => ({
     accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
-    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, stampIcon: icon, cardStyle,
-  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, icon, cardStyle]);
+    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, stampIcon: icon, cardStyle, decor,
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, icon, cardStyle, decor]);
   const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
 
   const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
@@ -794,7 +784,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
         config: {
           accent, text, textBody, cardBg, bgType,
           bgColor, bgColor2, bgImageId, logoId,
-          stampIcon: icon, cardStyle,
+          stampIcon: icon, cardStyle, decor,
         },
       });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
@@ -812,13 +802,21 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   };
 
   const ColorField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
-    <div className="flex items-center justify-between gap-2 bg-zinc-800/50 rounded-xl px-3 py-2">
-      <span className="text-xs text-zinc-400">{label}</span>
-      <div className="flex items-center gap-1.5">
-        <span className="text-[10px] font-mono text-zinc-600">{value}</span>
-        <input type="color" value={value} onChange={e => onChange(e.target.value)}
-          className="w-7 h-7 rounded-lg border border-zinc-700 bg-transparent cursor-pointer" />
+    <div className="flex items-center justify-between gap-2 bg-zinc-800/50 rounded-xl px-2.5 py-1.5">
+      <div className="min-w-0">
+        <p className="text-[11px] text-zinc-400 truncate">{label}</p>
+        <p className="text-[9px] font-mono text-zinc-600">{value}</p>
       </div>
+      <input type="color" value={value} onChange={e => onChange(e.target.value)}
+        className="w-7 h-7 shrink-0 rounded-lg border border-zinc-700 bg-transparent cursor-pointer" />
+    </div>
+  );
+
+  // Gruppiert die Editor-Bereiche optisch (Übersichtlichkeit)
+  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="bg-zinc-950/40 border border-zinc-800 rounded-xl p-3 space-y-2">
+      <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">{title}</p>
+      {children}
     </div>
   );
 
@@ -841,9 +839,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
           )}
 
           {/* Vorlagen */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Vorlagen (Startpunkt, danach anpassen)</p>
-            <div className="grid grid-cols-2 gap-1.5">
+          <Section title="Vorlagen (Startpunkt, danach anpassen)">
+            <div className="grid grid-cols-3 gap-1.5">
               {DESIGN_PRESETS.map(p => (
                 <button key={p.name} type="button"
                   onClick={() => {
@@ -851,31 +848,27 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                     setBgType(p.bgType); setBgColor(p.bgColor); setBgColor2(p.bgColor2 ?? p.bgColor);
                     setCardStyle(p.cardStyle);
                   }}
-                  className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-colors hover:border-zinc-600"
-                  style={{ background: p.cardBg, border: `1px solid ${p.accent}55` }}>
-                  <span className="flex shrink-0 -space-x-1">
-                    <span className="w-4 h-4 rounded-full border border-black/20" style={{ background: p.accent }} />
-                    <span className="w-4 h-4 rounded-full border border-black/20" style={{ background: p.bgColor }} />
-                    <span className="w-4 h-4 rounded-full border border-black/20" style={{ background: p.text }} />
-                  </span>
-                  <span className="text-[10px] font-semibold truncate" style={{ color: p.text }}>{p.name}</span>
+                  className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:border-zinc-500"
+                  style={{ background: p.cardBg, border: `1px solid ${p.accent}44` }}>
+                  <span className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/20" style={{ background: p.accent }} />
+                  <span className="text-[9px] font-semibold truncate" style={{ color: p.text }}>{p.name}</span>
                 </button>
               ))}
             </div>
-          </div>
+          </Section>
 
           {/* Farben */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Farben</p>
-            <ColorField label="Akzentfarbe"  value={accent}   onChange={setAccent} />
-            <ColorField label="Überschrift"  value={text}     onChange={setText} />
-            <ColorField label="Text"         value={textBody} onChange={setTextBody} />
-            <ColorField label="Kartenfläche" value={cardBg}   onChange={setCardBg} />
-          </div>
+          <Section title="Farben">
+            <div className="grid grid-cols-2 gap-1.5">
+              <ColorField label="Akzentfarbe"  value={accent}   onChange={setAccent} />
+              <ColorField label="Überschrift"  value={text}     onChange={setText} />
+              <ColorField label="Text"         value={textBody} onChange={setTextBody} />
+              <ColorField label="Kartenfläche" value={cardBg}   onChange={setCardBg} />
+            </div>
+          </Section>
 
           {/* Hintergrund */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Hintergrund</p>
+          <Section title="Hintergrund">
             <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
               {([
                 { id: "color",    label: "Farbe"   },
@@ -889,8 +882,12 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                 </button>
               ))}
             </div>
-            {bgType !== "image" && <ColorField label={bgType === "gradient" ? "Farbe oben" : "Hintergrundfarbe"} value={bgColor} onChange={setBgColor} />}
-            {bgType === "gradient" && <ColorField label="Farbe unten" value={bgColor2} onChange={setBgColor2} />}
+            {bgType !== "image" && (
+              <div className="grid grid-cols-2 gap-1.5">
+                <ColorField label={bgType === "gradient" ? "Farbe oben" : "Hintergrundfarbe"} value={bgColor} onChange={setBgColor} />
+                {bgType === "gradient" && <ColorField label="Farbe unten" value={bgColor2} onChange={setBgColor2} />}
+              </div>
+            )}
             {bgType === "image" && (
               <label className="block">
                 <span className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-700 transition-colors">
@@ -899,15 +896,14 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                 <input type="file" accept="image/*" className="hidden" onChange={handleUpload("bg")} disabled={uploading !== null} />
               </label>
             )}
-          </div>
+          </Section>
 
-          {/* Logo */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Logo (statt Shopname auf der Karte)</p>
+          {/* Logo & Stempel-Icon */}
+          <Section title="Logo & Stempel-Icon">
             <div className="flex items-center gap-2">
               <label className="flex-1">
                 <span className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-700 transition-colors">
-                  {uploading === "logo" ? "Lädt hoch…" : logoPreviewUrl ? "Logo ändern" : "Logo hochladen"}
+                  {uploading === "logo" ? "Lädt hoch…" : logoPreviewUrl ? "Logo ändern" : "Logo hochladen (statt Shopname)"}
                 </span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleUpload("logo")} disabled={uploading !== null} />
               </label>
@@ -916,11 +912,6 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                   className="px-2.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-500 hover:text-red-400 text-xs transition-colors">✕</button>
               )}
             </div>
-          </div>
-
-          {/* Stempel-Icon */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Stempel-Icon</p>
             <div className="flex gap-1.5 flex-wrap max-h-40 overflow-y-auto pr-1">
               {Object.entries(STAMP_ICONS).map(([key, IconComp]) => (
                 <button key={key} type="button" onClick={() => setIcon(key)}
@@ -932,11 +923,10 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                 </button>
               ))}
             </div>
-          </div>
+          </Section>
 
-          {/* Kartenstil */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Kartenstil</p>
+          {/* Kartenstil & Verzierung */}
+          <Section title="Kartenstil & Verzierung">
             <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
               {([
                 { id: "glow",    label: "Glow (leuchtende Stempel)" },
@@ -949,7 +939,21 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                 </button>
               ))}
             </div>
-          </div>
+            {/* Deko-Linien in Akzentfarbe, wie beim Entenhaus-Theme */}
+            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+              {([
+                { id: "none",  label: "Ohne Deko"     },
+                { id: "lines", label: "Zierlinien"    },
+                { id: "full",  label: "Linien + Ecken" },
+              ] as const).map(d => (
+                <button key={d.id} type="button" onClick={() => setDecor(d.id)}
+                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                  style={decor === d.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </Section>
 
           {/* Live-Vorschau */}
           <div className="space-y-1.5">

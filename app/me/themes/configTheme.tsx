@@ -26,6 +26,8 @@ export interface ShopDesignConfig {
   logoUrl?:  string;
   stampIcon?: string;
   cardStyle?: "classic" | "glow";
+  // Verzierung in Akzentfarbe: Zierlinie ("lines") bzw. zusätzlich Eck-Ornamente ("full")
+  decor?: "none" | "lines" | "full";
 }
 
 // Hex #rrggbb + Alpha-Suffix (z.B. "28"). Nicht-Hex-Werte unverändert lassen.
@@ -70,9 +72,33 @@ function makeBackground(cfg: ShopDesignConfig) {
   };
 }
 
+// Zierlinie mit Raute in der Mitte (Entenhaus-Stil, aber in Akzentfarbe)
+function OrnamentDivider({ color }: { color: string }) {
+  const line = `linear-gradient(90deg, transparent, ${color} 50%, transparent)`;
+  return (
+    <div className="flex items-center gap-2 mb-4" style={{ opacity: 0.55 }}>
+      <div className="flex-1 h-px" style={{ background: line }} />
+      <div className="w-1.5 h-1.5 shrink-0" style={{ background: color, transform: "rotate(45deg)" }} />
+      <div className="flex-1 h-px" style={{ background: line }} />
+    </div>
+  );
+}
+
+// Eck-Ornament (dünner abgerundeter Winkel), wird 4× rotiert platziert
+function CornerOrnament({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"
+      style={{ width: 22, height: 22, color, opacity: 0.5 }}>
+      <path d="M2 14 V4 C2 2.9 2.9 2 4 2 H14" />
+    </svg>
+  );
+}
+
 function makeCard(cfg: ShopDesignConfig) {
   const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
   const glow = cfg.cardStyle !== "classic"; // Default: glow
+  const lines   = cfg.decor === "lines" || cfg.decor === "full";
+  const corners = cfg.decor === "full";
   const Icon = getStampIcon(cfg.stampIcon);
 
   return function ConfigLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
@@ -86,6 +112,14 @@ function makeCard(cfg: ShopDesignConfig) {
         style={{ background: C, border: `1px solid ${alpha(A, "30")}`, boxShadow: glow ? `0 8px 32px ${alpha(A, "12")}` : undefined }}>
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${alpha(A, "0C")}, transparent)` }} />
+        {corners && (
+          <>
+            <div className="absolute pointer-events-none" style={{ top: 9, left: 9 }}><CornerOrnament color={A} /></div>
+            <div className="absolute pointer-events-none" style={{ top: 9, right: 9, transform: "rotate(90deg)" }}><CornerOrnament color={A} /></div>
+            <div className="absolute pointer-events-none" style={{ bottom: 9, right: 9, transform: "rotate(180deg)" }}><CornerOrnament color={A} /></div>
+            <div className="absolute pointer-events-none" style={{ bottom: 9, left: 9, transform: "rotate(270deg)" }}><CornerOrnament color={A} /></div>
+          </>
+        )}
         <div className="relative p-6">
           <div className="flex items-center justify-between mb-5">
             <div className="min-w-0">
@@ -116,6 +150,7 @@ function makeCard(cfg: ShopDesignConfig) {
               </button>
             )}
           </div>
+          {lines && <OrnamentDivider color={A} />}
           <div className="flex flex-wrap gap-2 mb-4">
             {Array.from({ length: maxStamps }).map((_, i) => {
               const filled = i < currentStamps;
@@ -164,6 +199,12 @@ function makeCard(cfg: ShopDesignConfig) {
 
 function makeBanner(cfg: ShopDesignConfig) {
   const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
+  const lines = cfg.decor === "lines" || cfg.decor === "full";
+  // Schmale Akzent-Leiste am linken Rand (Entenhaus-Stil)
+  const AccentBar = () => lines
+    ? <div className="absolute left-0 top-0 bottom-0 w-[3px]"
+        style={{ background: `linear-gradient(180deg, ${A}, ${alpha(A, "33")})` }} />
+    : null;
 
   return function ConfigRewardBanner({ rewardText, stampsRequired, rewardTiers }: ThemeBannerProps) {
     // Basis-Stufe immer einschließen, auch wenn Bonus-Stufen aktiv sind
@@ -172,7 +213,8 @@ function makeBanner(cfg: ShopDesignConfig) {
       : [];
     if (activeTiers.length > 0) {
       return (
-        <div className="rounded-2xl px-4 py-3 space-y-2.5" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
+        <div className="relative overflow-hidden rounded-2xl px-4 py-3 space-y-2.5" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
+          <AccentBar />
           <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: TB }}>Belohnungen</p>
           {activeTiers.map((tier, i) => (
             <div key={i} className="flex items-center gap-3">
@@ -188,7 +230,8 @@ function makeBanner(cfg: ShopDesignConfig) {
       );
     }
     return (
-      <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
+      <div className="relative overflow-hidden rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
+        <AccentBar />
         <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: alpha(A, "18"), border: `1px solid ${alpha(A, "30")}` }}>
           <Gift size={16} style={{ color: A }} />

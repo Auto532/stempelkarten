@@ -62,6 +62,8 @@ export default defineSchema({
       // Stempel & Kartenstil
       stampIcon: v.optional(v.string()),
       cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"))),
+      // Verzierung: Zierlinie/Eck-Ornamente in Akzentfarbe (wie Entenhaus)
+      decor: v.optional(v.union(v.literal("none"), v.literal("lines"), v.literal("full"))),
     })),
     stampValue: v.optional(v.number()),
     priceInfo: v.optional(v.string()),
