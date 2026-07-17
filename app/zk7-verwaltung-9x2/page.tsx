@@ -742,6 +742,31 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${to(h + 1 / 3)}${to(h)}${to(h - 1 / 3)}`;
 }
 
+function hexToHsv(hex: string): [number, number, number] {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d > 0) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+    if (h < 0) h += 1;
+  }
+  return [h, max === 0 ? 0 : d / max, max];
+}
+
+function hsvToHex(h: number, s: number, v: number): string {
+  const f = (n: number) => {
+    const k = (n + h * 6) % 6;
+    const c = v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+    return Math.round(c * 255).toString(16).padStart(2, "0");
+  };
+  return `#${f(5)}${f(3)}${f(1)}`;
+}
+
 // Leitet aus einem Palettenton ein stimmiges, gedecktes Schema ab. Sättigung
 // wird gedeckelt, damit auch kräftige Töne dezent bleiben; im Hell-Modus wird
 // die Akzentfarbe bei Bedarf abgedunkelt (Kontrast auf hellem Grund).
@@ -785,9 +810,56 @@ const FIELD_COLORS = [
   "#f4f4f5", "#f0e9db", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b", "#0b0b0d",
 ];
 
+// Benutzerdefinierte Farbwahl: großes Sättigungs-/Helligkeitsfeld + Farbton-
+// Leiste zum Tippen/Ziehen — ersetzt den nativen Browser-Picker.
+function CustomColorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [hsv, setHsv] = useState<[number, number, number]>(() => hexToHsv(value));
+  // Extern gesetzte Farbe (z.B. Swatch-Klick) übernehmen; eigene Updates
+  // erzeugen denselben Hex und lösen dadurch kein Zurücksetzen aus.
+  useEffect(() => {
+    if (hsvToHex(hsv[0], hsv[1], hsv[2]).toLowerCase() !== value.toLowerCase()) setHsv(hexToHsv(value));
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [h, s, v] = hsv;
+  const apply = (next: [number, number, number]) => { setHsv(next); onChange(hsvToHex(next[0], next[1], next[2])); };
+
+  const pickSV = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1);
+    const y = Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1);
+    apply([h, x, 1 - y]);
+  };
+  const pickHue = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    apply([Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), s, v]);
+  };
+  const drag = (fn: (e: React.PointerEvent<HTMLDivElement>) => void) => ({
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); fn(e); },
+    onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => { if (e.buttons) fn(e); },
+  });
+
+  return (
+    <div className="space-y-2">
+      <div className="relative h-28 rounded-xl border border-zinc-700 cursor-crosshair touch-none"
+        style={{ background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${Math.round(h * 360)},100%,50%))` }}
+        {...drag(pickSV)}>
+        <div className="absolute w-4 h-4 rounded-full border-2 border-white shadow-md -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ left: `${s * 100}%`, top: `${(1 - v) * 100}%`, background: value }} />
+      </div>
+      <div className="relative h-3.5 rounded-full border border-zinc-700 cursor-pointer touch-none"
+        style={{ background: `linear-gradient(90deg, ${[0, 60, 120, 180, 240, 300, 360].map(d => `hsl(${d},70%,55%)`).join(",")})` }}
+        {...drag(pickHue)}>
+        <div className="absolute top-1/2 w-4 h-4 rounded-full border-2 border-white shadow-md -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ left: `${h * 100}%`, background: `hsl(${Math.round(h * 360)},70%,55%)` }} />
+      </div>
+    </div>
+  );
+}
+
 // Farbfeld wie im /me-Bereich: aufklappbares Swatch-Grid + Benutzerdefiniert.
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState(false);
   const sel = value.toLowerCase();
   return (
     <div className="bg-zinc-800/50 rounded-xl">
@@ -813,11 +885,11 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
                 }} />
             ))}
           </div>
-          <label className="flex items-center justify-center gap-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-[10px] font-semibold text-zinc-400 cursor-pointer hover:text-zinc-200 hover:border-zinc-600 transition-colors">
-            Benutzerdefiniert
-            <input type="color" value={value} onChange={e => onChange(e.target.value)}
-              className="w-5 h-5 rounded border-0 bg-transparent cursor-pointer" />
-          </label>
+          <button type="button" onClick={() => setCustom(c => !c)}
+            className="w-full py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-[10px] font-semibold text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors">
+            Benutzerdefiniert {custom ? "▴" : "▾"}
+          </button>
+          {custom && <CustomColorPicker value={value} onChange={onChange} />}
         </div>
       )}
     </div>
