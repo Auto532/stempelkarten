@@ -25,8 +25,8 @@ export interface ShopDesignConfig {
   bgImageUrl?: string;
   logoUrl?:  string;
   stampIcon?: string;
-  // "glow" existiert nur noch als Altwert in der DB und rendert wie "classic"
-  cardStyle?: "classic" | "glow" | "paper";
+  // Altfeld, wird nicht mehr gerendert (Glow/Papier abgeschafft)
+  cardStyle?: string;
   // Ecken-Verzierung in Akzentfarbe: "none" | "thin" | "double" | "swirl"
   // (Altwerte: "full" → thin, "lines" → none)
   decor?: string;
@@ -74,10 +74,6 @@ function makeBackground(cfg: ShopDesignConfig) {
   };
 }
 
-// Papier-Look: Karte immer in warmem Papierweiß mit dunkler "Tinten"-Schrift,
-// unabhängig vom Farbschema — nur die Akzentfarbe bleibt (Stempel/Rahmen).
-const PAPER = { bg: "#f6f1e7", text: "#33291c", body: "#7d7261" };
-
 // Ecken-Verzierung: Altwerte aus der ersten Version auf die neuen Stile mappen
 export function normalizeDecor(decor?: string): "none" | "thin" | "double" | "swirl" {
   if (decor === "thin" || decor === "double" || decor === "swirl") return decor;
@@ -109,16 +105,9 @@ function CornerOrnament({ color, variant }: { color: string; variant: "thin" | "
 }
 
 function makeCard(cfg: ShopDesignConfig) {
-  const paper = cfg.cardStyle === "paper";
-  const A = cfg.accent;
-  const T  = paper ? PAPER.text : cfg.text;
-  const TB = paper ? PAPER.body : cfg.textBody;
-  const C  = paper ? PAPER.bg   : cfg.cardBg;
+  const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
   const corner = normalizeDecor(cfg.decor);
-  const cornerOffset = paper ? 14 : 9; // beim Papier-Look nicht in den Innenrahmen ragen
   const Icon = getStampIcon(cfg.stampIcon);
-  // Papier-Korn als eingebettetes SVG-Rauschen — keine Bild-Assets nötig
-  const paperNoise = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.09'/%3E%3C/svg%3E")`;
 
   return function ConfigLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
     const activeTiers = rewardTiers?.some(t => t.enabled)
@@ -127,24 +116,16 @@ function makeCard(cfg: ShopDesignConfig) {
     const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
 
     return (
-      <div className={`relative overflow-hidden ${paper ? "rounded-2xl" : "rounded-3xl"}`}
-        style={paper
-          ? { background: `${C} ${paperNoise}`, border: "1px solid rgba(0,0,0,.08)", boxShadow: "0 1px 2px rgba(0,0,0,.25), 0 14px 30px -10px rgba(0,0,0,.4)" }
-          : { background: C, border: `1px solid ${alpha(A, "30")}` }}>
-        {paper ? (
-          /* gestrichelter Innenrahmen wie bei gedruckten Karten */
-          <div className="absolute inset-2 pointer-events-none rounded-xl"
-            style={{ border: `1.5px dashed ${alpha(A, "50")}` }} />
-        ) : (
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${alpha(A, "0C")}, transparent)` }} />
-        )}
+      <div className="relative overflow-hidden rounded-3xl"
+        style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${alpha(A, "0C")}, transparent)` }} />
         {corner !== "none" && (
           <>
-            <div className="absolute pointer-events-none" style={{ top: cornerOffset, left: cornerOffset }}><CornerOrnament color={A} variant={corner} /></div>
-            <div className="absolute pointer-events-none" style={{ top: cornerOffset, right: cornerOffset, transform: "rotate(90deg)" }}><CornerOrnament color={A} variant={corner} /></div>
-            <div className="absolute pointer-events-none" style={{ bottom: cornerOffset, right: cornerOffset, transform: "rotate(180deg)" }}><CornerOrnament color={A} variant={corner} /></div>
-            <div className="absolute pointer-events-none" style={{ bottom: cornerOffset, left: cornerOffset, transform: "rotate(270deg)" }}><CornerOrnament color={A} variant={corner} /></div>
+            <div className="absolute pointer-events-none" style={{ top: 9, left: 9 }}><CornerOrnament color={A} variant={corner} /></div>
+            <div className="absolute pointer-events-none" style={{ top: 9, right: 9, transform: "rotate(90deg)" }}><CornerOrnament color={A} variant={corner} /></div>
+            <div className="absolute pointer-events-none" style={{ bottom: 9, right: 9, transform: "rotate(180deg)" }}><CornerOrnament color={A} variant={corner} /></div>
+            <div className="absolute pointer-events-none" style={{ bottom: 9, left: 9, transform: "rotate(270deg)" }}><CornerOrnament color={A} variant={corner} /></div>
           </>
         )}
         <div className="relative p-6">
@@ -172,9 +153,7 @@ function makeCard(cfg: ShopDesignConfig) {
             </div>
             {!hideQR && onShowQR && (
               <button onClick={onShowQR} className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-                style={paper
-                  ? { background: "transparent", border: `1.5px dashed ${alpha(A, "50")}` }
-                  : { background: C, border: `1px solid ${alpha(A, "30")}` }}>
+                style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
                 <QrCode size={26} style={{ color: A }} />
               </button>
             )}
@@ -189,16 +168,11 @@ function makeCard(cfg: ShopDesignConfig) {
                   animate={isAnimating ? { scale: [1, 1.4, 1] } : {}}
                   transition={{ duration: 0.5 }}
                   className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={paper
-                    // Papier: leere Felder gestrichelt, gefüllte wie ein Stempelabdruck in Akzentfarbe
-                    ? filled
-                      ? { border: `2px solid ${A}`, background: alpha(A, "16") }
-                      : { border: `1.5px dashed ${alpha(A, isTier ? "66" : "40")}`, background: "transparent" }
-                    : filled
-                      ? { background: A, border: `1px solid ${alpha(A, "60")}` }
-                      : isTier ? { border: `1px solid ${alpha(A, "40")}`, background: C }
-                      : { border: `1px solid ${alpha(A, "22")}`, background: alpha(C, "88") }}>
-                  {filled && <Icon size={13} style={{ color: paper ? A : C }} />}
+                  style={filled
+                    ? { background: A, border: `1px solid ${alpha(A, "60")}` }
+                    : isTier ? { border: `1px solid ${alpha(A, "40")}`, background: C }
+                    : { border: `1px solid ${alpha(A, "22")}`, background: alpha(C, "88") }}>
+                  {filled && <Icon size={13} style={{ color: C }} />}
                   {!filled && isTier && <Gift size={11} style={{ color: alpha(A, "70") }} />}
                 </motion.div>
               );
@@ -229,11 +203,7 @@ function makeCard(cfg: ShopDesignConfig) {
 }
 
 function makeBanner(cfg: ShopDesignConfig) {
-  const paper = cfg.cardStyle === "paper";
-  const A = cfg.accent;
-  const T  = paper ? PAPER.text : cfg.text;
-  const TB = paper ? PAPER.body : cfg.textBody;
-  const C  = paper ? PAPER.bg   : cfg.cardBg;
+  const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
 
   return function ConfigRewardBanner({ rewardText, stampsRequired, rewardTiers }: ThemeBannerProps) {
     // Basis-Stufe immer einschließen, auch wenn Bonus-Stufen aktiv sind
@@ -273,11 +243,7 @@ function makeBanner(cfg: ShopDesignConfig) {
 }
 
 function makeMilestones(cfg: ShopDesignConfig) {
-  const paper = cfg.cardStyle === "paper";
-  const A = cfg.accent;
-  const T  = paper ? PAPER.text : cfg.text;
-  const TB = paper ? PAPER.body : cfg.textBody;
-  const C  = paper ? PAPER.bg   : cfg.cardBg;
+  const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
 
   return function ConfigMilestonesSection({ milestones, totalStampsEver }: ThemeMilestonesProps) {
     const active = milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);

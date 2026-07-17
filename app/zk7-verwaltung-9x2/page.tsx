@@ -919,8 +919,6 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
-  // Glow gibt es nicht mehr — Altwert "glow" wird als Klassisch weitergeführt
-  const [cardStyle, setCardStyle] = useState<"classic" | "paper">(dc?.cardStyle === "paper" ? "paper" : "classic");
   const [decor, setDecor]         = useState<"none" | "thin" | "double" | "swirl">(normalizeDecor(dc?.decor));
   // Farbpalette: gewählter Grundton + Hell/Dunkel für das abgeleitete Schema
   const [paletteSel, setPaletteSel]   = useState<string | null>(null);
@@ -963,8 +961,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Live-Vorschau: dieselbe Komponente, die auch die Kunden sehen
   const previewCfg: ShopDesignConfig = useMemo(() => ({
     accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
-    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, stampIcon: icon, cardStyle, decor,
-  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, icon, cardStyle, decor]);
+    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, stampIcon: icon, decor,
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, icon, decor]);
   const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
 
   const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
@@ -981,7 +979,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
         config: {
           accent, text, textBody, cardBg, bgType,
           bgColor, bgColor2, bgImageId, logoId,
-          stampIcon: icon, cardStyle, decor,
+          stampIcon: icon, decor,
         },
       });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
@@ -1105,22 +1103,6 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                     ? { background: `${accent}22`, border: `1px solid ${accent}66` }
                     : { background: "#27272a", border: "1px solid #3f3f46" }}>
                   <IconComp size={15} style={{ color: icon === key ? accent : "#71717a" }} />
-                </button>
-              ))}
-            </div>
-          </Section>
-
-          {/* Kartenstil: digital leuchtend, flach oder wie eine physische Papierkarte */}
-          <Section title="Kartenstil">
-            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
-              {([
-                { id: "classic", label: "Klassisch" },
-                { id: "paper",   label: "Papier"    },
-              ] as const).map(s => (
-                <button key={s.id} type="button" onClick={() => setCardStyle(s.id)}
-                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                  style={cardStyle === s.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
-                  {s.label}
                 </button>
               ))}
             </div>
