@@ -27,6 +27,26 @@ const CONFIG_DEMOS: { id: string; label: string; color: string; config: ShopDesi
     id: "rose", label: "Rosé", color: "#ec4899",
     config: { accent: "#ec4899", text: "#2c1020", textBody: "#8c6578", cardBg: "#fff7fb", bgType: "gradient", bgColor: "#ffeef7", bgColor2: "#ffd6e9", stampIcon: "heart", cardStyle: "classic" },
   },
+  {
+    id: "wald", label: "Wald", color: "#4ade80",
+    config: { accent: "#4ade80", text: "#ecfdf5", textBody: "#86a596", cardBg: "#0e1f14", bgType: "gradient", bgColor: "#06120a", bgColor2: "#10291a", stampIcon: "leaf", cardStyle: "glow" },
+  },
+  {
+    id: "sonne", label: "Sonne", color: "#f59e0b",
+    config: { accent: "#f59e0b", text: "#451a03", textBody: "#a16207", cardBg: "#fffdf7", bgType: "gradient", bgColor: "#fffbeb", bgColor2: "#fde9c8", stampIcon: "sun", cardStyle: "classic" },
+  },
+  {
+    id: "nacht", label: "Nachtviolett", color: "#a78bfa",
+    config: { accent: "#a78bfa", text: "#f5f3ff", textBody: "#8b7fb8", cardBg: "#150d29", bgType: "gradient", bgColor: "#0b0716", bgColor2: "#1e1038", stampIcon: "sparkles", cardStyle: "glow" },
+  },
+  {
+    id: "ruby", label: "Ruby", color: "#f87171",
+    config: { accent: "#f87171", text: "#fef2f2", textBody: "#b07a7a", cardBg: "#200a0c", bgType: "gradient", bgColor: "#160607", bgColor2: "#2b0d10", stampIcon: "crown", cardStyle: "glow" },
+  },
+  {
+    id: "mint", label: "Mint", color: "#10b981",
+    config: { accent: "#10b981", text: "#064e3b", textBody: "#059669", cardBg: "#ffffff", bgType: "gradient", bgColor: "#ecfdf5", bgColor2: "#d1fae5", stampIcon: "droplets", cardStyle: "classic" },
+  },
 ];
 
 const DEMO_SHOP_NAMES: Record<string, string> = {
