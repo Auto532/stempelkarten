@@ -17,12 +17,8 @@ export const sendWelcomeEmail = internalAction({
     if (!RESEND_KEY) return;
 
     const rewardCount = args.rewardCount ?? 0;
-    // Einrichtung: 99 € einmalig, mit gebuchtem Bonusprogramm nur 45 €
-    // (muss zur Preislogik in der Affiliate-App passen, convex/pricing.ts).
     const extras = [
-      rewardCount > 0
-        ? "Individuelles Design & Einrichtung (einmalig 45 € statt 99 €, dank Bonusprogramm)"
-        : "Individuelles Design & Einrichtung (einmalig 99 €)",
+      "Individuelles Design & Einrichtung (einmalig 99 €)",
       ...(rewardCount > 0
         ? [`Bonusprogramm: ${rewardCount} Belohnung${rewardCount === 1 ? "" : "en"} (5 €/Monat pro Belohnung)`]
         : []),
@@ -31,13 +27,13 @@ export const sendWelcomeEmail = internalAction({
     const extrasSection = `
         <tr><td style="padding:0 32px 24px 32px;">
           <table width="100%" cellpadding="0" cellspacing="0"
-            style="background:#fffbef;border-radius:10px;border-left:4px solid #c9a227;">
+            style="background:#201a0d;border-radius:10px;border-left:4px solid #c9a227;">
             <tr><td style="padding:16px 20px;">
-              <p style="margin:0 0 10px 0;font-size:13px;font-weight:700;color:#0d0c0a;text-transform:uppercase;letter-spacing:1px;">
+              <p style="margin:0 0 10px 0;font-size:13px;font-weight:700;color:#f2ede4;text-transform:uppercase;letter-spacing:1px;">
                 In deinem Paket enthalten
               </p>
               ${extras.map(e => `
-              <p style="margin:6px 0;color:#444;font-size:14px;">
+              <p style="margin:6px 0;color:#cfc9bd;font-size:14px;">
                 <span style="color:#c9a227;font-weight:700;">✓</span>&nbsp; ${e}
               </p>`).join("")}
             </td></tr>
@@ -46,7 +42,7 @@ export const sendWelcomeEmail = internalAction({
 
     const designSection = `
         <tr><td style="padding:0 32px 24px 32px;">
-          <p style="margin:0;color:#444;font-size:15px;line-height:1.7;">
+          <p style="margin:0;color:#cfc9bd;font-size:15px;line-height:1.7;">
             Zu deinem Paket gehört ein <strong>individuelles Design</strong> deiner
             Stempelkarte. Wir melden uns <strong>innerhalb der nächsten 24 Stunden</strong>
             persönlich bei dir, damit deine Karte genauso aussieht, wie du es dir vorstellst.
@@ -57,11 +53,11 @@ export const sendWelcomeEmail = internalAction({
 <!DOCTYPE html>
 <html lang="de">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f0ede8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<body style="margin:0;padding:0;background:#0d0c0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
   <tr><td align="center">
   <table width="540" cellpadding="0" cellspacing="0"
-    style="background:#ffffff;border-radius:20px;overflow:hidden;max-width:540px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    style="background:#17150f;border-radius:20px;overflow:hidden;max-width:540px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
     <!-- Header -->
     <tr>
@@ -74,11 +70,11 @@ export const sendWelcomeEmail = internalAction({
     <!-- Greeting -->
     <tr>
       <td style="padding:36px 32px 20px 32px;">
-        <h1 style="margin:0 0 16px 0;font-size:22px;color:#0d0c0a;font-weight:800;">
+        <h1 style="margin:0 0 16px 0;font-size:22px;color:#f2ede4;font-weight:800;">
           Herzlich willkommen, ${escapeHtml(args.ownerName)}!
         </h1>
-        <p style="margin:0;color:#555;font-size:15px;line-height:1.75;">
-          Schön, dass du dabei bist! Dein Shop <strong style="color:#0d0c0a;">${escapeHtml(args.shopName)}</strong>
+        <p style="margin:0;color:#cfc9bd;font-size:15px;line-height:1.75;">
+          Schön, dass du dabei bist! Dein Shop <strong style="color:#f2ede4;">${escapeHtml(args.shopName)}</strong>
           ist bei uns registriert und wir kümmern uns ab sofort darum, dass deine
           digitale Stempelkarte schnell und reibungslos an den Start geht.
         </p>
@@ -91,7 +87,7 @@ export const sendWelcomeEmail = internalAction({
     <!-- Contact -->
     <tr>
       <td style="padding:0 32px 28px 32px;">
-        <p style="margin:0 0 14px 0;font-size:15px;color:#555;line-height:1.75;">
+        <p style="margin:0 0 14px 0;font-size:15px;color:#cfc9bd;line-height:1.75;">
           In der Zwischenzeit stehen wir dir bei allen Fragen zur Seite.
           Melde dich einfach per WhatsApp oder ruf direkt bei uns an:
         </p>
@@ -100,20 +96,20 @@ export const sendWelcomeEmail = internalAction({
                  text-decoration:none;font-weight:700;font-size:15px;">
           WhatsApp schreiben &rarr;
         </a>
-        <p style="margin:12px 0 0 0;font-size:14px;color:#888;">
-          Oder ruf uns einfach an: <strong style="color:#444;">${WHATSAPP_NR}</strong>
+        <p style="margin:12px 0 0 0;font-size:14px;color:#8a8577;">
+          Oder ruf uns einfach an: <strong style="color:#cfc9bd;">${WHATSAPP_NR}</strong>
         </p>
       </td>
     </tr>
 
     <!-- Closing -->
     <tr>
-      <td style="padding:0 32px 32px 32px;border-top:1px solid #f0ede8;">
-        <p style="margin:24px 0 0 0;color:#555;font-size:15px;line-height:1.75;">
+      <td style="padding:0 32px 32px 32px;border-top:1px solid #2a2620;">
+        <p style="margin:24px 0 0 0;color:#cfc9bd;font-size:15px;line-height:1.75;">
           Wir freuen uns darauf, gemeinsam mit dir mehr Stammkunden zu gewinnen.
           Danke für dein Vertrauen!
         </p>
-        <p style="margin:16px 0 0 0;color:#0d0c0a;font-size:15px;font-weight:600;">
+        <p style="margin:16px 0 0 0;color:#f2ede4;font-size:15px;font-weight:600;">
           Dein LoyaltyCard-Team
         </p>
       </td>
@@ -121,8 +117,8 @@ export const sendWelcomeEmail = internalAction({
 
     <!-- Footer -->
     <tr>
-      <td style="background:#f9f7f3;padding:18px 32px;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#bbb;">
+      <td style="background:#1c1a13;padding:18px 32px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#6b6558;">
           LoyaltyCard &middot; Digitale Stempelkarten für lokale Shops
         </p>
       </td>

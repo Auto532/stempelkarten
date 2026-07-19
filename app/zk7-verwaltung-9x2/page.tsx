@@ -374,8 +374,8 @@ function ContractBonusCard({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
         </div>
         <p className="text-[10px] text-zinc-600">
           Gilt ab der nächsten Abrechnung{contract.paymentCount === 0 ? " (erste Zahlung steht noch aus)" : ""}.
-          {contract.firstYearDiscount ? ` Rabatt ${contract.discountCode ?? ""} (${Math.round(contract.firstYearDiscount * 100)}% aufs 1. Jahr) wird automatisch mit eingerechnet.` : ""}
-          {" "}Einrichtung: {count > 0 ? "€45 (mit Bonusprogramm)" : "€99"}.
+          {contract.firstYearDiscount ? ` Rabatt ${contract.discountCode ?? ""} (nur 1. Rechnung, Einrichtung dann €45) wird automatisch mit eingerechnet.` : ""}
+          {" "}Einrichtung einmalig: €{contract.setupFee}.
         </p>
         {err && <p className="text-red-400 text-xs">{err}</p>}
         {dirty && (
@@ -1431,9 +1431,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         <div className="rounded-xl p-3 bg-amber-400/10 border border-amber-400/25">
           <p className="text-sm font-semibold text-zinc-100">Einrichtung & individuelles Design</p>
           <p className="text-[10px] text-zinc-500 mt-0.5">
-            {rewardCount > 0
-              ? <>Einmalig <s>€99</s> <b className="text-amber-400">€45</b> dank Bonusprogramm.</>
-              : "Einmalig €99, bei jedem Shop automatisch dabei. Mit Bonusprogramm nur €45."}
+            Einmalig €99, bei jedem Shop automatisch dabei. Mit Rabattcode auf der Zahlungsseite nur €45.
           </p>
         </div>
 
