@@ -46,17 +46,22 @@ export default function DemoPage() {
   }, []);
 
   const designs = useMemo(() => [
+    // Normale Designs: im Preis enthalten (99 € Einrichtung inkl. Design)
     ...CONFIG_DEMOS.map(d => ({
-      id: d.id, label: d.label, color: d.color,
+      id: d.id, label: d.label, color: d.color, signature: false,
       theme: getShopTheme({ customDesignEnabled: true, designConfig: d.config })!,
       shopName: "Dein Laden",
     })),
+    // Signature-Designs: von Hand gestaltet, gegen Aufpreis
     ...THEME_LIST.map(t => ({
-      id: t.id, label: t.label, color: t.color,
+      id: t.id, label: t.label, color: t.color, signature: true,
       theme: getShopTheme({ customDesignEnabled: true, theme: t.id })!,
       shopName: DEMO_SHOP_NAMES[t.id] ?? t.label,
     })),
   ], []);
+
+  const normalDesigns    = designs.filter(d => !d.signature);
+  const signatureDesigns = designs.filter(d => d.signature);
 
   const selected = designs.find(d => d.id === designId) ?? designs[0];
   const theme: ThemeConfig = selected.theme;
@@ -89,19 +94,49 @@ export default function DemoPage() {
         <p className="text-[11px] mt-1" style={{ color: c.accentDim }}>Kein App-Download, läuft direkt im Browser. Tippe unten auf „Stempel geben".</p>
       </div>
 
-      {/* Design-Umschalter */}
-      <div className="relative z-10 -mx-5 px-5 overflow-x-auto">
-        <div className="flex gap-1.5 w-max pb-1">
-          {designs.map(d => (
-            <button key={d.id} onClick={() => setDesignId(d.id)}
-              className="text-[11px] px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-colors"
-              style={designId === d.id
-                ? { background: d.color, color: "#111", border: `1px solid ${d.color}` }
-                : { background: "rgba(127,127,127,.12)", border: "1px solid rgba(127,127,127,.25)", color: c.textBody }}>
-              {d.label}
-            </button>
-          ))}
+      {/* Design-Umschalter: normale Designs (im Preis enthalten) */}
+      <div className="relative z-10">
+        <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: c.accentDim }}>
+          Dein Design · im Preis enthalten
+        </p>
+        <div className="-mx-5 px-5 overflow-x-auto">
+          <div className="flex gap-1.5 w-max pb-1">
+            {normalDesigns.map(d => (
+              <button key={d.id} onClick={() => setDesignId(d.id)}
+                className="text-[11px] px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-colors"
+                style={designId === d.id
+                  ? { background: d.color, color: "#111", border: `1px solid ${d.color}` }
+                  : { background: "rgba(127,127,127,.12)", border: "1px solid rgba(127,127,127,.25)", color: c.textBody }}>
+                {d.label}
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
+
+      {/* Design-Umschalter: Signature-Designs (gegen Aufpreis) */}
+      <div className="relative z-10">
+        <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: c.accentDim }}>
+          ✦ Signature-Designs · gegen Aufpreis
+        </p>
+        <div className="-mx-5 px-5 overflow-x-auto">
+          <div className="flex gap-1.5 w-max pb-1">
+            {signatureDesigns.map(d => (
+              <button key={d.id} onClick={() => setDesignId(d.id)}
+                className="text-[11px] px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-colors"
+                style={designId === d.id
+                  ? { background: d.color, color: "#111", border: `1px solid ${d.color}` }
+                  : { background: "rgba(127,127,127,.12)", border: "1px solid rgba(127,127,127,.25)", color: c.textBody }}>
+                ✦ {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {selected.signature && (
+          <p className="text-[10px] mt-1" style={{ color: c.accentDim }}>
+            Signature-Designs werden von Hand für deinen Laden gestaltet und sind nicht im normalen Preis enthalten. Preis auf Anfrage.
+          </p>
+        )}
       </div>
 
       {/* Karte */}
