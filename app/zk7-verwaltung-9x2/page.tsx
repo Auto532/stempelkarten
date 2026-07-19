@@ -308,6 +308,91 @@ function ToggleSwitch({ active, onToggle, disabled }: { active: boolean; onToggl
 
 type Tier = { stamps: number; text: string; enabled: boolean };
 
+// ─── ContractBonusCard ────────────────────────────────────────────────────────
+// Bonusprogramm (Anzahl Belohnungen) nachträglich ändern: liest den Vertrag aus
+// der Affiliate-App (per loatycardShopId) und schreibt Änderungen zurück. Der
+// neue Betrag fließt sofort in alle künftigen Abrechnungen ein; ein laufender
+// Erstjahr-Rabatt wird serverseitig mit eingerechnet.
+
+function ContractBonusCard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
+  const [contract, setContract] = useState<any | null | undefined>(undefined);
+  const [count, setCount]       = useState(0);
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [err, setErr]           = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const c = await affiliateQuery("admin:getContractForShop", { adminSecret, loatycardShopId: shop._id });
+        if (cancelled) return;
+        setContract(c);
+        setCount(c?.rewardCount ?? 0);
+      } catch { if (!cancelled) setContract(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [shop._id, adminSecret]);
+
+  if (contract === undefined || contract === null) return null; // kein Vertrag → nichts anzeigen
+
+  const perPeriod  = contract.planType === "annual" ? count * 60 : count * 5;
+  const periodTxt  = contract.planType === "annual" ? "Jahr" : "Monat";
+  const aboTotal   = (contract.planType === "annual" ? 240 : 20) + perPeriod;
+  const dirty      = count !== contract.rewardCount;
+
+  const handleSave = async () => {
+    setSaving(true); setErr("");
+    try {
+      await affiliateMutation("admin:updateContractRewardCount", { adminSecret, contractId: contract.contractId, rewardCount: count });
+      setContract({ ...contract, rewardCount: count });
+      setSaved(true); setTimeout(() => setSaved(false), 2000);
+    } catch (e: unknown) { setErr(errMsg(e, "Fehler beim Speichern")); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
+        <p className="text-sm font-semibold text-zinc-200">Bonusprogramm (Abrechnung)</p>
+        <span className="text-[10px] text-zinc-500">{contract.planType === "annual" ? "Jahresabo" : "Monatsabo"}</span>
+      </div>
+      <div className="p-4 space-y-3">
+        <div className="rounded-xl p-3 flex items-center justify-between bg-zinc-800 border border-zinc-700">
+          <div>
+            <p className="text-sm font-semibold text-zinc-100">{count} Belohnung{count === 1 ? "" : "en"}</p>
+            <p className="text-[10px] text-zinc-500 mt-0.5">
+              €5/Monat pro Belohnung · Abo gesamt €{aboTotal}/{periodTxt}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setCount(c => Math.max(0, c - 1))}
+              className="w-9 h-9 rounded-lg text-lg font-bold text-zinc-100 bg-zinc-700 border border-zinc-600">−</button>
+            <button type="button" onClick={() => setCount(c => Math.min(20, c + 1))}
+              className="w-9 h-9 rounded-lg text-lg font-bold text-zinc-900 bg-amber-400">+</button>
+          </div>
+        </div>
+        <p className="text-[10px] text-zinc-600">
+          Gilt ab der nächsten Abrechnung{contract.paymentCount === 0 ? " (erste Zahlung steht noch aus)" : ""}.
+          {contract.firstYearDiscount ? ` Rabatt ${contract.discountCode ?? ""} (${Math.round(contract.firstYearDiscount * 100)}% aufs 1. Jahr) wird automatisch mit eingerechnet.` : ""}
+          {" "}Einrichtung: {count > 0 ? "€45 (mit Bonusprogramm)" : "€99"}.
+        </p>
+        {err && <p className="text-red-400 text-xs">{err}</p>}
+        {dirty && (
+          <button onClick={handleSave} disabled={saving}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ background: saved ? "#22c55e" : "#fbbf24", color: "#18181b" }}>
+            {saving ? "Speichert..." : "Bonusprogramm speichern"}
+          </button>
+        )}
+        {saved && !dirty && (
+          <p className="text-center text-xs text-green-400 flex items-center justify-center gap-1.5"><Check size={13} /> Gespeichert</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops">; adminSecret: string; onDeleted: () => void }) {
   const adminSetFeatures  = useMutation(api.shops.adminSetFeatures);
   const updateContent     = useMutation(api.shops.adminUpdateShopContent);
@@ -535,6 +620,9 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
           </button>
         </div>
       </div>
+
+      {/* Bonusprogramm nachträglich ändern (Abrechnung, Affiliate-Vertrag) */}
+      <ContractBonusCard shop={shop} adminSecret={adminSecret} />
 
       {/* Shop-Status (aktiv/deaktiviert) */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center justify-between">
@@ -1342,7 +1430,11 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
 
         <div className="rounded-xl p-3 bg-amber-400/10 border border-amber-400/25">
           <p className="text-sm font-semibold text-zinc-100">Einrichtung & individuelles Design</p>
-          <p className="text-[10px] text-zinc-500 mt-0.5">Einmalig €99, bei jedem Shop automatisch dabei.</p>
+          <p className="text-[10px] text-zinc-500 mt-0.5">
+            {rewardCount > 0
+              ? <>Einmalig <s>€99</s> <b className="text-amber-400">€45</b> dank Bonusprogramm.</>
+              : "Einmalig €99, bei jedem Shop automatisch dabei. Mit Bonusprogramm nur €45."}
+          </p>
         </div>
 
         <div>
@@ -1884,7 +1976,7 @@ async function exportFinancePdf(summary: EarningsSummary, payments: PaymentRow[]
   doc.text("Finanzbericht", 13, 16);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(`Loatycard  ·  Stand: ${today}`, 13, 26);
+  doc.text(`LoyaltyCard  ·  Stand: ${today}`, 13, 26);
 
   // ── Zusammenfassung ─────────────────────────────────────────────────────────
   let y = 46;
@@ -2025,7 +2117,7 @@ async function exportFinancePdf(summary: EarningsSummary, payments: PaymentRow[]
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...dark);
-    doc.text("Loatycard · Finanzbericht", 13, 294);
+    doc.text("LoyaltyCard · Finanzbericht", 13, 294);
     doc.text(`Seite ${p} / ${pageCount}`, W - 13, 294, { align: "right" });
   }
 
@@ -3134,6 +3226,25 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
               <p className="text-xs text-zinc-500">{a.email} · <span className="font-mono text-amber-400">{a.referralCode}</span></p>
             </div>
 
+            {/* Neue Partner-Anfrage: nach Prüfung der Angaben direkt hier freigeben */}
+            {a.status === "pending" && (
+              <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(251,191,36,.08)", border: "1px solid rgba(251,191,36,.3)" }}>
+                <p className="text-xs font-semibold text-yellow-400">Anfrage wartet auf Freigabe</p>
+                <p className="text-[10px] text-zinc-400">Prüfe unten Stammdaten und Bankverbindung, dann freigeben.</p>
+                <button
+                  onClick={async () => {
+                    setBusy(true); setErr("");
+                    try { await affiliateMutation("admin:approveAffiliate", { adminSecret, affiliateId }); await load(); onChanged(); }
+                    catch (e: any) { setErr(e?.message ?? "Fehler"); }
+                    finally { setBusy(false); }
+                  }}
+                  disabled={busy}
+                  className="w-full text-xs py-2 rounded-lg bg-green-900/30 border border-green-800/50 text-green-400 font-semibold disabled:opacity-50">
+                  Partner freigeben
+                </button>
+              </div>
+            )}
+
             {pending && (
               <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(251,191,36,.08)", border: "1px solid rgba(251,191,36,.3)" }}>
                 <p className="text-xs font-semibold text-yellow-400">Änderungen warten auf Freigabe</p>
@@ -3401,15 +3512,23 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
           <div className="divide-y divide-zinc-800/50">
             {pendingPartners.map(p => (
               <div key={p._id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-zinc-200 font-medium">{p.name}</p>
+                {/* Erst anschauen, dann freigeben: öffnet das Detail-Popup mit allen Angaben */}
+                <button onClick={() => setDetailId(p._id)} className="flex-1 min-w-0 text-left group">
+                  <p className="text-sm text-zinc-200 font-medium group-hover:text-amber-400 transition-colors">{p.name}</p>
                   <p className="text-xs text-zinc-500">{p.email} · {p.referralCode}</p>
-                </div>
-                <button onClick={() => handleApprovePartner(p._id)}
-                  className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors"
-                  style={{ background: "rgba(251,191,36,.15)", border: "1px solid rgba(251,191,36,.3)", color: "#fbbf24" }}>
-                  Freigeben
+                  <p className="text-[10px] text-zinc-600 mt-0.5">Antippen für alle Details (Adresse, Bank, Steuer)</p>
                 </button>
+                <div className="flex flex-col gap-1.5 flex-shrink-0">
+                  <button onClick={() => setDetailId(p._id)}
+                    className="text-[10px] px-3 py-1 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-amber-400 transition-colors">
+                    Ansehen
+                  </button>
+                  <button onClick={() => handleApprovePartner(p._id)}
+                    className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors"
+                    style={{ background: "rgba(251,191,36,.15)", border: "1px solid rgba(251,191,36,.3)", color: "#fbbf24" }}>
+                    Freigeben
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -3434,7 +3553,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
         <div className="space-y-3">
           <div className="rounded-xl px-3 py-2.5 text-xs text-zinc-400"
             style={{ background: "rgba(251,191,36,.06)", border: "1px solid rgba(251,191,36,.15)" }}>
-            Shops werden automatisch aktiviert. Hier siehst du neue Shops die in Loatycard eingerichtet werden müssen.
+            Shops werden automatisch aktiviert. Hier siehst du neue Shops die in LoyaltyCard eingerichtet werden müssen.
           </div>
           {leads?.length === 0 && (
             <p className="text-center text-zinc-500 text-sm py-6">Keine neuen Shops</p>

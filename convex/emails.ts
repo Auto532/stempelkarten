@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { escapeHtml } from "./htmlEscape";
 
 const RESEND_KEY  = process.env.RESEND_API_KEY ?? "";
-const FROM_EMAIL  = process.env.RESEND_FROM_EMAIL ?? "Loatycard <onboarding@resend.dev>";
+const FROM_EMAIL  = process.env.RESEND_FROM_EMAIL ?? "LoyaltyCard <onboarding@resend.dev>";
 const WHATSAPP_NR = process.env.SUPPORT_WHATSAPP ?? "+491634848207";
 
 export const sendWelcomeEmail = internalAction({
@@ -17,8 +17,12 @@ export const sendWelcomeEmail = internalAction({
     if (!RESEND_KEY) return;
 
     const rewardCount = args.rewardCount ?? 0;
+    // Einrichtung: 99 € einmalig, mit gebuchtem Bonusprogramm nur 45 €
+    // (muss zur Preislogik in der Affiliate-App passen, convex/pricing.ts).
     const extras = [
-      "Individuelles Design & Einrichtung (einmalig 99 €)",
+      rewardCount > 0
+        ? "Individuelles Design & Einrichtung (einmalig 45 € statt 99 €, dank Bonusprogramm)"
+        : "Individuelles Design & Einrichtung (einmalig 99 €)",
       ...(rewardCount > 0
         ? [`Bonusprogramm: ${rewardCount} Belohnung${rewardCount === 1 ? "" : "en"} (5 €/Monat pro Belohnung)`]
         : []),
@@ -62,7 +66,7 @@ export const sendWelcomeEmail = internalAction({
     <!-- Header -->
     <tr>
       <td style="background:#0d0c0a;padding:28px 32px;text-align:center;">
-        <p style="margin:0;color:#c9a227;font-size:24px;font-weight:900;letter-spacing:6px;">LOATYCARD</p>
+        <p style="margin:0;color:#c9a227;font-size:24px;font-weight:900;letter-spacing:6px;">LOYALTYCARD</p>
         <p style="margin:6px 0 0 0;color:rgba(242,237,228,0.45);font-size:12px;letter-spacing:2px;">DIGITALE KUNDENKARTE</p>
       </td>
     </tr>
@@ -110,7 +114,7 @@ export const sendWelcomeEmail = internalAction({
           Danke für dein Vertrauen!
         </p>
         <p style="margin:16px 0 0 0;color:#0d0c0a;font-size:15px;font-weight:600;">
-          Dein Loatycard-Team
+          Dein LoyaltyCard-Team
         </p>
       </td>
     </tr>
@@ -119,7 +123,7 @@ export const sendWelcomeEmail = internalAction({
     <tr>
       <td style="background:#f9f7f3;padding:18px 32px;text-align:center;">
         <p style="margin:0;font-size:12px;color:#bbb;">
-          Loatycard &middot; Digitale Stempelkarten für lokale Shops
+          LoyaltyCard &middot; Digitale Stempelkarten für lokale Shops
         </p>
       </td>
     </tr>
@@ -144,8 +148,8 @@ export const sendWelcomeEmail = internalAction({
       ``,
       `Wir freuen uns darauf, gemeinsam mit dir mehr Stammkunden zu gewinnen!`,
       ``,
-      `Dein Loatycard-Team`,
-      `Loatycard · Digitale Stempelkarten für lokale Shops`,
+      `Dein LoyaltyCard-Team`,
+      `LoyaltyCard · Digitale Stempelkarten für lokale Shops`,
     ].join("\n");
 
     const res = await fetch("https://api.resend.com/emails", {
@@ -157,7 +161,7 @@ export const sendWelcomeEmail = internalAction({
       body: JSON.stringify({
         from:    FROM_EMAIL,
         to:      [args.ownerEmail],
-        subject: `Willkommen bei Loatycard! ${args.shopName} ist registriert`,
+        subject: `Willkommen bei LoyaltyCard! ${args.shopName} ist registriert`,
         html,
         text,
       }),

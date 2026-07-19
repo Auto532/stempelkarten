@@ -109,7 +109,7 @@ export default function DemoPage() {
 
       {/* Header */}
       <div className="relative z-10 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: c.accentDim }}>Loatycard · Live-Demo</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: c.accentDim }}>LoyaltyCard · Live-Demo</p>
         <h1 className="text-lg font-bold mt-1" style={{ color: c.text }}>So sehen deine Kunden ihre Stempelkarte</h1>
         <p className="text-[11px] mt-1" style={{ color: c.accentDim }}>Kein App-Download, läuft direkt im Browser. Tippe unten auf „Stempel geben".</p>
       </div>

@@ -926,7 +926,7 @@ export default function BetriebDashboard() {
   );
 }
 
-// ─── Support (Hilfe-Anfrage an Loatycard, kommt per Telegram beim Admin an) ───
+// ─── Support (Hilfe-Anfrage an LoyaltyCard, kommt per Telegram beim Admin an) ───
 
 function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
   adminToken: string; card: React.CSSProperties; divColor: string;
@@ -982,7 +982,7 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
           ) : (
             <>
               <p className="text-xs pt-3" style={{ color: tm }}>
-                Beschreib dein Problem oder deine Frage. Die Nachricht geht direkt an das Loatycard-Team.
+                Beschreib dein Problem oder deine Frage. Die Nachricht geht direkt an das LoyaltyCard-Team.
               </p>
               <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={4}
                 placeholder="Was können wir für dich tun?"
@@ -1044,7 +1044,7 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
                           ? { background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.25)" }
                           : { background: `${ic}10`, border: `1px solid ${ic}30` }}>
                         <p className="text-[9px] font-semibold mb-0.5" style={{ color: m.from === "admin" ? "#4ade80" : ic }}>
-                          {m.from === "admin" ? "Loatycard-Team" : "Du"}
+                          {m.from === "admin" ? "LoyaltyCard-Team" : "Du"}
                         </p>
                         <p className="text-xs whitespace-pre-wrap" style={{ color: tx }}>{m.text}</p>
                       </div>
