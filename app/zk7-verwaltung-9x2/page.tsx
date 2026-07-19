@@ -1181,8 +1181,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
   const [ownerName, setOwnerName]   = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
-  const [wantsDesign, setWantsDesign]           = useState(false);
-  const [wantsBonusStamps, setWantsBonusStamps] = useState(false);
+  const [rewardCount, setRewardCount] = useState(0);
   const [planType, setPlanType] = useState<"annual" | "monthly">("annual");
   const [payLink, setPayLink]   = useState("");
   const [copied, setCopied]     = useState(false);
@@ -1200,8 +1199,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         ownerName:        ownerName  || undefined,
         ownerEmail:       ownerEmail || undefined,
         ownerPhone:       ownerPhone || undefined,
-        wantsDesign:      wantsDesign      || undefined,
-        wantsBonusStamps: wantsBonusStamps || undefined,
+        rewardCount:      rewardCount || undefined,
       });
 
       // Vertrag im Partnerprogramm registrieren (Direktvertrieb, 0% Provision)
@@ -1215,6 +1213,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
           ownerPhone:          ownerPhone  || undefined,
           businessType:        brancheText || undefined,
           planType,
+          rewardCount:         rewardCount || undefined,
           loatycardShopId:     created.shopId,
           loatycardShopSlug:   created.slug,
           loatycardAdminToken: created.adminLoginToken,
@@ -1340,33 +1339,27 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
           </div>
         ))}
 
+        <div className="rounded-xl p-3 bg-amber-400/10 border border-amber-400/25">
+          <p className="text-sm font-semibold text-zinc-100">Einrichtung & individuelles Design</p>
+          <p className="text-[10px] text-zinc-500 mt-0.5">Einmalig €99 — bei jedem Shop automatisch dabei.</p>
+        </div>
+
         <div>
-          <label className="block text-xs text-zinc-500 mb-2">Extras</label>
-          <div className="grid grid-cols-2 gap-2">
-            {([
-              { state: wantsDesign,      set: setWantsDesign,      label: "Custom Design",  sub: "Individuelle Gestaltung" },
-              { state: wantsBonusStamps, set: setWantsBonusStamps, label: "Bonus-Stempel",  sub: "Mehr als 10 Stempel"     },
-            ] as const).map((opt, i) => (
-              <button key={i} type="button" onClick={() => opt.set((v: boolean) => !v)}
-                className="rounded-xl p-3 text-left transition-colors"
-                style={opt.state
-                  ? { background: "rgba(251,191,36,.12)", border: "1px solid rgba(251,191,36,.4)" }
-                  : { background: "rgb(39,39,42)",        border: "1px solid rgb(63,63,70)" }}>
-                <div className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${opt.state ? "bg-amber-400" : "bg-zinc-700 border border-zinc-600"}`}>
-                    {opt.state && (
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#18181b" strokeWidth="3">
-                        <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-100 leading-none">{opt.label}</p>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">{opt.sub}</p>
-                  </div>
-                </div>
-              </button>
-            ))}
+          <label className="block text-xs text-zinc-500 mb-2">Bonusprogramm — Anzahl Belohnungen</label>
+          <div className="rounded-xl p-3 flex items-center justify-between bg-zinc-800 border border-zinc-700">
+            <div>
+              <p className="text-sm font-semibold text-zinc-100">{rewardCount} Belohnung{rewardCount === 1 ? "" : "en"}</p>
+              <p className="text-[10px] text-zinc-500 mt-0.5">
+                €5/Monat pro Belohnung{planType === "annual" ? " (€60/Jahr)" : ""}
+                {rewardCount > 0 && ` · gesamt ${planType === "annual" ? `€${rewardCount * 60}/Jahr` : `€${rewardCount * 5}/Monat`}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setRewardCount(c => Math.max(0, c - 1))}
+                className="w-9 h-9 rounded-lg text-lg font-bold text-zinc-100 bg-zinc-700 border border-zinc-600">−</button>
+              <button type="button" onClick={() => setRewardCount(c => Math.min(20, c + 1))}
+                className="w-9 h-9 rounded-lg text-lg font-bold text-zinc-900 bg-amber-400">+</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1376,8 +1369,8 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Vertrag (Finanzen)</p>
         <div className="grid grid-cols-2 gap-2">
           {([
-            { id: "annual",  label: "Jahresabo",  sub: "€389/Jahr" },
-            { id: "monthly", label: "Monatsabo",  sub: "€39/Monat" },
+            { id: "annual",  label: "Jahresabo",  sub: "€360/Jahr" },
+            { id: "monthly", label: "Monatsabo",  sub: "€30/Monat" },
           ] as const).map(opt => (
             <button key={opt.id} type="button" onClick={() => setPlanType(opt.id)}
               className="rounded-xl p-3 text-center transition-colors"
@@ -2978,7 +2971,7 @@ function nextCommissionPreview(planType: "annual" | "monthly", paymentNumber: nu
       ? paymentNumber === 1 ? "Erstprovision" : paymentNumber === 2 ? "Jahr 2" : paymentNumber === 3 ? "Jahr 3" : "Jahr 4+"
       : paymentNumber <= 12 ? "Erstprovision" : paymentNumber <= 24 ? "Jahr 2" : paymentNumber <= 36 ? "Jahr 3" : "Jahr 4+";
   const rates: Record<string, number> = { "Erstprovision": 0.20, "Jahr 2": 0.05, "Jahr 3": 0.10, "Jahr 4+": 0.15 };
-  const base   = planType === "annual" ? 389 : 39;
+  const base   = planType === "annual" ? 360 : 30; // Provision nur auf den Abo-Anteil
   const rate   = rates[phase];
   const amount = Math.round(base * rate * 100) / 100;
   return { phase, rate, amount };

@@ -309,10 +309,9 @@ export const createShop = mutation({
     ownerName:        v.optional(v.string()),
     ownerEmail:       v.optional(v.string()),
     ownerPhone:       v.optional(v.string()),
-    wantsDesign:      v.optional(v.boolean()),
-    wantsBonusStamps: v.optional(v.boolean()),
+    rewardCount:      v.optional(v.number()),
   },
-  handler: async (ctx, { adminSecret, ownerName, ownerEmail, ownerPhone, wantsDesign, wantsBonusStamps, ...shopArgs }) => {
+  handler: async (ctx, { adminSecret, ownerName, ownerEmail, ownerPhone, rewardCount, ...shopArgs }) => {
     requireAdmin({ secret: adminSecret });
     const adminLoginToken  = crypto.randomUUID();
     const mitarbeiterToken = crypto.randomUUID();
@@ -340,8 +339,7 @@ export const createShop = mutation({
         ownerEmail,
         ownerName,
         shopName:         shopArgs.name,
-        wantsDesign,
-        wantsBonusStamps,
+        rewardCount,
       });
     }
 
