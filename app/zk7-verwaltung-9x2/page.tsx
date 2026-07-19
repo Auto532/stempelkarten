@@ -1584,6 +1584,10 @@ function GrowthCard({ label, value, prev, color, period }: {
 type EarningsSummary = {
   revenueTotal: number; commTotal: number; commPaid: number;
   commConfirmed: number; commPending: number; netEarnings: number; activeContracts: number;
+  // Vertrags-Aufschlüsselung (ältere Server-Version liefert die Felder noch nicht)
+  payingContracts?: number; payingMonthly?: number; payingAnnual?: number;
+  awaitingPayment?: number; canceledContracts?: number;
+  monthlyRunRate?: number; yearlyRunRate?: number;
 };
 
 type PaymentRow = {
@@ -1642,7 +1646,7 @@ function EarningsCard({ adminSecret }: { adminSecret: string }) {
             <div className="bg-zinc-800/50 rounded-xl p-3">
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Gesamtumsatz</p>
               <p className="text-2xl font-bold text-green-400">€{data.revenueTotal.toFixed(2)}</p>
-              <p className="text-[10px] text-zinc-600 mt-0.5">{data.activeContracts} aktive Verträge</p>
+              <p className="text-[10px] text-zinc-600 mt-0.5">alle eingegangenen Zahlungen</p>
             </div>
             <div className="bg-zinc-800/50 rounded-xl p-3">
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Mein Anteil</p>
@@ -1650,6 +1654,40 @@ function EarningsCard({ adminSecret }: { adminSecret: string }) {
               <p className="text-[10px] text-zinc-600 mt-0.5">nach Provisionen</p>
             </div>
           </div>
+
+          {/* Verträge: nur wer gezahlt hat, zählt als wirklich aktiv */}
+          {data.payingContracts !== undefined && (
+            <div className="border-t border-zinc-800 pt-3 space-y-2">
+              <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Verträge</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-zinc-500">Zahlende Shops</span>
+                <span className="text-sm font-semibold text-green-400">
+                  {data.payingContracts}
+                  <span className="text-[10px] text-zinc-600 font-normal">
+                    {" "}({data.payingAnnual ?? 0}× Jahr, {data.payingMonthly ?? 0}× Monat)
+                  </span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-zinc-500">Warten auf Zahlung</span>
+                <span className="text-sm font-semibold text-yellow-400">{data.awaitingPayment ?? 0}</span>
+              </div>
+              {(data.canceledContracts ?? 0) > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-500">Gekündigt</span>
+                  <span className="text-sm font-semibold text-zinc-400">{data.canceledContracts}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-1 border-t border-zinc-800">
+                <span className="text-xs text-zinc-400 font-semibold">Laufender Abo-Umsatz</span>
+                <span className="text-sm font-bold text-green-400">
+                  €{(data.monthlyRunRate ?? 0).toFixed(2)}/Monat
+                  <span className="text-[10px] text-zinc-600 font-normal"> (€{(data.yearlyRunRate ?? 0).toFixed(0)}/Jahr)</span>
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="border-t border-zinc-800 pt-3 space-y-2">
             <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Provisionen an Partner</p>
             {[
@@ -1736,7 +1774,9 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
             ))}
           </div>
           <p className="text-[10px] text-zinc-600 -mt-2">
-            {summary.activeContracts} aktive Verträge · {payments ? `${payments.length} Zahlungen` : "…"}
+            {summary.payingContracts ?? summary.activeContracts} zahlende Shops
+            {(summary.awaitingPayment ?? 0) > 0 && ` · ${summary.awaitingPayment} warten auf Zahlung`}
+            {" "}· {payments ? `${payments.length} Zahlungen` : "…"}
           </p>
 
           {/* Ansicht wählen */}
@@ -1873,7 +1913,7 @@ async function exportFinancePdf(summary: EarningsSummary, payments: PaymentRow[]
   doc.setFontSize(8);
   doc.setTextColor(...mid);
   doc.text(
-    `${summary.activeContracts} aktive Verträge  ·  ${payments.length} Zahlungen  ·  ` +
+    `${summary.payingContracts ?? summary.activeContracts} zahlende Shops  ·  ${payments.length} Zahlungen  ·  ` +
     `Provisionen: ${euro(summary.commPending)} ausstehend, ${euro(summary.commConfirmed)} bestätigt, ${euro(summary.commPaid)} ausgezahlt`,
     13, y
   );
