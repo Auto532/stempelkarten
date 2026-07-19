@@ -62,7 +62,7 @@ export const addStamp = mutation({
     if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
 
     const shop = await requireShopRole(ctx, { shopId: membership.shopId, token: adminToken, role: "mitarbeiter" });
-    if (shop.active === false) throw new Error("Shop ist deaktiviert — Stempeln nicht möglich");
+    if (shop.active === false) throw new Error("Shop ist deaktiviert, Stempeln nicht möglich");
 
     const newStamps = membership.currentStamps + 1;
     const rewardReached = newStamps >= shop.stampsRequired;

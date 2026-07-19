@@ -107,7 +107,7 @@ export const replyTicket = mutation({
     });
 
     await ctx.scheduler.runAfter(0, internal.support.notifySupportTelegram, {
-      from:    `Betrieb: ${auth.shop.name} — neue Antwort im Ticket`,
+      from:    `Betrieb: ${auth.shop.name}: neue Antwort im Ticket`,
       message,
     });
   },

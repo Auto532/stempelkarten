@@ -10,6 +10,7 @@ import { StampOverlay, QRCard, RedeemVoucher, LoyaltyCard, MilestonesSection, ge
 import type { CardTier } from "../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
+import { InstallHint } from "@/app/components/InstallHint";
 
 const SHOP_LEVELS = [
   { min: 0,   max: 9,        label: "Neuling"     },
@@ -175,6 +176,12 @@ export default function MeShopPage() {
     <div className={`min-h-screen px-5 pt-10 pb-10 max-w-sm mx-auto flex flex-col relative ${theme ? "z-[2]" : ""}`}>
 
       {theme && <theme.Background />}
+
+      <InstallHint
+        storageKey="kunde"
+        title="Deine Karte als App"
+        text="Installiere deine Stempelkarte auf dem Startbildschirm. So hast du sie beim nächsten Besuch mit einem Tipp offen, ganz ohne Suchen."
+      />
 
       <AnimatePresence>
         {showStampOverlay && <StampOverlay onDone={() => setShowStampOverlay(false)} />}

@@ -2,7 +2,7 @@ import { buildManifest } from "@/lib/buildManifest";
 
 export async function GET() {
   const manifest = buildManifest({
-    name: "Stempelkarte – Admin",
+    name: "Stempelkarte Admin",
     shortName: "Admin",
     startUrl: "/zk7-verwaltung-9x2",
     scope: "/zk7-verwaltung-9x2",

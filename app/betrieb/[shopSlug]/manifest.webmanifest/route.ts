@@ -6,7 +6,7 @@ export async function GET(
 ) {
   const slug = params.shopSlug;
   const manifest = buildManifest({
-    name: `Stempelkarte – Inhaber`,
+    name: `Stempelkarte Inhaber`,
     shortName: "Inhaber",
     startUrl: `/betrieb/${slug}`,
     scope: `/betrieb/${slug}`,

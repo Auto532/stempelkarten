@@ -74,7 +74,7 @@ async function printQR(rawShopName: string, rawUrl: string) {
   const dataUrl = await QRCode.toDataURL(rawUrl, { width: 400, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
   const w = window.open("", "_blank", "width=520,height=640");
   if (!w) return;
-  w.document.write(`<!DOCTYPE html><html><head><title>${shopName} – QR Code</title>
+  w.document.write(`<!DOCTYPE html><html><head><title>${shopName} · QR Code</title>
   <style>*{margin:0;padding:0;box-sizing:border-box}body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#fff;font-family:-apple-system,sans-serif;gap:20px;padding:40px;text-align:center}img{width:300px;height:300px}h2{font-size:24px;font-weight:700;color:#111}p{font-size:14px;color:#555}.url{font-size:11px;color:#aaa;font-family:monospace;margin-top:4px;word-break:break-all}</style>
   </head><body>
   <h2>${shopName}</h2>
@@ -1222,9 +1222,9 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
           setPayLink(`${AFFILIATE_APP_URL}/pay/${contract.paymentToken}`);
           return;
         }
-        setError("Shop erstellt — aber kein Bezahllink erhalten (Affiliate-App nicht konfiguriert?)");
+        setError("Shop erstellt, aber kein Bezahllink erhalten (Affiliate-App nicht konfiguriert?)");
       } catch (err: unknown) {
-        setError(`Shop erstellt — Vertrag fehlgeschlagen: ${err instanceof Error ? err.message : "Fehler"}`);
+        setError(`Shop erstellt, aber Vertrag fehlgeschlagen: ${err instanceof Error ? err.message : "Fehler"}`);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Fehler");
@@ -1249,7 +1249,7 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         </div>
         <p className="text-sm text-zinc-400">
           Vertrag ({planType === "annual" ? "Jahresabo" : "Monatsabo"}) ist angelegt. Über den Bezahllink
-          wird bezahlt — Rabattcode kann direkt auf der Zahlungsseite eingegeben werden. Nach der Zahlung
+          wird bezahlt. Der Rabattcode kann direkt auf der Zahlungsseite eingegeben werden. Nach der Zahlung
           erscheint der Umsatz automatisch in den Finanzen.
         </p>
         {/* Zahlungs-QR: Inhaber scannt und landet auf der Zahlungsseite */}
@@ -1341,11 +1341,11 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
 
         <div className="rounded-xl p-3 bg-amber-400/10 border border-amber-400/25">
           <p className="text-sm font-semibold text-zinc-100">Einrichtung & individuelles Design</p>
-          <p className="text-[10px] text-zinc-500 mt-0.5">Einmalig €99 — bei jedem Shop automatisch dabei.</p>
+          <p className="text-[10px] text-zinc-500 mt-0.5">Einmalig €99, bei jedem Shop automatisch dabei.</p>
         </div>
 
         <div>
-          <label className="block text-xs text-zinc-500 mb-2">Bonusprogramm — Anzahl Belohnungen</label>
+          <label className="block text-xs text-zinc-500 mb-2">Bonusprogramm: Anzahl Belohnungen</label>
           <div className="rounded-xl p-3 flex items-center justify-between bg-zinc-800 border border-zinc-700">
             <div>
               <p className="text-sm font-semibold text-zinc-100">{rewardCount} Belohnung{rewardCount === 1 ? "" : "en"}</p>
@@ -2015,7 +2015,21 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
   return (
     <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
 
+      {/* Sektion 1: Finanzen (Zahlungen, Provisionen) */}
+      <div className="flex items-center gap-2 pt-1">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Finanzen</p>
+        <div className="flex-1 h-px bg-zinc-800" />
+      </div>
       <EarningsCard adminSecret={adminSecret} />
+
+      {/* Sektion 2: Nutzung (Stempel-Aktivität, unabhängig von den Finanzen) */}
+      <div className="flex items-center gap-2 pt-3">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Nutzung & Aktivität</p>
+        <div className="flex-1 h-px bg-zinc-800" />
+      </div>
+      <p className="text-[11px] text-zinc-600 -mt-2">
+        Stempel und Kunden im gewählten Zeitraum. Hat nichts mit den Finanzen oben zu tun.
+      </p>
 
       <PeriodSelector value={period} onChange={setPeriod} />
 
@@ -2030,7 +2044,8 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
             <GrowthCard label="Einlösungen"  value={data.redeems}        prev={data.prevRedeems} color="text-purple-400" period={period} />
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
               <p className="text-3xl font-bold text-green-400">{data.activeShops}</p>
-              <p className="text-xs text-zinc-500 mt-1">Aktive Shops</p>
+              <p className="text-xs text-zinc-500 mt-1">Shops mit Stempeln</p>
+              <p className="text-[10px] text-zinc-600 mt-0.5">im Zeitraum, nicht Vertragsstatus</p>
             </div>
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
               <div className="flex items-start justify-between gap-1">
@@ -2594,11 +2609,11 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
                       {copied ? <Check size={14} className="text-green-400" /> : <Link size={14} />}
                     </button>
                   </div>
-                  <p className="text-[11px] text-zinc-600 mt-1.5">Nur du kennst diese URL — teile sie niemals.</p>
+                  <p className="text-[11px] text-zinc-600 mt-1.5">Nur du kennst diese URL. Teile sie niemals.</p>
                 </div>
                 <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl p-3">
                   <p className="text-xs text-amber-300 font-medium mb-1">PIN: gesetzt via ADMIN_PIN Env-Variable</p>
-                  <p className="text-[11px] text-zinc-500">PIN wird server-seitig geprüft — nicht im Client-Bundle sichtbar.</p>
+                  <p className="text-[11px] text-zinc-500">PIN wird server-seitig geprüft und ist nicht im Client-Bundle sichtbar.</p>
                 </div>
               </div>
             </motion.div>
@@ -2628,13 +2643,13 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
           <User size={14} className="text-zinc-400 shrink-0" />
           <p className="text-sm font-medium text-zinc-200">Mein Account</p>
         </div>
-        <p className="text-[11px] text-zinc-500">Erstellt deinen Kunden-Account und verbindet ihn mit /me — einmalig nach jedem Gerät-Reset.</p>
+        <p className="text-[11px] text-zinc-500">Erstellt deinen Kunden-Account und verbindet ihn mit /me, einmalig nach jedem Gerät-Reset.</p>
         {registered ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-1">
             <div className="flex items-center gap-2 text-green-400 text-sm">
               <Check size={14} /> Registriert! /me ist jetzt aktiv.
             </div>
-            <p className="text-[11px] text-zinc-500">QR-Token gespeichert — öffne /me um deine Karte zu sehen.</p>
+            <p className="text-[11px] text-zinc-500">QR-Token gespeichert. Öffne /me um deine Karte zu sehen.</p>
           </motion.div>
         ) : (
           <button onClick={handleRegister} disabled={registering}
@@ -2665,7 +2680,7 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
                   </motion.div>
                 ) : !confirmDelete ? (
                   <div className="space-y-3">
-                    <p className="text-xs text-zinc-500">Löscht alle Shops, Kunden, Stempel und Ereignisse — unwiderruflich.</p>
+                    <p className="text-xs text-zinc-500">Löscht alle Shops, Kunden, Stempel und Ereignisse, unwiderruflich.</p>
                     <button onClick={() => setConfirmDelete(true)}
                       className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-red-900/30 border border-zinc-700 hover:border-red-900/50 text-zinc-500 hover:text-red-400 rounded-xl text-sm transition-colors">
                       <Trash2 size={14} /> Alle Daten löschen
@@ -2842,7 +2857,7 @@ function CreatePartnerForm({ adminSecret, onCreated }: { adminSecret: string; on
             <div>
               <label className="block text-[10px] text-zinc-500 mb-1">Initial-Passwort *</label>
               <input type="text" value={form.password} onChange={set("password")}
-                placeholder="Sichtbar — wird dem Partner mitgeteilt"
+                placeholder="Sichtbar, wird dem Partner mitgeteilt"
                 className="w-full px-3 py-2 rounded-lg text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40 font-mono" />
               <p className="text-[10px] text-zinc-600 mt-1">Partner kann es nach dem Login ändern</p>
             </div>
@@ -3073,13 +3088,13 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
                 {pending.businessType === "business" && a.businessType !== "business" && (
                   <div className="rounded-lg px-2.5 py-2" style={{ background: "rgba(249,115,22,.12)", border: "1px solid rgba(249,115,22,.4)" }}>
                     <p className="text-[11px] font-bold text-orange-400">⚠ Wechsel Privat → Gewerbe</p>
-                    <p className="text-[10px] text-zinc-400 mt-0.5">Firmenname und USt-IdNr./Steuernr. prüfen — steuerlich relevant (Provisions-Abrechnung).</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">Firmenname und USt-IdNr./Steuernr. prüfen, steuerlich relevant (Provisions-Abrechnung).</p>
                   </div>
                 )}
                 {pending.businessType === "private" && a.businessType === "business" && (
                   <div className="rounded-lg px-2.5 py-2" style={{ background: "rgba(249,115,22,.12)", border: "1px solid rgba(249,115,22,.4)" }}>
                     <p className="text-[11px] font-bold text-orange-400">⚠ Wechsel Gewerbe → Privat</p>
-                    <p className="text-[10px] text-zinc-400 mt-0.5">Prüfen, ob das plausibel ist — steuerlich relevant (Provisions-Abrechnung).</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">Prüfen, ob das plausibel ist, steuerlich relevant (Provisions-Abrechnung).</p>
                   </div>
                 )}
                 <div className="space-y-1">
@@ -3632,7 +3647,7 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
           className="text-zinc-500 text-sm text-center py-10">Laden...</motion.p>
       ) : shown.length === 0 ? (
         <p className="text-zinc-600 text-sm text-center py-10">
-          {filter === "open" ? "Keine offenen Anfragen — alles erledigt! 🎉" : "Keine Anfragen."}
+          {filter === "open" ? "Keine offenen Anfragen, alles erledigt! 🎉" : "Keine Anfragen."}
         </p>
       ) : shown.map(t => {
         const isOpen = t.status === "open" || !!expanded[t._id];

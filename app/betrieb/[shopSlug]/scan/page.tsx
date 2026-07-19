@@ -28,7 +28,7 @@ async function printQR(shopName: string, url: string) {
   const dataUrl = await QRCode.toDataURL(url, { width: 400, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
   const w = window.open("", "_blank", "width=520,height=640");
   if (!w) return;
-  w.document.write(`<!DOCTYPE html><html><head><title>${shopName} – QR Code</title>
+  w.document.write(`<!DOCTYPE html><html><head><title>${shopName} · QR Code</title>
   <style>*{margin:0;padding:0;box-sizing:border-box}body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#fff;font-family:-apple-system,sans-serif;gap:20px;padding:40px;text-align:center}img{width:300px;height:300px}h2{font-size:24px;font-weight:700;color:#111}p{font-size:14px;color:#555}.url{font-size:11px;color:#aaa;font-family:monospace;margin-top:4px;word-break:break-all}</style>
   </head><body>
   <h2>${shopName}</h2>
@@ -500,7 +500,7 @@ export default function ScanPage() {
           </div>
           <div className="px-5 pb-4 space-y-2">
             <p className="text-xs mb-3" style={{ color: c.accentDim }}>
-              Basieren auf Gesamtstempeln — nie zurückgesetzt
+              Basieren auf Gesamtstempeln und werden nie zurückgesetzt
             </p>
             {shop.milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps).map((m, i) => (
               <div key={i} className="flex items-center justify-between py-2 border-t" style={{ borderColor: c.divider }}>

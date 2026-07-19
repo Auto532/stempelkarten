@@ -205,7 +205,7 @@ export default function MeinBereichPage() {
             <textarea
               value={messageText}
               onChange={e => { setMessageText(e.target.value); setSendError(null); }}
-              placeholder="Schreib uns etwas – Feedback, Fragen, Wünsche…"
+              placeholder="Schreib uns etwas: Feedback, Fragen, Wünsche…"
               maxLength={1000}
               rows={4}
               className="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none mb-3"

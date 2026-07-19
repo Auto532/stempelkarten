@@ -13,6 +13,7 @@ import {
   Trophy, ChevronRight, ArrowLeft, Settings, KeyRound, Share2, Copy,
 } from "lucide-react";
 import { QRImage } from "@/app/components/QRImage";
+import { InstallHint } from "@/app/components/InstallHint";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import QRCode from "qrcode";
@@ -34,7 +35,7 @@ async function printQR(rawShopName: string, rawUrl: string) {
   const dataUrl = await QRCode.toDataURL(rawUrl, { width: 400, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
   const w = window.open("", "_blank", "width=520,height=640");
   if (!w) return;
-  w.document.write(`<!DOCTYPE html><html><head><title>${shopName} – QR Code</title>
+  w.document.write(`<!DOCTYPE html><html><head><title>${shopName} · QR Code</title>
   <style>*{margin:0;padding:0;box-sizing:border-box}body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#fff;font-family:-apple-system,sans-serif;gap:20px;padding:40px;text-align:center}img{width:300px;height:300px}h2{font-size:24px;font-weight:700;color:#111}p{font-size:14px;color:#555}.url{font-size:11px;color:#aaa;font-family:monospace;margin-top:4px;word-break:break-all}</style>
   </head><body>
   <h2>${shopName}</h2><img src="${dataUrl}" alt="QR Code" />
@@ -258,6 +259,12 @@ export default function BetriebDashboard() {
       <div className={wrapperClass}>
         {theme && <theme.Background />}
 
+        <InstallHint
+          storageKey="betrieb"
+          title="Scanner als App"
+          text="Installiere das Dashboard auf dem Handy. So sind Scannen und Stempeln im Alltag am schnellsten, auch für deine Mitarbeiter."
+        />
+
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="pt-10 pb-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: tm }}>Inhaber · {shop.name}</p>
@@ -459,9 +466,9 @@ export default function BetriebDashboard() {
                       <TrendingUp size={13} style={{ color: ic }} />
                       <p className="text-xs font-semibold" style={{ color: tx }}>Weitere Bonus-Stufen</p>
                     </div>
-                    <p className="text-[11px]" style={{ color: tm }}>Zusätzliche Belohnungen für mehr Stempel — Stufe 1 ist der Standard oben.</p>
+                    <p className="text-[11px]" style={{ color: tm }}>Zusätzliche Belohnungen für mehr Stempel. Stufe 1 ist der Standard oben.</p>
                     {tiers.length <= 1 && (
-                      <p className="text-[11px] py-1" style={{ color: tm }}>Noch keine weiteren Stufen — füge eine hinzu.</p>
+                      <p className="text-[11px] py-1" style={{ color: tm }}>Noch keine weiteren Stufen. Füge eine hinzu.</p>
                     )}
                     {tiers.map((tier, i) => (
                       i === 0 ? null : (
@@ -516,7 +523,7 @@ export default function BetriebDashboard() {
                   <span className="font-semibold text-sm" style={{ color: tx }}>Treue-Meilensteine</span>
                 </div>
                 <div className="p-5 space-y-3">
-                  <p className="text-[11px]" style={{ color: tm }}>Belohnungen für Stammkunden — basieren auf Gesamtstempeln, nie zurückgesetzt.</p>
+                  <p className="text-[11px]" style={{ color: tm }}>Belohnungen für Stammkunden. Sie basieren auf Gesamtstempeln und werden nie zurückgesetzt.</p>
                   {milestones.length === 0 && <p className="text-sm text-center py-2" style={{ color: tm }}>Noch keine Meilensteine</p>}
                   {milestones.map((m, i) => (
                     <div key={i} className="rounded-xl p-3 space-y-2" style={sub}>
@@ -792,7 +799,7 @@ export default function BetriebDashboard() {
       if (!recoveryUrl) return;
       const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
       if (nav.share) {
-        try { await nav.share({ title: `${shop.name} – Stempelkarte`, url: recoveryUrl }); } catch {}
+        try { await nav.share({ title: `${shop.name} · Stempelkarte`, url: recoveryUrl }); } catch {}
       } else {
         await navigator.clipboard.writeText(recoveryUrl);
         setRecoveryCopied(true);
@@ -809,7 +816,7 @@ export default function BetriebDashboard() {
           {/* Eingabe */}
           <div className="rounded-2xl p-5 space-y-4" style={card}>
             <p className="text-xs" style={{ color: tm }}>
-              E-Mail des Kunden eingeben — es wird nur gesucht wenn eine Mitgliedschaft bei <span style={{ color: ic }}>{shop.name}</span> existiert.
+              E-Mail des Kunden eingeben. Es wird nur gesucht wenn eine Mitgliedschaft bei <span style={{ color: ic }}>{shop.name}</span> existiert.
             </p>
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -879,7 +886,7 @@ export default function BetriebDashboard() {
                       : <><Copy size={15} /> Link kopieren</>}
                 </button>
                 <p className="text-[11px] text-center" style={{ color: tm }}>
-                  Kunde öffnet den Link — Konto ist wiederhergestellt.
+                  Kunde öffnet den Link, damit ist das Konto wiederhergestellt.
                 </p>
               </motion.div>
             )}
@@ -969,12 +976,12 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
         <div className="px-5 pb-5 space-y-3" style={{ borderTop: `1px solid ${divColor}` }}>
           {done ? (
             <p className="text-sm pt-3" style={{ color: ic }}>
-              Nachricht gesendet — wir melden uns so schnell wie möglich bei dir!
+              Nachricht gesendet! Wir melden uns so schnell wie möglich bei dir.
             </p>
           ) : (
             <>
               <p className="text-xs pt-3" style={{ color: tm }}>
-                Beschreib dein Problem oder deine Frage — die Nachricht geht direkt an das Loatycard-Team.
+                Beschreib dein Problem oder deine Frage. Die Nachricht geht direkt an das Loatycard-Team.
               </p>
               <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={4}
                 placeholder="Was können wir für dich tun?"
@@ -1056,7 +1063,7 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
                       </button>
                     </div>
                   ) : (
-                    <p className="text-[10px]" style={{ color: tm }}>Ticket abgeschlossen — bei neuem Anliegen einfach oben eine neue Anfrage senden.</p>
+                    <p className="text-[10px]" style={{ color: tm }}>Ticket abgeschlossen. Bei neuem Anliegen einfach oben eine neue Anfrage senden.</p>
                   )}
                 </div>
                 );
