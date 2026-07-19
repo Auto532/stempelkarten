@@ -39,3 +39,5 @@ next-env.d.ts
 
 public/PLAN-FINAL-V2.md
 public/PLAN-FINAL.md
+.vercel
+.env*

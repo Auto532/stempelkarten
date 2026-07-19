@@ -8,7 +8,7 @@ import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy,
-  Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, type LucideIcon,
+  Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, Clock, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
 import { THEME_LIST } from "@/app/me/themes/registry";
@@ -1676,6 +1676,8 @@ function GrowthCard({ label, value, prev, color, period }: {
 
 type EarningsSummary = {
   revenueTotal: number; commTotal: number; commPaid: number;
+  // Einrichtungsgebühren-Anteil (einmalig, in Zahlung #1) und Abo-Anteil des Umsatzes
+  setupFeesTotal?: number; aboRevenue?: number;
   commConfirmed: number; commPending: number; netEarnings: number; activeContracts: number;
   // Vertrags-Aufschlüsselung (ältere Server-Version liefert die Felder noch nicht)
   payingContracts?: number; payingMonthly?: number; payingAnnual?: number;
@@ -1687,6 +1689,8 @@ type PaymentRow = {
   date: number; shopName: string; planType: "annual" | "monthly"; paymentNumber: number;
   paidAmount: number; commission: number; commissionStatus: string; direct: boolean;
   discountCode: string | null;
+  // Einrichtungsanteil dieser Zahlung (nur #1): gezahlt und Listenpreis (45/99 €)
+  setupFeePaid?: number; setupFeeList?: number;
 };
 
 function groupPayments(payments: PaymentRow[], mode: "month" | "year") {
@@ -1707,6 +1711,80 @@ function groupPayments(payments: PaymentRow[], mode: "month" | "year") {
     map.set(key, g);
   }
   return Array.from(map.values()).sort((a, b) => b.sort - a.sort);
+}
+
+// ─── PayLaterCard ─────────────────────────────────────────────────────────────
+// Shops (Direktvertrieb), deren Inhaber auf der Zahlungsseite "Später zahlen"
+// gewählt haben. Verschwinden automatisch nach Zahlungseingang; "Erledigt"
+// entfernt die Vormerkung manuell.
+
+function PayLaterCard({ adminSecret }: { adminSecret: string }) {
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const load = () => {
+    affiliateQuery("admin:getPayLaterList", { adminSecret }).then(setRows).catch(() => {});
+  };
+  useEffect(() => { if (adminSecret) load(); }, [adminSecret]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!rows || rows.length === 0) return null;
+
+  const copyLink = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(`${AFFILIATE_APP_URL}/pay/${token}`);
+      setCopied(token); setTimeout(() => setCopied(null), 2000);
+    } catch {}
+  };
+
+  const clear = async (contractId: string) => {
+    setBusy(contractId);
+    try { await affiliateMutation("admin:clearPayLater", { adminSecret, contractId }); load(); }
+    catch (e: unknown) { alert(errMsg(e, "Fehler")); }
+    finally { setBusy(null); }
+  };
+
+  return (
+    <div className="bg-zinc-900 border border-amber-900/30 rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+        <Clock size={13} className="text-amber-400" />
+        <span className="text-sm font-medium text-zinc-200">Später zahlen</span>
+        <span className="ml-auto text-[10px] text-amber-400 font-semibold">{rows.length}</span>
+      </div>
+      <div className="divide-y divide-zinc-800/50">
+        {rows.map(r => (
+          <div key={r.contractId} className="px-4 py-3 space-y-1.5">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-zinc-200 truncate">{r.shopName}</p>
+                <p className="text-xs text-zinc-500">{r.ownerName}{r.ownerPhone ? ` · ${r.ownerPhone}` : ""}</p>
+                {r.ownerEmail && <p className="text-xs text-zinc-600">{r.ownerEmail}</p>}
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-sm font-bold text-amber-400">€{r.amount}</p>
+                <p className="text-[10px] text-zinc-500">{r.planType === "annual" ? "Jahresabo" : "Monatsabo"}{r.rewardCount > 0 ? ` · ${r.rewardCount} Bonus` : ""}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <p className="text-[10px] text-zinc-600">
+                Vorgemerkt: {new Date(r.payLaterAt).toLocaleDateString("de-DE")} {new Date(r.payLaterAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+              </p>
+              <div className="flex gap-1.5">
+                <button onClick={() => copyLink(r.paymentToken)}
+                  className="text-[10px] px-2.5 py-1 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-amber-400 transition-colors">
+                  {copied === r.paymentToken ? "Kopiert ✓" : "Bezahllink"}
+                </button>
+                <button onClick={() => clear(r.contractId)} disabled={busy === r.contractId}
+                  className="text-[10px] px-2.5 py-1 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-green-400 transition-colors disabled:opacity-50">
+                  {busy === r.contractId ? "..." : "Erledigt"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function EarningsCard({ adminSecret }: { adminSecret: string }) {
@@ -1739,7 +1817,11 @@ function EarningsCard({ adminSecret }: { adminSecret: string }) {
             <div className="bg-zinc-800/50 rounded-xl p-3">
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Gesamtumsatz</p>
               <p className="text-2xl font-bold text-green-400">€{data.revenueTotal.toFixed(2)}</p>
-              <p className="text-[10px] text-zinc-600 mt-0.5">alle eingegangenen Zahlungen</p>
+              <p className="text-[10px] text-zinc-600 mt-0.5">
+                {(data.setupFeesTotal ?? 0) > 0
+                  ? <>€{(data.aboRevenue ?? 0).toFixed(0)} Abo + €{(data.setupFeesTotal ?? 0).toFixed(0)} Einrichtung</>
+                  : "alle eingegangenen Zahlungen"}
+              </p>
             </div>
             <div className="bg-zinc-800/50 rounded-xl p-3">
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Mein Anteil</p>
@@ -1870,6 +1952,7 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
             {summary.payingContracts ?? summary.activeContracts} zahlende Shops
             {(summary.awaitingPayment ?? 0) > 0 && ` · ${summary.awaitingPayment} warten auf Zahlung`}
             {" "}· {payments ? `${payments.length} Zahlungen` : "…"}
+            {(summary.setupFeesTotal ?? 0) > 0 && ` · davon €${(summary.setupFeesTotal ?? 0).toFixed(0)} Einrichtungsgebühren (einmalig)`}
           </p>
 
           {/* Ansicht wählen */}
@@ -1934,6 +2017,13 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
                       {p.direct && <span className="text-blue-400"> · Direkt</span>}
                       {p.discountCode && <span className="text-purple-400"> · {p.discountCode}</span>}
                     </p>
+                    {(p.setupFeePaid ?? 0) > 0 && (
+                      <p className="text-[10px] text-amber-400/80">
+                        inkl. €{(p.setupFeePaid ?? 0).toFixed(2)} Einrichtung
+                        {(p.setupFeeList ?? 0) === 45 ? " (45 € Bonus-Preis)" : ""}
+                        {p.discountCode && (p.setupFeePaid ?? 0) < (p.setupFeeList ?? 0) ? ` (statt €${p.setupFeeList})` : ""}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-green-400">€{p.paidAmount.toFixed(2)}</p>
@@ -2007,7 +2097,10 @@ async function exportFinancePdf(summary: EarningsSummary, payments: PaymentRow[]
   doc.setTextColor(...mid);
   doc.text(
     `${summary.payingContracts ?? summary.activeContracts} zahlende Shops  ·  ${payments.length} Zahlungen  ·  ` +
-    `Provisionen: ${euro(summary.commPending)} ausstehend, ${euro(summary.commConfirmed)} bestätigt, ${euro(summary.commPaid)} ausgezahlt`,
+    `Provisionen: ${euro(summary.commPending)} ausstehend, ${euro(summary.commConfirmed)} bestätigt, ${euro(summary.commPaid)} ausgezahlt` +
+    ((summary.setupFeesTotal ?? 0) > 0
+      ? `  ·  Umsatz: ${euro(summary.aboRevenue ?? 0)} Abo + ${euro(summary.setupFeesTotal ?? 0)} Einrichtung (einmalig)`
+      : ""),
     13, y
   );
   y += 8;
@@ -2154,6 +2247,7 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
         <div className="flex-1 h-px bg-zinc-800" />
       </div>
       <EarningsCard adminSecret={adminSecret} />
+      <PayLaterCard adminSecret={adminSecret} />
 
       {/* Sektion 2: Nutzung (Stempel-Aktivität, unabhängig von den Finanzen) */}
       <div className="flex items-center gap-2 pt-3">
