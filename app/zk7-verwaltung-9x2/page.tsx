@@ -1369,8 +1369,8 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Vertrag (Finanzen)</p>
         <div className="grid grid-cols-2 gap-2">
           {([
-            { id: "annual",  label: "Jahresabo",  sub: "€360/Jahr" },
-            { id: "monthly", label: "Monatsabo",  sub: "€30/Monat" },
+            { id: "annual",  label: "Jahresabo",  sub: "€240/Jahr" },
+            { id: "monthly", label: "Monatsabo",  sub: "€20/Monat" },
           ] as const).map(opt => (
             <button key={opt.id} type="button" onClick={() => setPlanType(opt.id)}
               className="rounded-xl p-3 text-center transition-colors"
@@ -2971,7 +2971,7 @@ function nextCommissionPreview(planType: "annual" | "monthly", paymentNumber: nu
       ? paymentNumber === 1 ? "Erstprovision" : paymentNumber === 2 ? "Jahr 2" : paymentNumber === 3 ? "Jahr 3" : "Jahr 4+"
       : paymentNumber <= 12 ? "Erstprovision" : paymentNumber <= 24 ? "Jahr 2" : paymentNumber <= 36 ? "Jahr 3" : "Jahr 4+";
   const rates: Record<string, number> = { "Erstprovision": 0.20, "Jahr 2": 0.05, "Jahr 3": 0.10, "Jahr 4+": 0.15 };
-  const base   = planType === "annual" ? 360 : 30; // Provision nur auf den Abo-Anteil
+  const base   = planType === "annual" ? 240 : 20; // Provision nur auf den Abo-Anteil
   const rate   = rates[phase];
   const amount = Math.round(base * rate * 100) / 100;
   return { phase, rate, amount };
