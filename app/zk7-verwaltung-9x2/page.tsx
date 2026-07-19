@@ -88,10 +88,44 @@ async function printQR(rawShopName: string, rawUrl: string) {
 
 // ─── ShopListItem ─────────────────────────────────────────────────────────────
 
-function ShopListItem({ shop, index, onSelect }: {
+// Zahlungsstatus je Shop aus der Affiliate-App (paymentCount des Vertrags).
+// Key = Stempelkarten-Shop-ID; fehlt ein Shop in der Map, hat er keinen Vertrag.
+type PayStatus = { paid: boolean; payLater: boolean; amountDue: number; paymentToken: string };
+
+function usePayStatus(adminSecret: string): Record<string, PayStatus> {
+  const [map, setMap] = useState<Record<string, PayStatus>>({});
+  useEffect(() => {
+    if (!adminSecret) return;
+    affiliateQuery("admin:getPayStatusForShops", { adminSecret })
+      .then((rows: any[]) => {
+        const m: Record<string, PayStatus> = {};
+        (rows ?? []).forEach((r: any) => { m[r.loatycardShopId] = r; });
+        setMap(m);
+      })
+      .catch(() => {});
+  }, [adminSecret]);
+  return map;
+}
+
+function PayBadge({ status }: { status?: PayStatus }) {
+  if (!status) return null;
+  if (status.paid) return (
+    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-green-900/25 border border-green-800/40 text-green-400 shrink-0">
+      Bezahlt
+    </span>
+  );
+  return (
+    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-yellow-900/25 border border-yellow-700/40 text-yellow-400 shrink-0">
+      {status.payLater ? "Später zahlen" : "Zahlung offen"} · €{status.amountDue}
+    </span>
+  );
+}
+
+function ShopListItem({ shop, index, onSelect, payStatus }: {
   shop: Doc<"shops">;
   index: number;
   onSelect: () => void;
+  payStatus?: PayStatus;
 }) {
   return (
     <motion.button
@@ -105,7 +139,10 @@ function ShopListItem({ shop, index, onSelect }: {
         <Store size={16} className="text-amber-400" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-zinc-100 truncate">{shop.name}</p>
+        <p className="font-medium text-zinc-100 truncate flex items-center gap-2">
+          {shop.name}
+          <PayBadge status={payStatus} />
+        </p>
         <p className="text-xs text-zinc-500 truncate">{shop.rewardText} · {shop.stampsRequired} Stempel</p>
       </div>
       <ChevronRight size={15} className="text-zinc-600 shrink-0" />
@@ -1491,6 +1528,8 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
 
 function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSelectShop: (id: Id<"shops">) => void }) {
   const globalStats = useQuery(api.shops.getGlobalStats, adminSecret ? { adminSecret } : "skip");
+  const payStatus = usePayStatus(adminSecret);
+  const openPayments = Object.values(payStatus).filter(s => !s.paid);
 
   if (!globalStats) {
     return (
@@ -1519,11 +1558,27 @@ function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSel
         ))}
       </div>
 
+      {/* Offene Zahlungen fließen in die Statistik mit ein */}
+      {openPayments.length > 0 && (
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-2.5 bg-yellow-900/15 border border-yellow-800/40">
+          <AlertTriangle size={14} className="text-yellow-400 shrink-0" />
+          <p className="text-xs text-yellow-400">
+            <b>{openPayments.length}</b> Shop{openPayments.length === 1 ? "" : "s"} mit offener Zahlung
+            {" "}(gesamt €{openPayments.reduce((s, p) => s + p.amountDue, 0)})
+          </p>
+        </div>
+      )}
+
       {globalStats.shops.length > 0 && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-zinc-800">
             <Store size={14} className="text-zinc-500" />
             <span className="text-sm font-medium text-zinc-200">Shops</span>
+            {openPayments.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-yellow-900/25 border border-yellow-700/40 text-yellow-400">
+                {openPayments.length} offen
+              </span>
+            )}
             <span className="ml-auto text-xs text-zinc-600">{globalStats.shops.length}</span>
           </div>
           <div className="divide-y divide-zinc-800/50">
@@ -1534,7 +1589,10 @@ function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSel
                 <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
                   <Store size={13} className="text-amber-400" />
                 </div>
-                <span className="flex-1 text-sm text-zinc-200 font-medium truncate">{shop.name}</span>
+                <span className="flex-1 text-sm text-zinc-200 font-medium truncate flex items-center gap-2">
+                  {shop.name}
+                  <PayBadge status={payStatus[shop._id]} />
+                </span>
                 <ChevronRight size={14} className="text-zinc-600 shrink-0" />
               </motion.button>
             ))}
@@ -1553,6 +1611,7 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
   onSelectShop: (id: Id<"shops">) => void;
 }) {
   const [showCreate, setShowCreate] = useState(false);
+  const payStatus = usePayStatus(adminSecret);
 
   return (
     <motion.div key="shops" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
@@ -1576,7 +1635,8 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
         <div className="text-center py-10 text-zinc-600 text-sm">Noch keine Shops. Klicke Neu um den ersten anzulegen.</div>
       )}
       {shops?.map((shop, i) => (
-        <ShopListItem key={shop._id} shop={shop} index={i} onSelect={() => onSelectShop(shop._id)} />
+        <ShopListItem key={shop._id} shop={shop} index={i} onSelect={() => onSelectShop(shop._id)}
+          payStatus={payStatus[shop._id]} />
       ))}
     </motion.div>
   );
