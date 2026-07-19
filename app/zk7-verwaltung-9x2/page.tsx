@@ -16,6 +16,7 @@ import { makeConfigTheme, normalizeDecor, type ShopDesignConfig } from "@/app/me
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
+import { errMsg } from "@/app/lib/errMsg";
 
 // ─── Global Level System (spiegelt me/page.tsx) ───────────────────────────────
 
@@ -334,7 +335,7 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
       catch { /* Shop ist gelöscht — Affiliate-Sync-Fehler nicht blockierend */ }
       onDeleted();
     }
-    catch (e) { alert(e instanceof Error ? e.message : "Fehler beim Löschen"); setDeleting(false); }
+    catch (e) { alert(errMsg(e, "Fehler beim Löschen")); setDeleting(false); }
   };
 
   // Program
@@ -954,7 +955,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
       if (kind === "logo") { setLogoId(id); setLogoPreviewUrl(preview); }
       else { setBgImageId(id); setBgPreviewUrl(preview); setBgType("image"); }
     } catch (ex: unknown) {
-      setErr(ex instanceof Error ? ex.message : "Upload fehlgeschlagen");
+      setErr(errMsg(ex, "Upload fehlgeschlagen"));
     } finally { setUploading(null); e.target.value = ""; }
   };
 
@@ -984,7 +985,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
       });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } catch (ex: unknown) {
-      setErr(ex instanceof Error ? ex.message : "Fehler beim Speichern");
+      setErr(errMsg(ex, "Fehler beim Speichern"));
     } finally { setSaving(false); }
   };
 
@@ -992,7 +993,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
     if (!window.confirm("Eigenes Design entfernen? Der Shop nutzt dann wieder den Standard-Look.")) return;
     setSaving(true); setErr("");
     try { await setDesignConfig({ shopId: shop._id, adminSecret, config: null }); }
-    catch (ex: unknown) { setErr(ex instanceof Error ? ex.message : "Fehler"); }
+    catch (ex: unknown) { setErr(errMsg(ex, "Fehler")); }
     finally { setSaving(false); }
   };
 
@@ -1224,10 +1225,10 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         }
         setError("Shop erstellt, aber kein Bezahllink erhalten (Affiliate-App nicht konfiguriert?)");
       } catch (err: unknown) {
-        setError(`Shop erstellt, aber Vertrag fehlgeschlagen: ${err instanceof Error ? err.message : "Fehler"}`);
+        setError(`Shop erstellt, aber Vertrag fehlgeschlagen: ${errMsg(err, "Fehler")}`);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Fehler");
+      setError(errMsg(err, "Fehler"));
     } finally { setLoading(false); }
   };
 
@@ -1730,7 +1731,7 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
   useEffect(() => {
     affiliateQuery("admin:getEarningsDetail", { adminSecret })
       .then(setPayments)
-      .catch((e: unknown) => setErr(e instanceof Error ? e.message : "Fehler beim Laden"));
+      .catch((e: unknown) => setErr(errMsg(e, "Fehler beim Laden")));
   }, [adminSecret]);
 
   const handlePdf = async () => {
@@ -2758,6 +2759,17 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
 
 const AFFILIATE_URL = process.env.NEXT_PUBLIC_AFFILIATE_CONVEX_URL ?? "";
 
+// ConvexError-Texte stehen im HTTP-API-Feld errorData (auch in Produktion);
+// errorMessage ist bei anderen Fehlern in Prod nur ein redigiertes "Server Error".
+function affiliateError(data: { errorData?: unknown; errorMessage?: string }): Error {
+  if (typeof data.errorData === "string") return new Error(data.errorData);
+  const msg = data.errorMessage ?? "";
+  if (!msg || /Server Error|Uncaught|\[Request ID/i.test(msg)) {
+    return new Error("Fehler bei der Partner-App. Bitte nochmal versuchen.");
+  }
+  return new Error(msg);
+}
+
 async function affiliateQuery(path: string, args: Record<string, unknown>) {
   if (!AFFILIATE_URL) return null;
   const res = await fetch(`${AFFILIATE_URL}/api/query`, {
@@ -2766,7 +2778,7 @@ async function affiliateQuery(path: string, args: Record<string, unknown>) {
     body: JSON.stringify({ path, format: "json", args }),
   });
   const data = await res.json();
-  if (data.status === "error") throw new Error(data.errorMessage);
+  if (data.status === "error") throw affiliateError(data);
   return data.value;
 }
 
@@ -2778,7 +2790,7 @@ async function affiliateMutation(path: string, args: Record<string, unknown>) {
     body: JSON.stringify({ path, format: "json", args }),
   });
   const data = await res.json();
-  if (data.status === "error") throw new Error(data.errorMessage);
+  if (data.status === "error") throw affiliateError(data);
   return data.value;
 }
 
@@ -2856,7 +2868,7 @@ function CreatePartnerForm({ adminSecret, onCreated }: { adminSecret: string; on
       setForm(EMPTY_PARTNER);
       onCreated();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Fehler");
+      alert(errMsg(e, "Fehler"));
     } finally { setSaving(false); }
   };
 
@@ -2980,7 +2992,7 @@ function InvitePartnerButton({ adminSecret }: { adminSecret: string }) {
       const token = (res as any).token;
       setLink(`${AFFILIATE_APP_URL}/invite/partner/${token}`);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Fehler");
+      alert(errMsg(e, "Fehler"));
     } finally { setLoading(false); }
   };
 
@@ -3263,7 +3275,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
       setContractMap(contracts);
       setCommissionsMap(commissions);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Verbindungsfehler zur Partner-App");
+      setError(errMsg(e, "Verbindungsfehler zur Partner-App"));
     } finally { setLoading(false); }
   };
 
@@ -3277,7 +3289,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
       });
       await load();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Fehler");
+      alert(errMsg(e, "Fehler"));
     } finally { setApproving(null); }
   };
 
@@ -3288,7 +3300,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
       await affiliateMutation("admin:rejectLead", { adminSecret, leadId, reason: reasonMap[leadId] });
       await load();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Fehler");
+      alert(errMsg(e, "Fehler"));
     } finally { setRejecting(null); }
   };
 
@@ -3297,7 +3309,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
       await affiliateMutation("admin:approveAffiliate", { adminSecret, affiliateId });
       await load();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Fehler");
+      alert(errMsg(e, "Fehler"));
     }
   };
 
@@ -3307,7 +3319,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
       await affiliateMutation("admin:deleteAffiliate", { adminSecret, affiliateId });
       await load();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Fehler");
+      alert(errMsg(e, "Fehler"));
     }
   };
 
@@ -3316,7 +3328,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
       await affiliateMutation("admin:suspendAffiliate", { adminSecret, affiliateId });
       await load();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Fehler");
+      alert(errMsg(e, "Fehler"));
     }
   };
 
@@ -3327,7 +3339,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
       alert(`✓ Provision erfasst: €${(result as any)?.amount?.toFixed(2)} (${(result as any)?.phase})`);
       await load();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Fehler");
+      alert(errMsg(e, "Fehler"));
     } finally { setRecording(null); }
   };
 
@@ -3337,7 +3349,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
       await affiliateMutation("admin:confirmCommission", { adminSecret, commissionId });
       await load();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Fehler");
+      alert(errMsg(e, "Fehler"));
     } finally { setConfirming(null); }
   };
 
@@ -3838,7 +3850,7 @@ export default function SuperAdminPage() {
       setAdminSecret(pin);
       setAuthed(true);
     } catch (err: unknown) {
-      setPinError(err instanceof Error ? err.message : "Fehler");
+      setPinError(errMsg(err, "Fehler"));
       setPin("");
     } finally { setChecking(false); }
   };

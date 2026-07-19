@@ -1,5 +1,5 @@
 import { internalMutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 export const seedBarbershop = internalMutation({
   args: {},
@@ -67,7 +67,7 @@ export const patchShopTheme = internalMutation({
   args: { slug: v.string(), theme: v.string() },
   handler: async (ctx, { slug, theme }) => {
     const shop = await ctx.db.query("shops").withIndex("by_slug", q => q.eq("slug", slug)).unique();
-    if (!shop) throw new Error("Shop nicht gefunden");
+    if (!shop) throw new ConvexError("Shop nicht gefunden");
     await ctx.db.patch(shop._id, { theme, customDesignEnabled: true });
     return "OK";
   },

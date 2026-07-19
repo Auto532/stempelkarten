@@ -9,6 +9,7 @@ import { Stamp, Gift, UserPlus, ArrowLeft, LogIn, ShieldCheck } from "lucide-rea
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import type { Id } from "@/convex/_generated/dataModel";
+import { errMsg } from "@/app/lib/errMsg";
 
 type Tier = { stamps: number; text: string; enabled: boolean };
 
@@ -102,7 +103,7 @@ export default function StampPage() {
     try {
       await addStamp({ membershipId: data.membership._id, adminToken });
       setDone("stamped");
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    } catch (e: unknown) { setError(errMsg(e, "Fehler")); }
     finally { setLoading(false); }
   };
 
@@ -113,7 +114,7 @@ export default function StampPage() {
       await redeemReward({ membershipId: data.membership._id, adminToken, rewardText: tierText });
       setRedeemedTierText(tierText ?? null);
       setDone("redeemed");
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    } catch (e: unknown) { setError(errMsg(e, "Fehler")); }
     finally { setLoading(false); }
   };
 
@@ -124,7 +125,7 @@ export default function StampPage() {
       const result = await confirmPendingRedemption({ membershipId: data.membership._id, adminToken });
       setRedeemedTierText(result.rewardText);
       setDone("redeemed");
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    } catch (e: unknown) { setError(errMsg(e, "Fehler")); }
     finally { setLoading(false); }
   };
 
@@ -133,7 +134,7 @@ export default function StampPage() {
     setLoading(true); setError("");
     try {
       await createMembership({ qrToken, shopId: shop._id });
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    } catch (e: unknown) { setError(errMsg(e, "Fehler")); }
     finally { setLoading(false); }
   };
 
@@ -143,7 +144,7 @@ export default function StampPage() {
     try {
       await adminStamp({ adminSecret: adminPin, shopId: adminSelectedShopId, qrToken });
       setDone("stamped");
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    } catch (e: unknown) { setError(errMsg(e, "Fehler")); }
     finally { setLoading(false); }
   };
 
@@ -154,7 +155,7 @@ export default function StampPage() {
       const result = await adminConfirmPendingRedemption({ membershipId: adminMembershipData.membership._id, adminSecret: adminPin });
       setRedeemedTierText(result.rewardText);
       setDone("redeemed");
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    } catch (e: unknown) { setError(errMsg(e, "Fehler")); }
     finally { setLoading(false); }
   };
 

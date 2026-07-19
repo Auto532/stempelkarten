@@ -9,6 +9,7 @@ import { User, Mail, Gift, ArrowRight, CheckCircle, Stamp } from "lucide-react";
 import { getShopTheme, DEFAULT_COLORS, type ThemeColors } from "@/app/me/themes/registry";
 import { hexToRgba } from "@/app/me/components";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
+import { errMsg } from "@/app/lib/errMsg";
 
 function AcquisitionPicker({
   value, onChange, c, shopName,
@@ -97,7 +98,7 @@ export default function JoinPage() {
       setSuccess(true);
       setTimeout(() => router.push(`/me/shop/${shopSlug}?qr=1`), 1500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Fehler beim Registrieren");
+      setError(errMsg(err, "Fehler beim Registrieren"));
     } finally { setLoading(false); }
   };
 
@@ -109,7 +110,7 @@ export default function JoinPage() {
       setSuccess(true);
       setTimeout(() => router.push(`/me/shop/${shopSlug}?qr=1`), 1500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Fehler beim Hinzufügen");
+      setError(errMsg(err, "Fehler beim Hinzufügen"));
     } finally { setLoading(false); }
   };
 

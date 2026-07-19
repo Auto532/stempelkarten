@@ -18,6 +18,7 @@ import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import { QRImage } from "@/app/components/QRImage";
 import QRCode from "qrcode";
+import { errMsg } from "@/app/lib/errMsg";
 
 const Scanner = dynamic(
   () => import("@yudiel/react-qr-scanner").then((m) => m.Scanner),
@@ -171,7 +172,7 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
           Noch nicht für diesen Laden registriert.
         </p>
         {error && <p className="text-red-400 text-sm">{error}</p>}
-        <button onClick={async () => { try { await createMembership({ qrToken, shopId }); } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); } }}
+        <button onClick={async () => { try { await createMembership({ qrToken, shopId }); } catch (e: unknown) { setError(errMsg(e, "Fehler")); } }}
           className="w-full py-3.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-100 font-medium rounded-xl flex items-center justify-center gap-2 transition-colors">
           <UserPlus size={16} /> Für diesen Laden registrieren
         </button>
@@ -187,7 +188,7 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
     try {
       const result = await addStamp({ membershipId: membership._id, adminToken });
       setActionState({ type: "stamped", customerName: customer.name, newStamps: membership.currentStamps + 1, stampsRequired: result.stampsRequired, rewardReached: result.rewardReached, rewardText });
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    } catch (e: unknown) { setError(errMsg(e, "Fehler")); }
     finally { setLoading(false); }
   };
 
@@ -196,7 +197,7 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
     try {
       await redeemReward({ membershipId: membership._id, adminToken });
       setActionState({ type: "redeemed", customerName: customer.name, rewardText });
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    } catch (e: unknown) { setError(errMsg(e, "Fehler")); }
     finally { setLoading(false); }
   };
 
@@ -205,7 +206,7 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
     try {
       const result = await confirmPendingRedemption({ membershipId: membership._id, adminToken });
       setActionState({ type: "redeemed", customerName: customer.name, rewardText: result.rewardText });
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Fehler"); }
+    } catch (e: unknown) { setError(errMsg(e, "Fehler")); }
     finally { setLoading(false); }
   };
 

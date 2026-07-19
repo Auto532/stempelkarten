@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin } from "./auth";
 
@@ -13,13 +13,13 @@ export const sendMessage = mutation({
       .query("customers")
       .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
       .unique();
-    if (!customer) throw new Error("Nicht autorisiert");
+    if (!customer) throw new ConvexError("Nicht autorisiert");
 
     const membership = await ctx.db.get(membershipId);
-    if (!membership || membership.customerId !== customer._id) throw new Error("Nicht autorisiert");
+    if (!membership || membership.customerId !== customer._id) throw new ConvexError("Nicht autorisiert");
 
     const trimmed = text.trim();
-    if (!trimmed || trimmed.length > 1000) throw new Error("Ungültige Nachricht");
+    if (!trimmed || trimmed.length > 1000) throw new ConvexError("Ungültige Nachricht");
 
     await ctx.db.insert("messages", {
       shopId: membership.shopId,

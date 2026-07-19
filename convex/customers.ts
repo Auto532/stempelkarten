@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { normalizeEmail } from "./lib/phone";
 
@@ -83,9 +83,9 @@ export const updateName = mutation({
       .query("customers")
       .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
       .unique();
-    if (!customer) throw new Error("Kunde nicht gefunden");
+    if (!customer) throw new ConvexError("Kunde nicht gefunden");
     const trimmed = name.trim();
-    if (trimmed.length < 2 || trimmed.length > 40) throw new Error("Name muss 2–40 Zeichen lang sein");
+    if (trimmed.length < 2 || trimmed.length > 40) throw new ConvexError("Name muss 2–40 Zeichen lang sein");
     await ctx.db.patch(customer._id, { name: trimmed });
   },
 });
@@ -101,14 +101,14 @@ export const registerCustomer = mutation({
   handler: async (ctx, { name, email, shopSlug, existingQrToken, acquisitionType }) => {
     const normalized = normalizeEmail(email);
     if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-      throw new Error("Ungültige E-Mail-Adresse");
+      throw new ConvexError("Ungültige E-Mail-Adresse");
     }
 
     const shop = await ctx.db
       .query("shops")
       .withIndex("by_slug", (q) => q.eq("slug", shopSlug))
       .unique();
-    if (!shop) throw new Error("Shop nicht gefunden");
+    if (!shop) throw new ConvexError("Shop nicht gefunden");
 
     let customerId;
     let qrToken;

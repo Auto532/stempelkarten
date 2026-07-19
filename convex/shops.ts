@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireShopRole, sanitizeShop } from "./auth";
 import { internal } from "./_generated/api";
@@ -272,7 +272,7 @@ export const adminDeleteShop = mutation({
   handler: async (ctx, { shopId, adminSecret }) => {
     requireAdmin({ secret: adminSecret });
     const shop = await ctx.db.get(shopId);
-    if (!shop) throw new Error("Shop nicht gefunden");
+    if (!shop) throw new ConvexError("Shop nicht gefunden");
 
     const [stampEvents, messages, memberships] = await Promise.all([
       ctx.db.query("stampEvents").withIndex("by_shop", (q) => q.eq("shopId", shopId)).collect(),
@@ -676,7 +676,7 @@ export const listCustomersForShop = query({
   handler: async (ctx, { shopId, adminToken, limit }) => {
     await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
     const shop = await ctx.db.get(shopId);
-    if (!shop) throw new Error("Shop nicht gefunden");
+    if (!shop) throw new ConvexError("Shop nicht gefunden");
     const isMitarbeiter = adminToken === shop.mitarbeiterToken;
 
     const q = ctx.db
@@ -704,7 +704,7 @@ export const adminRestoreCustomerStamps = mutation({
   handler: async (ctx, { membershipId, adminSecret, stamps }) => {
     requireAdmin({ secret: adminSecret });
     const membership = await ctx.db.get(membershipId);
-    if (!membership) throw new Error("Membership not found");
+    if (!membership) throw new ConvexError("Membership not found");
     await ctx.db.patch(membershipId, { currentStamps: Math.max(0, stamps) });
   },
 });

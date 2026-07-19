@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireShopRole, requireAdmin } from "./auth";
 
@@ -33,7 +33,7 @@ export const createMembershipForExistingCustomer = mutation({
       .query("customers")
       .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
       .unique();
-    if (!customer) throw new Error("Kunde nicht gefunden");
+    if (!customer) throw new ConvexError("Kunde nicht gefunden");
 
     const existing = await ctx.db
       .query("memberships")
@@ -59,10 +59,10 @@ export const addStamp = mutation({
   args: { membershipId: v.id("memberships"), adminToken: v.string() },
   handler: async (ctx, { membershipId, adminToken }) => {
     const membership = await ctx.db.get(membershipId);
-    if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
+    if (!membership) throw new ConvexError("Mitgliedschaft nicht gefunden");
 
     const shop = await requireShopRole(ctx, { shopId: membership.shopId, token: adminToken, role: "mitarbeiter" });
-    if (shop.active === false) throw new Error("Shop ist deaktiviert, Stempeln nicht möglich");
+    if (shop.active === false) throw new ConvexError("Shop ist deaktiviert, Stempeln nicht möglich");
 
     const newStamps = membership.currentStamps + 1;
     const rewardReached = newStamps >= shop.stampsRequired;
@@ -88,7 +88,7 @@ export const redeemReward = mutation({
   args: { membershipId: v.id("memberships"), adminToken: v.string(), rewardText: v.optional(v.string()) },
   handler: async (ctx, { membershipId, adminToken, rewardText }) => {
     const membership = await ctx.db.get(membershipId);
-    if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
+    if (!membership) throw new ConvexError("Mitgliedschaft nicht gefunden");
 
     const shop = await requireShopRole(ctx, { shopId: membership.shopId, token: adminToken, role: "mitarbeiter" });
 
@@ -128,10 +128,10 @@ export const adminStampForCustomer = mutation({
       });
       customer = await ctx.db.get(id);
     }
-    if (!customer) throw new Error("Kunde konnte nicht erstellt werden");
+    if (!customer) throw new ConvexError("Kunde konnte nicht erstellt werden");
 
     const shop = await ctx.db.get(shopId);
-    if (!shop) throw new Error("Shop nicht gefunden");
+    if (!shop) throw new ConvexError("Shop nicht gefunden");
 
     let membership = await ctx.db
       .query("memberships")
@@ -151,7 +151,7 @@ export const adminStampForCustomer = mutation({
       });
       membership = await ctx.db.get(mId);
     }
-    if (!membership) throw new Error("Mitgliedschaft konnte nicht erstellt werden");
+    if (!membership) throw new ConvexError("Mitgliedschaft konnte nicht erstellt werden");
 
     const newStamps = membership.currentStamps + 1;
     const rewardReached = newStamps >= shop.stampsRequired;
@@ -180,14 +180,14 @@ export const setPendingRedemption = mutation({
       .query("customers")
       .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
       .unique();
-    if (!customer) throw new Error("Kunde nicht gefunden");
+    if (!customer) throw new ConvexError("Kunde nicht gefunden");
 
     const membership = await ctx.db.get(membershipId);
-    if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
-    if (membership.customerId !== customer._id) throw new Error("Nicht berechtigt");
+    if (!membership) throw new ConvexError("Mitgliedschaft nicht gefunden");
+    if (membership.customerId !== customer._id) throw new ConvexError("Nicht berechtigt");
 
     const shop = await ctx.db.get(membership.shopId);
-    if (!shop) throw new Error("Shop nicht gefunden");
+    if (!shop) throw new ConvexError("Shop nicht gefunden");
 
     const activeTiers = (shop.bonusProgramEnabled ? (shop.rewardTiers ?? []) : [])
       .filter((t) => t.enabled)
@@ -197,7 +197,7 @@ export const setPendingRedemption = mutation({
       ? [baseTier, ...activeTiers].sort((a, b) => a.stamps - b.stamps)
       : [baseTier];
     const tier = tiers.find((t) => t.stamps === targetStamps && membership.currentStamps >= t.stamps);
-    if (!tier) throw new Error("Keine Belohnung verfügbar");
+    if (!tier) throw new ConvexError("Keine Belohnung verfügbar");
 
     await ctx.db.patch(membershipId, { pendingRedemption: { stamps: tier.stamps, rewardText: tier.text } });
     return { rewardText: tier.text };
@@ -211,9 +211,9 @@ export const cancelPendingRedemption = mutation({
       .query("customers")
       .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
       .unique();
-    if (!customer) throw new Error("Kunde nicht gefunden");
+    if (!customer) throw new ConvexError("Kunde nicht gefunden");
     const membership = await ctx.db.get(membershipId);
-    if (!membership || membership.customerId !== customer._id) throw new Error("Nicht berechtigt");
+    if (!membership || membership.customerId !== customer._id) throw new ConvexError("Nicht berechtigt");
     await ctx.db.patch(membershipId, { pendingRedemption: undefined });
   },
 });
@@ -222,13 +222,13 @@ export const confirmPendingRedemption = mutation({
   args: { membershipId: v.id("memberships"), adminToken: v.string() },
   handler: async (ctx, { membershipId, adminToken }) => {
     const membership = await ctx.db.get(membershipId);
-    if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
+    if (!membership) throw new ConvexError("Mitgliedschaft nicht gefunden");
 
     await requireShopRole(ctx, { shopId: membership.shopId, token: adminToken, role: "mitarbeiter" });
 
     const pending = membership.pendingRedemption;
-    if (!pending) throw new Error("Keine ausstehende Einlösung");
-    if (membership.currentStamps < pending.stamps) throw new Error("Nicht genug Stempel");
+    if (!pending) throw new ConvexError("Keine ausstehende Einlösung");
+    if (membership.currentStamps < pending.stamps) throw new ConvexError("Nicht genug Stempel");
 
     const carryOver = Math.max(0, membership.currentStamps - pending.stamps);
     await ctx.db.patch(membershipId, {
@@ -252,10 +252,10 @@ export const adminConfirmPendingRedemption = mutation({
   handler: async (ctx, { membershipId, adminSecret }) => {
     requireAdmin({ secret: adminSecret });
     const membership = await ctx.db.get(membershipId);
-    if (!membership) throw new Error("Mitgliedschaft nicht gefunden");
+    if (!membership) throw new ConvexError("Mitgliedschaft nicht gefunden");
     const pending = membership.pendingRedemption;
-    if (!pending) throw new Error("Keine ausstehende Einlösung");
-    if (membership.currentStamps < pending.stamps) throw new Error("Nicht genug Stempel");
+    if (!pending) throw new ConvexError("Keine ausstehende Einlösung");
+    if (membership.currentStamps < pending.stamps) throw new ConvexError("Nicht genug Stempel");
     const carryOver = Math.max(0, membership.currentStamps - pending.stamps);
     await ctx.db.patch(membershipId, {
       currentStamps: carryOver,

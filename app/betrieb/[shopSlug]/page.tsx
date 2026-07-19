@@ -17,6 +17,7 @@ import { InstallHint } from "@/app/components/InstallHint";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import QRCode from "qrcode";
+import { errMsg } from "@/app/lib/errMsg";
 
 const Scanner = dynamic(
   () => import("@yudiel/react-qr-scanner").then(m => m.Scanner),
@@ -961,7 +962,7 @@ function SupportCard({ adminToken, card, divColor, tx, tm, ic, inp }: {
       await submit({ token: adminToken, message: msg, contact: contact || undefined });
       setDone(true); setMsg(""); setContact("");
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : "Fehler beim Senden");
+      setErr(errMsg(e, "Fehler beim Senden"));
     } finally { setSending(false); }
   };
 

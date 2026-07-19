@@ -10,6 +10,7 @@ import {
   Trophy, Pencil, AlertCircle, Info,
 } from "lucide-react";
 import { StampOverlay, getActiveTiers, hexToRgba, getStampIcon } from "./components";
+import { errMsg } from "@/app/lib/errMsg";
 
 // ─── Profanity filter ─────────────────────────────────────────────────────────
 
@@ -414,7 +415,7 @@ function SettingsPanel({
       await updateName({ qrToken, name: trimmed });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Fehler beim Speichern");
+      setError(errMsg(e, "Fehler beim Speichern"));
     } finally { setSaving(false); }
   };
 

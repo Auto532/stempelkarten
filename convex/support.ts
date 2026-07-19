@@ -1,5 +1,5 @@
 import { mutation, query, internalAction } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
 import { requireAdmin } from "./auth";
 import type { QueryCtx } from "./_generated/server";
@@ -32,12 +32,12 @@ export const submitTicket = mutation({
   },
   handler: async (ctx, args) => {
     const auth = await shopFromToken(ctx, args.token);
-    if (!auth) throw new Error("Nicht eingeloggt");
+    if (!auth) throw new ConvexError("Nicht eingeloggt");
     const { shop, role: senderRole } = auth;
 
     const message = args.message.trim();
-    if (!message) throw new Error("Bitte beschreibe dein Anliegen");
-    if (message.length > 2000) throw new Error("Nachricht zu lang (max. 2000 Zeichen)");
+    if (!message) throw new ConvexError("Bitte beschreibe dein Anliegen");
+    if (message.length > 2000) throw new ConvexError("Nachricht zu lang (max. 2000 Zeichen)");
 
     await ctx.db.insert("supportTickets", {
       shopId: shop._id, senderRole, message,
@@ -94,12 +94,12 @@ export const replyTicket = mutation({
   args: { token: v.string(), ticketId: v.id("supportTickets"), message: v.string() },
   handler: async (ctx, args) => {
     const auth = await shopFromToken(ctx, args.token);
-    if (!auth) throw new Error("Nicht eingeloggt");
+    if (!auth) throw new ConvexError("Nicht eingeloggt");
     const ticket = await ctx.db.get(args.ticketId);
-    if (!ticket || ticket.shopId !== auth.shop._id) throw new Error("Ticket nicht gefunden");
+    if (!ticket || ticket.shopId !== auth.shop._id) throw new ConvexError("Ticket nicht gefunden");
     const message = args.message.trim();
-    if (!message) throw new Error("Nachricht ist leer");
-    if (message.length > 2000) throw new Error("Nachricht zu lang (max. 2000 Zeichen)");
+    if (!message) throw new ConvexError("Nachricht ist leer");
+    if (message.length > 2000) throw new ConvexError("Nachricht zu lang (max. 2000 Zeichen)");
 
     await ctx.db.patch(args.ticketId, {
       thread: [...(ticket.thread ?? []), { from: "user" as const, text: message, at: Date.now() }],
@@ -145,7 +145,7 @@ export const adminAnswerTicket = mutation({
   handler: async (ctx, { adminSecret, ticketId, reply, status }) => {
     requireAdmin({ secret: adminSecret });
     const ticket = await ctx.db.get(ticketId);
-    if (!ticket) throw new Error("Ticket nicht gefunden");
+    if (!ticket) throw new ConvexError("Ticket nicht gefunden");
     const patch: Record<string, unknown> = {};
     const trimmed = reply?.trim();
     if (trimmed) {
