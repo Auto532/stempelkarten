@@ -2006,6 +2006,8 @@ type EarningsSummary = {
   payingContracts?: number; payingMonthly?: number; payingAnnual?: number;
   awaitingPayment?: number; canceledContracts?: number;
   monthlyRunRate?: number; yearlyRunRate?: number;
+  // Laufender Abo-Umsatz getrennt nach Abo-Modell
+  monthlyPlanRunRate?: number; annualPlanRunRate?: number;
 };
 
 type PaymentRow = {
@@ -2176,12 +2178,14 @@ function EarningsCard({ adminSecret }: { adminSecret: string }) {
                   <span className="text-sm font-semibold text-zinc-400">{data.canceledContracts}</span>
                 </div>
               )}
+              {/* Laufender Abo-Umsatz getrennt nach Abo-Modell */}
               <div className="flex items-center justify-between pt-1 border-t border-zinc-800">
-                <span className="text-xs text-zinc-400 font-semibold">Laufender Abo-Umsatz</span>
-                <span className="text-sm font-bold text-green-400">
-                  €{(data.monthlyRunRate ?? 0).toFixed(2)}/Monat
-                  <span className="text-[10px] text-zinc-600 font-normal"> (€{(data.yearlyRunRate ?? 0).toFixed(0)}/Jahr)</span>
-                </span>
+                <span className="text-xs text-zinc-400 font-semibold">Jährliche Zahlungen (Jahresabos)</span>
+                <span className="text-sm font-bold text-green-400">€{(data.annualPlanRunRate ?? 0).toFixed(0)}/Jahr</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-zinc-400 font-semibold">Monatliche Zahlungen (Monatsabos)</span>
+                <span className="text-sm font-bold text-green-400">€{(data.monthlyPlanRunRate ?? 0).toFixed(0)}/Monat</span>
               </div>
             </div>
           )}
