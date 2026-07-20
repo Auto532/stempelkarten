@@ -150,6 +150,96 @@ function ShopListItem({ shop, index, onSelect, payStatus }: {
   );
 }
 
+// ─── ContractInfoCard ─────────────────────────────────────────────────────────
+// Vertrag & Zahlung in der Shop-Detailansicht: Modell + Bonus, bei offener
+// Zahlung der Bezahllink zum Kopieren, nach Zahlung Abschluss- und
+// Verlängerungsdatum (Daten aus der Affiliate-App).
+
+function ContractInfoCard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
+  const [contract, setContract] = useState<any | null | undefined>(undefined);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const c = await affiliateQuery("admin:getContractForShop", { adminSecret, loatycardShopId: shop._id });
+        if (!cancelled) setContract(c);
+      } catch { if (!cancelled) setContract(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [shop._id, adminSecret]);
+
+  if (!contract) return null; // kein Vertrag (z.B. Alt-Shop) → nichts anzeigen
+
+  const paid      = contract.paymentCount > 0;
+  const fmt       = (ts: number) => new Date(ts).toLocaleDateString("de-DE");
+  const planTxt   = contract.planType === "annual" ? "Jahresabo" : "Monatsabo";
+  const periodTxt = contract.planType === "annual" ? "Jahr" : "Monat";
+  const payUrl    = contract.paymentToken ? `${AFFILIATE_APP_URL}/pay/${contract.paymentToken}` : "";
+
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(payUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {}
+  };
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+        <FileText size={14} className="text-amber-400" />
+        <span className="text-sm font-medium text-zinc-200">Vertrag & Zahlung</span>
+        <span className={`ml-auto text-[9px] px-1.5 py-0.5 rounded-md border ${paid
+          ? "bg-green-900/25 border-green-800/40 text-green-400"
+          : "bg-yellow-900/25 border-yellow-700/40 text-yellow-400"}`}>
+          {paid ? "Bezahlt" : contract.payLaterAt ? "Später zahlen" : "Zahlung offen"}
+        </span>
+      </div>
+      <div className="p-4 space-y-3">
+        <div>
+          <p className="text-sm font-semibold text-zinc-100">
+            {planTxt}{contract.rewardCount > 0 ? ` + ${contract.rewardCount} Belohnung${contract.rewardCount === 1 ? "" : "en"}` : ""}
+          </p>
+          <p className="text-[10px] text-zinc-500 mt-0.5">
+            €{contract.recurringPrice}/{periodTxt}{contract.discountCode ? ` · Rabatt ${contract.discountCode} (nur 1. Rechnung)` : ""}
+          </p>
+        </div>
+
+        {paid ? (
+          <div className="rounded-xl p-3 bg-zinc-800 border border-zinc-700 space-y-1">
+            {contract.firstPaidAt && (
+              <p className="text-xs text-zinc-300">Abgeschlossen am <b className="text-zinc-100">{fmt(contract.firstPaidAt)}</b></p>
+            )}
+            {contract.paymentCount > 1 && contract.lastPaidAt && (
+              <p className="text-xs text-zinc-300">Letzte Zahlung: {fmt(contract.lastPaidAt)} (Zahlung #{contract.paymentCount})</p>
+            )}
+            {contract.nextRenewalAt && (
+              <p className="text-xs text-zinc-300">
+                Läuft bis <b className="text-zinc-100">{fmt(contract.nextRenewalAt)}</b>, dann Verlängerung zu €{contract.recurringPrice}/{periodTxt}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="rounded-xl p-3 bg-yellow-900/15 border border-yellow-800/40">
+              <p className="text-xs text-yellow-400">
+                Erste Zahlung offen: <b>€{contract.amountDue}</b>
+                {contract.payLaterAt ? ` · Später zahlen vorgemerkt am ${fmt(contract.payLaterAt)}` : ""}
+              </p>
+            </div>
+            {payUrl && (
+              <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2">
+                <code className="text-[11px] text-amber-300 flex-1 truncate">{payUrl}</code>
+                <button onClick={copyLink} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
+                  {copied ? <Check size={13} className="text-green-400" /> : <Link size={13} />}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── ShopDashboard ────────────────────────────────────────────────────────────
 
 function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
@@ -194,6 +284,9 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
           </div>
         ))}
       </div>
+
+      {/* Vertrag & Zahlung (Modell, Bezahllink bzw. Laufzeit) */}
+      <ContractInfoCard shop={shop} adminSecret={adminSecret} />
 
       {/* QR Code */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
@@ -1298,6 +1391,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
 
 function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecret: string }) {
   const createShop = useMutation(api.shops.createShop);
+  const deleteShop = useMutation(api.shops.adminDeleteShop);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [stampsRequired, setStampsRequired] = useState(10);
@@ -1350,7 +1444,11 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         }
         setError("Shop erstellt, aber kein Bezahllink erhalten (Affiliate-App nicht konfiguriert?)");
       } catch (err: unknown) {
-        setError(`Shop erstellt, aber Vertrag fehlgeschlagen: ${errMsg(err, "Fehler")}`);
+        // Rollback: Schlägt die Vertragsanlage fehl, den gerade erstellten Shop
+        // sofort wieder löschen — sonst bleibt bei jedem Versuch ein Shop ohne
+        // Vertrag in der Übersicht zurück (Duplikate).
+        try { await deleteShop({ shopId: created.shopId, adminSecret }); } catch {}
+        setError(`Shop NICHT erstellt, Vertrag fehlgeschlagen: ${errMsg(err, "Fehler")}`);
       }
     } catch (err: unknown) {
       setError(errMsg(err, "Fehler"));
