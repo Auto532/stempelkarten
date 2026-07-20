@@ -313,6 +313,15 @@ export const createShop = mutation({
   },
   handler: async (ctx, { adminSecret, ownerName, ownerEmail, ownerPhone, rewardCount, ...shopArgs }) => {
     requireAdmin({ secret: adminSecret });
+
+    // Slug muss eindeutig sein: getBySlug/Join-Links laufen über .unique() und
+    // brechen bei Doppelbelegung für ALLE Shops mit diesem Slug. (.first statt
+    // .unique, damit der Check auch funktioniert, falls es schon Altlasten gibt.)
+    const slugTaken = await ctx.db.query("shops")
+      .withIndex("by_slug", q => q.eq("slug", shopArgs.slug))
+      .first();
+    if (slugTaken) throw new ConvexError(`Slug "${shopArgs.slug}" ist schon vergeben, bitte anderes URL-Kürzel wählen`);
+
     const adminLoginToken  = crypto.randomUUID();
     const mitarbeiterToken = crypto.randomUUID();
 
