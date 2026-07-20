@@ -169,19 +169,3 @@ export const registerCustomer = mutation({
   },
 });
 
-export const migratePhonesToEmail = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const customers = await ctx.db.query("customers").collect();
-    let migrated = 0;
-    for (const c of customers) {
-      // @ts-expect-error - old documents may have phone field
-      if (c.phone && !c.email) {
-        // @ts-expect-error - old documents may have phone field
-        await ctx.db.patch(c._id, { email: normalizeEmail(c.phone) });
-        migrated++;
-      }
-    }
-    return { migrated, total: customers.length };
-  },
-});

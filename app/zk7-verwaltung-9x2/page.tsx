@@ -3540,14 +3540,15 @@ function InvitePartnerButton({ adminSecret }: { adminSecret: string }) {
   );
 }
 
-function nextCommissionPreview(planType: "annual" | "monthly", paymentNumber: number) {
+function nextCommissionPreview(planType: "annual" | "monthly", paymentNumber: number, firstYearDiscount?: number | null) {
   const phase =
     planType === "annual"
       ? paymentNumber === 1 ? "Jahr 1" : "Ab Jahr 2"
       : paymentNumber <= 12 ? "Jahr 1" : "Ab Jahr 2";
   // Modell seit 2026-07-20: Jahr 1 = 35%, ab Jahr 2 dauerhaft 15% (lifetime)
   const rates: Record<string, number> = { "Jahr 1": 0.35, "Ab Jahr 2": 0.15 };
-  const base   = planType === "annual" ? 240 : 20; // Provision nur auf den Abo-Anteil
+  // Provision nur auf den GEZAHLTEN Abo-Anteil: Rabattcode drückt Zahlung #1
+  const base = (planType === "annual" ? 240 : 20) * (paymentNumber === 1 && firstYearDiscount ? 1 - firstYearDiscount : 1);
   const rate   = rates[phase];
   const amount = Math.round(base * rate * 100) / 100;
   return { phase, rate, amount };
@@ -4079,7 +4080,7 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
             const comms    = commissionsMap[lead._id] ?? [];
             const pending  = comms.filter((c: any) => c.status === "pending");
             const confirmed = comms.filter((c: any) => c.status === "confirmed");
-            const preview  = nextCommissionPreview(contract.planType, contract.paymentCount + 1);
+            const preview  = nextCommissionPreview(contract.planType, contract.paymentCount + 1, contract.firstYearDiscount);
             return (
               <div key={lead._id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
