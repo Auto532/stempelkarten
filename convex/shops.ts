@@ -103,6 +103,8 @@ export const updateSettings = mutation({
   handler: async (ctx, { shopId, adminToken, stampsRequired, rewardText, rewardTiers, stampValue }) => {
     await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
     await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, stampValue });
+    // Abrechnung folgt den echten Bonus-Stufen (auch bei Inhaber-Änderungen)
+    await ctx.scheduler.runAfter(0, internal.billingSync.syncBonusBilling, { shopId });
   },
 });
 
@@ -181,6 +183,8 @@ export const adminUpdateShopContent = mutation({
   handler: async (ctx, { shopId, adminSecret, stampsRequired, rewardText, rewardTiers, milestones, stampValue }) => {
     requireAdmin({ secret: adminSecret });
     await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, milestones, stampValue });
+    // Abrechnung folgt den echten Bonus-Stufen
+    await ctx.scheduler.runAfter(0, internal.billingSync.syncBonusBilling, { shopId });
   },
 });
 
@@ -209,6 +213,12 @@ export const adminSetFeatures = mutation({
     if (flags.theme !== undefined) patch.theme = flags.theme;
     if (flags.accentColor !== undefined) patch.accentColor = flags.accentColor;
     await ctx.db.patch(shopId, patch);
+
+    // Bonus-Toggle wirkt auf die Abrechnung: an → aktive Zusatz-Stufen zählen,
+    // aus → 0 Belohnungen berechnet.
+    if (flags.bonusProgramEnabled !== undefined) {
+      await ctx.scheduler.runAfter(0, internal.billingSync.syncBonusBilling, { shopId });
+    }
   },
 });
 

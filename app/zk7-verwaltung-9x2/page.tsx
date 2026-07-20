@@ -508,7 +508,10 @@ function ContractBonusCard({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
           </div>
         </div>
         <p className="text-[10px] text-zinc-600">
-          Gilt ab der nächsten Abrechnung{contract.paymentCount === 0 ? " (erste Zahlung steht noch aus)" : ""}.
+          Zählt nur ZUSATZ-Stufen, die Basis-Belohnung ist immer kostenlos. Wird automatisch
+          angeglichen, sobald Bonus-Stufen oder der Bonus-Toggle des Shops geändert werden
+          (manuell ändern nur für Sonderfälle). Gilt ab der nächsten Abrechnung
+          {contract.paymentCount === 0 ? " (erste Zahlung steht noch aus)" : ""}.
           {contract.firstYearDiscount ? ` Rabatt ${contract.discountCode ?? ""} (nur 1. Rechnung, Einrichtung dann €45) wird automatisch mit eingerechnet.` : ""}
           {" "}Einrichtung einmalig: €{contract.setupFee}.
         </p>
@@ -1730,12 +1733,12 @@ function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; adminSecr
         </div>
 
         <div>
-          <label className="block text-xs text-zinc-500 mb-2">Bonusprogramm: Anzahl Belohnungen</label>
+          <label className="block text-xs text-zinc-500 mb-2">Bonusprogramm: zusätzliche Belohnungsstufen</label>
           <div className="rounded-xl p-3 flex items-center justify-between bg-zinc-800 border border-zinc-700">
             <div>
-              <p className="text-sm font-semibold text-zinc-100">{rewardCount} Belohnung{rewardCount === 1 ? "" : "en"}</p>
+              <p className="text-sm font-semibold text-zinc-100">{rewardCount} Zusatz-Stufe{rewardCount === 1 ? "" : "n"}</p>
               <p className="text-[10px] text-zinc-500 mt-0.5">
-                €5/Monat pro Belohnung{planType === "annual" ? " (€60/Jahr)" : ""}
+                Basis-Belohnung inklusive · €5/Monat pro Zusatz-Stufe{planType === "annual" ? " (€60/Jahr)" : ""}
                 {rewardCount > 0 && ` · gesamt ${planType === "annual" ? `€${rewardCount * 60}/Jahr` : `€${rewardCount * 5}/Monat`}`}
               </p>
             </div>
