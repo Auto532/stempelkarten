@@ -84,6 +84,8 @@ export default defineSchema({
   memberships: defineTable({
     customerId: v.id("customers"),
     shopId: v.id("shops"),
+    // Fortlaufende Kunden-Nummer pro Shop (#1, #2, …), nur Anzeige/Struktur.
+    memberNumber: v.optional(v.number()),
     currentStamps: v.number(),
     totalStampsEver: v.number(),
     rewardsRedeemed: v.number(),

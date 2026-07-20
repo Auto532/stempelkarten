@@ -40,12 +40,14 @@ export const seedBarbershop = internalMutation({
       { name: "Lena Schmidt",   email: "lena@example.com",  qrToken: "demo-lena",  stamps: 0,  total: 8,  redeemed: 1 },
     ];
 
-    for (const k of kunden) {
+    for (let idx = 0; idx < kunden.length; idx++) {
+      const k = kunden[idx];
       const customerId = await ctx.db.insert("customers", {
         name: k.name, email: k.email, qrToken: k.qrToken, createdAt: Date.now(),
       });
       const membershipId = await ctx.db.insert("memberships", {
         customerId, shopId,
+        memberNumber: idx + 1,
         currentStamps: k.stamps,
         totalStampsEver: k.total,
         rewardsRedeemed: k.redeemed,

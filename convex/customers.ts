@@ -1,6 +1,7 @@
 import { v, ConvexError } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { normalizeEmail } from "./lib/phone";
+import { nextMemberNumber } from "./memberships";
 
 export const findCustomerByEmail = query({
   args: { email: v.string(), adminToken: v.string() },
@@ -155,6 +156,7 @@ export const registerCustomer = mutation({
       await ctx.db.insert("memberships", {
         customerId: customerId!,
         shopId: shop._id,
+        memberNumber: await nextMemberNumber(ctx, shop._id),
         currentStamps: 0,
         totalStampsEver: 0,
         rewardsRedeemed: 0,

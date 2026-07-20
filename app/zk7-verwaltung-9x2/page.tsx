@@ -406,7 +406,12 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
                 {customer.name?.[0]?.toUpperCase() ?? "?"}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-zinc-200 truncate">{customer.name}</p>
+                <p className="text-sm text-zinc-200 truncate">
+                  {membership.memberNumber != null && (
+                    <span className="text-zinc-500 font-mono text-xs mr-1.5">#{membership.memberNumber}</span>
+                  )}
+                  {customer.name}
+                </p>
                 <p className="text-[11px] text-zinc-500 truncate">{customer.email}</p>
               </div>
               <div className="text-right shrink-0">

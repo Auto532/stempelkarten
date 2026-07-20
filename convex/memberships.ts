@@ -1,6 +1,44 @@
 import { v, ConvexError } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireShopRole, requireAdmin } from "./auth";
+import type { Id } from "./_generated/dataModel";
+
+// Fortlaufende Kunden-Nummer pro Shop (#1, #2, …). Basis ist das Maximum der
+// vergebenen Nummern (nicht die Anzahl), damit Nummern gelöschter Kunden nie
+// neu vergeben werden.
+export async function nextMemberNumber(
+  ctx: { db: { query: (t: "memberships") => any } },
+  shopId: Id<"shops">,
+): Promise<number> {
+  const mems = await ctx.db.query("memberships")
+    .withIndex("by_shop", (q: any) => q.eq("shopId", shopId))
+    .collect();
+  return mems.reduce((max: number, m: any) => Math.max(max, m.memberNumber ?? 0), mems.length) + 1;
+}
+
+// Einmaliger Backfill für Bestandskunden: nummeriert pro Shop in
+// Beitritts-Reihenfolge (_creationTime), vorhandene Nummern bleiben.
+export const backfillMemberNumbers = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const shops = await ctx.db.query("shops").collect();
+    let updated = 0;
+    for (const shop of shops) {
+      const mems = (await ctx.db.query("memberships")
+        .withIndex("by_shop", q => q.eq("shopId", shop._id))
+        .collect()).sort((a, b) => a._creationTime - b._creationTime);
+      let next = mems.reduce((max, m) => Math.max(max, m.memberNumber ?? 0), 0);
+      for (const m of mems) {
+        if (m.memberNumber === undefined) {
+          next += 1;
+          await ctx.db.patch(m._id, { memberNumber: next });
+          updated++;
+        }
+      }
+    }
+    return { updated };
+  },
+});
 
 export const getForCustomerAndShop = query({
   args: { qrToken: v.string(), shopId: v.id("shops") },
@@ -46,6 +84,7 @@ export const createMembershipForExistingCustomer = mutation({
     return await ctx.db.insert("memberships", {
       customerId: customer._id,
       shopId,
+      memberNumber: await nextMemberNumber(ctx, shopId),
       currentStamps: 0,
       totalStampsEver: 0,
       rewardsRedeemed: 0,
@@ -144,6 +183,7 @@ export const adminStampForCustomer = mutation({
       const mId = await ctx.db.insert("memberships", {
         customerId: customer._id,
         shopId,
+        memberNumber: await nextMemberNumber(ctx, shopId),
         currentStamps: 0,
         totalStampsEver: 0,
         rewardsRedeemed: 0,

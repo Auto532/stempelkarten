@@ -164,10 +164,12 @@ export default function BetriebDashboard() {
     : [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true }];
   const lowestTierStamps = activeTiers[0].stamps;
   const readyCount = customers?.filter(({ membership }) => membership.currentStamps >= lowestTierStamps).length ?? 0;
-  const filteredCustomers = customers?.filter(({ customer }) => {
+  const filteredCustomers = customers?.filter(({ customer, membership }) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return customer?.name.toLowerCase().includes(q) || (shop.showLeads && customer?.email.toLowerCase().includes(q));
+    return customer?.name.toLowerCase().includes(q)
+      || (shop.showLeads && customer?.email.toLowerCase().includes(q))
+      || (membership.memberNumber != null && `#${membership.memberNumber}`.includes(q));
   }) ?? [];
 
   const baseDirty = stampsRequired !== shop.stampsRequired || rewardText !== shop.rewardText || stampValue !== (shop.stampValue ?? "");
@@ -636,7 +638,12 @@ export default function BetriebDashboard() {
                         : { background: c.dark, border: c.card.border, color: c.accent }}>
                       {customer.name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="flex-1 text-sm truncate" style={{ color: tb }}>{customer.name}</span>
+                    <span className="flex-1 text-sm truncate" style={{ color: tb }}>
+                      {membership.memberNumber != null && (
+                        <span className="font-mono text-xs mr-1.5" style={{ color: tm }}>#{membership.memberNumber}</span>
+                      )}
+                      {customer.name}
+                    </span>
                     {isReady && (
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold shrink-0"
                         style={{ background: `${ic}22`, border: `1px solid ${ic}55`, color: ic }}>BEREIT</span>
