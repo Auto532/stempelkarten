@@ -3547,8 +3547,10 @@ function nextCommissionPreview(planType: "annual" | "monthly", paymentNumber: nu
       : paymentNumber <= 12 ? "Jahr 1" : "Ab Jahr 2";
   // Modell seit 2026-07-20: Jahr 1 = 35%, ab Jahr 2 dauerhaft 15% (lifetime)
   const rates: Record<string, number> = { "Jahr 1": 0.35, "Ab Jahr 2": 0.15 };
-  // Provision nur auf den GEZAHLTEN Abo-Anteil: Rabattcode drückt Zahlung #1
-  const base = (planType === "annual" ? 240 : 20) * (paymentNumber === 1 && firstYearDiscount ? 1 - firstYearDiscount : 1);
+  // Provision nur auf den GEZAHLTEN Abo-Anteil: Rabattcodes gibt es nur für das
+  // Jahresabo und dort nur auf Zahlung #1
+  const inPromo = !!firstYearDiscount && planType === "annual" && paymentNumber === 1;
+  const base = (planType === "annual" ? 240 : 20) * (inPromo ? 1 - firstYearDiscount! : 1);
   const rate   = rates[phase];
   const amount = Math.round(base * rate * 100) / 100;
   return { phase, rate, amount };
