@@ -751,8 +751,7 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
         </div>
       </div>
 
-      {/* Bonusprogramm nachträglich ändern (Abrechnung, Affiliate-Vertrag) */}
-      <ContractBonusCard shop={shop} adminSecret={adminSecret} />
+      {/* Bonusprogramm (Abrechnung) ist in den Vertrag-Tab umgezogen */}
 
       {/* Shop-Status (aktiv/deaktiviert) */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center justify-between">
@@ -858,13 +857,167 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
   );
 }
 
+// ─── ShopVertragTab ───────────────────────────────────────────────────────────
+// Eigener Tab pro Shop: Vertrag im Detail — Modell + Preisaufschlüsselung,
+// Zahlungsstatus (offen inkl. Bezahllink / bezahlt inkl. Laufzeit),
+// komplette Zahlungshistorie und die Bonusprogramm-Verwaltung.
+
+function ShopVertragTab({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
+  const [contract, setContract] = useState<any | null | undefined>(undefined);
+  const [copied, setCopied]     = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const c = await affiliateQuery("admin:getContractForShop", { adminSecret, loatycardShopId: shop._id });
+        if (!cancelled) setContract(c);
+      } catch { if (!cancelled) setContract(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [shop._id, adminSecret]);
+
+  if (contract === undefined) return (
+    <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
+      className="text-zinc-500 text-sm text-center py-16">Laden...</motion.div>
+  );
+  if (contract === null) return (
+    <div className="text-center py-16 text-zinc-600 text-sm">
+      Kein Vertrag zu diesem Shop gefunden (Alt-Shop ohne Partnerprogramm-Anbindung).
+    </div>
+  );
+
+  const paid      = contract.paymentCount > 0;
+  const fmt       = (ts: number) => new Date(ts).toLocaleDateString("de-DE");
+  const planTxt   = contract.planType === "annual" ? "Jahresabo" : "Monatsabo";
+  const periodTxt = contract.planType === "annual" ? "Jahr" : "Monat";
+  const aboBase   = contract.planType === "annual" ? 240 : 20;
+  const payUrl    = contract.paymentToken ? `${AFFILIATE_APP_URL}/pay/${contract.paymentToken}` : "";
+
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(payUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {}
+  };
+
+  const priceRow = (label: string, value: string, dim = false) => (
+    <div className="flex justify-between text-xs">
+      <span className={dim ? "text-zinc-600" : "text-zinc-400"}>{label}</span>
+      <span className={dim ? "text-zinc-500" : "text-zinc-200"}>{value}</span>
+    </div>
+  );
+
+  return (
+    <motion.div key="vertrag" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+
+      {/* Modell + Preise */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+          <FileText size={14} className="text-amber-400" />
+          <span className="text-sm font-medium text-zinc-200">Vertrag</span>
+          <span className={`ml-auto text-[9px] px-1.5 py-0.5 rounded-md border ${paid
+            ? "bg-green-900/25 border-green-800/40 text-green-400"
+            : "bg-yellow-900/25 border-yellow-700/40 text-yellow-400"}`}>
+            {paid ? "Bezahlt" : contract.payLaterAt ? "Später zahlen" : "Zahlung offen"}
+          </span>
+        </div>
+        <div className="p-4 space-y-2.5">
+          <p className="text-sm font-semibold text-zinc-100">{planTxt}</p>
+          {priceRow(`LoyaltyCard ${planTxt}`, `€${aboBase}/${periodTxt}`)}
+          {contract.rewardCount > 0 && priceRow(
+            `Bonusprogramm (${contract.rewardCount} Belohnung${contract.rewardCount === 1 ? "" : "en"} × €${contract.rewardUnitPrice})`,
+            `€${contract.rewardCount * contract.rewardUnitPrice}/${periodTxt}`
+          )}
+          <div className="border-t border-zinc-800 pt-2">
+            {priceRow("Wiederkehrend gesamt", `€${contract.recurringPrice}/${periodTxt}`)}
+          </div>
+          {priceRow(`Einrichtung & Design (einmalig, 1. Rechnung)`, `€${contract.setupFee}`, true)}
+          {contract.discountCode && priceRow(
+            `Rabattcode ${contract.discountCode} (−${Math.round((contract.firstYearDiscount ?? 0) * 100)}%, nur 1. Rechnung)`,
+            contract.paymentCount === 0 ? "aktiv" : "eingelöst", true
+          )}
+          {priceRow("Vertragsbeginn", fmt(contract.contractStart), true)}
+        </div>
+      </div>
+
+      {/* Zahlungsstatus */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+          <Clock size={14} className={paid ? "text-green-400" : "text-yellow-400"} />
+          <span className="text-sm font-medium text-zinc-200">{paid ? "Laufzeit" : "Offene Zahlung"}</span>
+        </div>
+        <div className="p-4 space-y-2.5">
+          {paid ? (
+            <>
+              {contract.firstPaidAt   && priceRow("Abgeschlossen am", fmt(contract.firstPaidAt))}
+              {contract.lastPaidAt && contract.paymentCount > 1 && priceRow(`Letzte Zahlung (#${contract.paymentCount})`, fmt(contract.lastPaidAt))}
+              {contract.nextRenewalAt && priceRow("Läuft bis / Verlängerung am", fmt(contract.nextRenewalAt))}
+              {contract.nextRenewalAt && (
+                <p className="text-[10px] text-zinc-600">
+                  Zur Verlängerung wird wieder €{contract.recurringPrice}/{periodTxt} fällig (ohne Einrichtung).
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="rounded-xl p-3 bg-yellow-900/15 border border-yellow-800/40">
+                <p className="text-xs text-yellow-400">
+                  Erste Zahlung offen: <b>€{contract.amountDue}</b>
+                  {contract.payLaterAt ? ` · Später zahlen vorgemerkt am ${fmt(contract.payLaterAt)}` : ""}
+                </p>
+              </div>
+              {payUrl && (
+                <div className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2">
+                  <code className="text-[11px] text-amber-300 flex-1 truncate">{payUrl}</code>
+                  <button onClick={copyLink} className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors">
+                    {copied ? <Check size={13} className="text-green-400" /> : <Link size={13} />}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Zahlungshistorie */}
+      {(contract.payments?.length ?? 0) > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+            <TrendingUp size={14} className="text-zinc-500" />
+            <span className="text-sm font-medium text-zinc-200">Zahlungshistorie</span>
+            <span className="ml-auto text-xs text-zinc-600">{contract.payments.length}</span>
+          </div>
+          <div className="divide-y divide-zinc-800/50">
+            {[...contract.payments].reverse().map((p: any) => (
+              <div key={p.paymentNumber} className="flex items-center justify-between px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-400">Zahlung #{p.paymentNumber}</span>
+                  {p.isTest && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-500">Test</span>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-semibold text-zinc-200">€{p.amount}</p>
+                  <p className="text-[10px] text-zinc-600">{fmt(p.paidAt)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bonusprogramm verwalten */}
+      <ContractBonusCard shop={shop} adminSecret={adminSecret} />
+    </motion.div>
+  );
+}
+
 // ─── ShopWorkspace ───────────────────────────────────────────────────────────
 
-type SubView = "dashboard" | "analytics" | "einstellungen";
+type SubView = "dashboard" | "analytics" | "vertrag" | "einstellungen";
 
 const SUB_TABS: { id: SubView; label: string; icon: LucideIcon }[] = [
   { id: "dashboard",     label: "Dashboard",     icon: LayoutDashboard },
   { id: "analytics",     label: "Analytics",     icon: BarChart2       },
+  { id: "vertrag",       label: "Vertrag",       icon: FileText        },
   { id: "einstellungen", label: "Einstellungen", icon: Sliders         },
 ];
 
@@ -895,6 +1048,7 @@ function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops">; admi
         <AnimatePresence mode="wait">
           {subView === "dashboard"     && <ShopDashboard     key={`${shop._id}-dash`}  shop={shop} adminSecret={adminSecret} />}
           {subView === "analytics"     && <ShopAnalytics     key={`${shop._id}-anal`}  shop={shop} adminSecret={adminSecret} />}
+          {subView === "vertrag"       && <ShopVertragTab    key={`${shop._id}-vertr`} shop={shop} adminSecret={adminSecret} />}
           {subView === "einstellungen" && <ShopEinstellungen key={`${shop._id}-einst`} shop={shop} adminSecret={adminSecret} onDeleted={onBack} />}
         </AnimatePresence>
       </div>
