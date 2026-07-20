@@ -334,14 +334,10 @@ export const createShop = mutation({
       createdAt: Date.now(),
     });
 
-    if (ownerEmail && ownerName) {
-      await ctx.scheduler.runAfter(0, internal.emails.sendWelcomeEmail, {
-        ownerEmail,
-        ownerName,
-        shopName:         shopArgs.name,
-        rewardCount,
-      });
-    }
+    // Keine Willkommens-Mail mehr beim Anlegen: die Mails (Willkommen +
+    // Zahlungsbestätigung) verschickt die Affiliate-App erst nach dem
+    // Zahlungseingang (autoRecordPayment). Wer "Später zahlen" wählt,
+    // bekommt bis zur Zahlung nichts.
 
     return { shopId, slug: shopArgs.slug, adminLoginToken };
   },

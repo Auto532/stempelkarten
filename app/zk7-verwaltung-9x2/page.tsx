@@ -1538,8 +1538,10 @@ function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSel
     );
   }
 
+  // Shops mit offener Zahlung zählen nicht in die Statistik, sie stehen in
+  // der eigenen Kategorie "Zahlung offen" darunter.
   const statCards = [
-    { icon: Store, label: "Shops",       value: globalStats.totalShops,     color: "text-amber-400" },
+    { icon: Store, label: "Shops",       value: globalStats.totalShops - openPayments.length, color: "text-amber-400" },
     { icon: Users, label: "Kunden",      value: globalStats.totalCustomers, color: "text-blue-400"  },
     { icon: Stamp, label: "Stempel",     value: globalStats.totalStamps,    color: "text-green-400" },
     { icon: Award, label: "Belohnungen", value: globalStats.totalRewards,   color: "text-purple-400" },
@@ -1558,16 +1560,19 @@ function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSel
         ))}
       </div>
 
-      {/* Offene Zahlungen fließen in die Statistik mit ein */}
+      {/* Eigene Kategorie "Zahlung offen" (inkl. Später zahlen) */}
       {openPayments.length > 0 && (
-        <div className="rounded-2xl px-4 py-3 flex items-center gap-2.5 bg-yellow-900/15 border border-yellow-800/40">
-          <AlertTriangle size={14} className="text-yellow-400 shrink-0" />
-          <p className="text-xs text-yellow-400">
-            <b>{openPayments.length}</b> Shop{openPayments.length === 1 ? "" : "s"} mit offener Zahlung
-            {" "}(gesamt €{openPayments.reduce((s, p) => s + p.amountDue, 0)})
+        <div className="bg-zinc-900 border border-yellow-800/40 rounded-2xl p-4">
+          <Clock size={20} className="text-yellow-400 mb-3" />
+          <p className="text-3xl font-bold text-zinc-100">{openPayments.length}</p>
+          <p className="text-xs text-yellow-400 mt-1">
+            Zahlung offen · gesamt €{openPayments.reduce((s, p) => s + p.amountDue, 0)}
           </p>
         </div>
       )}
+
+      {/* Später-zahlen-Liste (mit Bezahllink und Erledigt-Button) */}
+      <PayLaterCard adminSecret={adminSecret} />
 
       {globalStats.shops.length > 0 && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
@@ -2305,7 +2310,6 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
         <div className="flex-1 h-px bg-zinc-800" />
       </div>
       <EarningsCard adminSecret={adminSecret} />
-      <PayLaterCard adminSecret={adminSecret} />
 
       {/* Sektion 2: Nutzung (Stempel-Aktivität, unabhängig von den Finanzen) */}
       <div className="flex items-center gap-2 pt-3">
@@ -3279,9 +3283,10 @@ function InvitePartnerButton({ adminSecret }: { adminSecret: string }) {
 function nextCommissionPreview(planType: "annual" | "monthly", paymentNumber: number) {
   const phase =
     planType === "annual"
-      ? paymentNumber === 1 ? "Erstprovision" : paymentNumber === 2 ? "Jahr 2" : paymentNumber === 3 ? "Jahr 3" : "Jahr 4+"
-      : paymentNumber <= 12 ? "Erstprovision" : paymentNumber <= 24 ? "Jahr 2" : paymentNumber <= 36 ? "Jahr 3" : "Jahr 4+";
-  const rates: Record<string, number> = { "Erstprovision": 0.20, "Jahr 2": 0.05, "Jahr 3": 0.10, "Jahr 4+": 0.15 };
+      ? paymentNumber === 1 ? "Jahr 1" : "Ab Jahr 2"
+      : paymentNumber <= 12 ? "Jahr 1" : "Ab Jahr 2";
+  // Modell seit 2026-07-20: Jahr 1 = 35%, ab Jahr 2 dauerhaft 15% (lifetime)
+  const rates: Record<string, number> = { "Jahr 1": 0.35, "Ab Jahr 2": 0.15 };
   const base   = planType === "annual" ? 240 : 20; // Provision nur auf den Abo-Anteil
   const rate   = rates[phase];
   const amount = Math.round(base * rate * 100) / 100;
