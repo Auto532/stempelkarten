@@ -213,7 +213,7 @@ export function BarberLoyaltyCard({
               const isTier = activeTiers.some(t => t.stamps === i + 1);
               return (
                 <motion.div key={i}
-                  animate={isAnimating ? { scale: [1, 1.35, 1] } : {}}
+                  animate={isAnimating ? { scale: [1, 1.35, 1] } : { scale: 1 }}
                   transition={{ duration: 0.45 }}
                   style={{
                     aspectRatio: "1", borderRadius: "50%",

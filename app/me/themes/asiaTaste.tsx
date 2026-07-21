@@ -114,7 +114,7 @@ export function AsiaTasteBackground() {
 
 // ─── Loyalty Card ─────────────────────────────────────────────────────────────
 export function AsiaTasteLoyaltyCard({
-  shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR,
+  shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, hideLogo,
   rewardTiers, stampValue, cardNumber, milestoneBadge,
 }: ThemeCardProps) {
   const activeTiers = rewardTiers?.some(t => t.enabled)
@@ -145,7 +145,7 @@ export function AsiaTasteLoyaltyCard({
         <div className="relative z-10 px-6 pt-8 pb-6 flex flex-col items-center">
 
           {/* Crest */}
-          <div className="mb-3"><AsiaCrest /></div>
+          {!hideLogo && <div className="mb-3"><AsiaCrest /></div>}
 
           {/* eyebrow row */}
           <div className="flex items-center gap-2 mb-3 flex-wrap justify-center">
@@ -207,7 +207,7 @@ export function AsiaTasteLoyaltyCard({
               const isTier = tierSet.has(i + 1);
               return (
                 <motion.div key={i} className="aspect-square"
-                  animate={isAnim ? { scale: [1, 1.35, 1] } : {}}
+                  animate={isAnim ? { scale: [1, 1.35, 1] } : { scale: 1 }}
                   transition={{ duration: 0.45 }}>
                   {filled ? (
                     <div className="w-full h-full rounded-full flex items-center justify-center"

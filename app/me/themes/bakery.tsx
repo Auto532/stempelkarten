@@ -67,7 +67,7 @@ export function BakeryLoyaltyCard({ shopName, stampsRequired, currentStamps, ani
             const isTier = activeTiers.some(t => t.stamps === i + 1);
             return (
               <motion.div key={i}
-                animate={isAnimating ? { scale: [1, 1.4, 1] } : {}}
+                animate={isAnimating ? { scale: [1, 1.4, 1] } : { scale: 1 }}
                 transition={{ duration: 0.5 }}
                 className="w-8 h-8 rounded-full flex items-center justify-center"
                 style={filled

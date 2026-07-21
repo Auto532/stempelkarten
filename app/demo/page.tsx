@@ -5,7 +5,7 @@
 // Stempelkarte OHNE Registrierung, ohne App, ohne Datenbank — Stempel geben,
 // Animation sehen, Designs durchschalten. Rein clientseitig.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Stamp, RotateCcw } from "lucide-react";
 import { getShopTheme, THEME_LIST, type ThemeConfig } from "@/app/me/themes/registry";
@@ -49,9 +49,16 @@ const CONFIG_DEMOS: { id: string; label: string; color: string; config: ShopDesi
   },
 ];
 
-const DEMO_SHOP_NAMES: Record<string, string> = {
-  "beates-grill": "Beate's Grill", "asia-taste": "Asia Taste", "barber": "Oldschool Barbershop",
-  "block13": "Block 13", "entenhaus": "Entenhaus", "eiszauber": "Eiszauber", "bakery": "Meisterbäckerei",
+// Neutrale Branchen-Namen: die Signature-Designs zeigen in der Demo keine
+// echten Firmennamen oder Logos der Kunden, für die sie gestaltet wurden.
+const SIGNATURE_DEMOS: Record<string, { label: string; name: string }> = {
+  "beates-grill": { label: "Grill",      name: "Dein Grill" },
+  "asia-taste":   { label: "Asia-Markt", name: "Asia Markt" },
+  "barber":       { label: "Barbershop", name: "Dein Barbershop" },
+  "block13":      { label: "Kiosk",      name: "Dein Kiosk" },
+  "entenhaus":    { label: "Restaurant", name: "Dein Restaurant" },
+  "eiszauber":    { label: "Eisdiele",   name: "Deine Eisdiele" },
+  "bakery":       { label: "Bäckerei",   name: "Deine Bäckerei" },
 };
 
 export default function DemoPage() {
@@ -74,9 +81,9 @@ export default function DemoPage() {
     })),
     // Signature-Designs: von Hand gestaltet, gegen Aufpreis
     ...THEME_LIST.map(t => ({
-      id: t.id, label: t.label, color: t.color, signature: true,
+      id: t.id, label: SIGNATURE_DEMOS[t.id]?.label ?? t.label, color: t.color, signature: true,
       theme: getShopTheme({ customDesignEnabled: true, theme: t.id })!,
-      shopName: DEMO_SHOP_NAMES[t.id] ?? t.label,
+      shopName: SIGNATURE_DEMOS[t.id]?.name ?? "Dein Laden",
     })),
   ], []);
 
@@ -96,11 +103,15 @@ export default function DemoPage() {
     { stamps: 60, text: "VIP-Kunde", enabled: true },
   ];
 
+  // Alten Timer abbrechen, sonst beendet er bei schnellem Tippen die
+  // Animation des gerade neu gesetzten Stempels vorzeitig
+  const animTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleStamp = () => {
     if (currentStamps >= MAX_STAMPS) return;
+    if (animTimer.current) clearTimeout(animTimer.current);
     setAnimateIndex(currentStamps);
     setCurrentStamps(s => s + 1);
-    setTimeout(() => setAnimateIndex(null), 600);
+    animTimer.current = setTimeout(() => setAnimateIndex(null), 600);
   };
 
   return (
@@ -168,6 +179,7 @@ export default function DemoPage() {
           animateIndex={animateIndex}
           qrToken="demo"
           hideQR
+          hideLogo
           rewardTiers={rewardTiers}
           stampValue={10}
           cardNumber={1}

@@ -110,7 +110,7 @@ export function EiszauberLoyaltyCard({
               const isGoal = activeTiers.some(t => t.stamps === i + 1) || (!activeTiers.length && i + 1 === stampsRequired);
               return (
                 <motion.div key={i}
-                  animate={isAnimating ? { scale: [1, 1.35, 1] } : {}}
+                  animate={isAnimating ? { scale: [1, 1.35, 1] } : { scale: 1 }}
                   transition={{ duration: 0.45 }}
                   className="aspect-square rounded-full flex items-center justify-center font-bold"
                   style={filled

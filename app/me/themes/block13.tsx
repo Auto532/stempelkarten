@@ -152,7 +152,7 @@ export function Block13LoyaltyCard({
             const isAnimating = i === animateIndex;
             return (
               <motion.div key={i}
-                animate={isAnimating ? { scale: [1, 1.25, 1] } : {}}
+                animate={isAnimating ? { scale: [1, 1.25, 1] } : { scale: 1 }}
                 transition={{ duration: 0.4 }}
                 style={{
                   position: "relative", aspectRatio: "1",

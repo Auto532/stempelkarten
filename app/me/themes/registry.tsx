@@ -114,6 +114,8 @@ export interface ThemeCardProps {
   onShowQR?: () => void;
   qrToken: string;
   hideQR?: boolean;
+  // Demo-Seite: firmenspezifisches Logo/Wappen ausblenden
+  hideLogo?: boolean;
   rewardTiers?: ThemeTier[];
   accentColor?: string;
   stampValue?: number | null;
