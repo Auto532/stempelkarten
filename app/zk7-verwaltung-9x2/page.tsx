@@ -8,7 +8,7 @@ import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy,
-  Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, Clock, type LucideIcon,
+  Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, Clock, Search, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS } from "@/app/me/components";
 import { THEME_LIST } from "@/app/me/themes/registry";
@@ -131,7 +131,7 @@ function ShopListItem({ shop, index, onSelect, payStatus }: {
     <motion.button
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06 }}
+      transition={{ delay: Math.min(index * 0.04, 0.25) }}
       onClick={onSelect}
       className="w-full flex items-center gap-3 px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:bg-zinc-800/60 hover:border-zinc-700 transition-colors text-left"
     >
@@ -141,6 +141,11 @@ function ShopListItem({ shop, index, onSelect, payStatus }: {
       <div className="flex-1 min-w-0">
         <p className="font-medium text-zinc-100 truncate flex items-center gap-2">
           {shop.name}
+          {shop.active === false && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-red-900/25 border border-red-800/40 text-red-400 shrink-0">
+              Inaktiv
+            </span>
+          )}
           <PayBadge status={payStatus} />
         </p>
         <p className="text-xs text-zinc-500 truncate">{shop.rewardText} · {shop.stampsRequired} Stempel</p>
@@ -1790,6 +1795,7 @@ function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSel
   const globalStats = useQuery(api.shops.getGlobalStats, adminSecret ? { adminSecret } : "skip");
   const payStatus = usePayStatus(adminSecret);
   const openPayments = Object.values(payStatus).filter(s => !s.paid);
+  const [showAllShops, setShowAllShops] = useState(false);
 
   if (!globalStats) {
     return (
@@ -1847,8 +1853,10 @@ function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSel
             <span className="ml-auto text-xs text-zinc-600">{globalStats.shops.length}</span>
           </div>
           <div className="divide-y divide-zinc-800/50">
-            {[...globalStats.shops].sort((a, b) => a.name.localeCompare(b.name)).map((shop, i) => (
-              <motion.button key={shop._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 + i * 0.04 }}
+            {[...globalStats.shops].sort((a, b) => a.name.localeCompare(b.name))
+              .slice(0, showAllShops ? undefined : 10)
+              .map((shop, i) => (
+              <motion.button key={shop._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(0.15 + i * 0.03, 0.4) }}
                 onClick={() => onSelectShop(shop._id)}
                 className="w-full flex items-center gap-3 px-5 py-3 hover:bg-zinc-800/40 transition-colors text-left">
                 <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
@@ -1862,6 +1870,12 @@ function OverviewTab({ adminSecret, onSelectShop }: { adminSecret: string; onSel
               </motion.button>
             ))}
           </div>
+          {globalStats.shops.length > 10 && (
+            <button onClick={() => setShowAllShops(v => !v)}
+              className="w-full py-3 text-xs text-zinc-500 hover:text-zinc-300 border-t border-zinc-800 transition-colors">
+              {showAllShops ? "Weniger anzeigen" : `Alle ${globalStats.shops.length} Shops anzeigen`}
+            </button>
+          )}
         </div>
       )}
     </motion.div>
@@ -1876,7 +1890,32 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
   onSelectShop: (id: Id<"shops">) => void;
 }) {
   const [showCreate, setShowCreate] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"alle" | "offen" | "inaktiv">("alle");
+  const [showAll, setShowAll] = useState(false);
   const payStatus = usePayStatus(adminSecret);
+
+  // Neueste zuerst, damit frisch angelegte Shops oben stehen
+  const sorted = [...(shops ?? [])].sort((a, b) => b._creationTime - a._creationTime);
+  const q = search.trim().toLowerCase();
+  const openCount     = sorted.filter(s => payStatus[s._id] && !payStatus[s._id].paid).length;
+  const inactiveCount = sorted.filter(s => s.active === false).length;
+  const filtered = sorted.filter(s => {
+    if (q && !s.name.toLowerCase().includes(q) && !s.slug.toLowerCase().includes(q)) return false;
+    if (filter === "offen")   return !!payStatus[s._id] && !payStatus[s._id].paid;
+    if (filter === "inaktiv") return s.active === false;
+    return true;
+  });
+  // Bei Suche/Filter alles zeigen, sonst erst nach Klick auf "Alle anzeigen"
+  const LIMIT = 25;
+  const capped = !showAll && !q && filter === "alle" && filtered.length > LIMIT;
+  const visible = capped ? filtered.slice(0, LIMIT) : filtered;
+
+  const chips: { id: typeof filter; label: string; count: number | null }[] = [
+    { id: "alle",    label: "Alle",          count: sorted.length },
+    { id: "offen",   label: "Zahlung offen", count: openCount },
+    { id: "inaktiv", label: "Inaktiv",       count: inactiveCount },
+  ];
 
   return (
     <motion.div key="shops" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
@@ -1892,6 +1931,33 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
         {showCreate && <CreateShopForm onDone={() => setShowCreate(false)} adminSecret={adminSecret} />}
       </AnimatePresence>
 
+      {/* Suche + Filter: erst relevant, wenn die Liste wächst */}
+      {(shops?.length ?? 0) > 5 && (
+        <div className="space-y-2">
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Shop suchen…"
+              className="w-full pl-8 pr-8 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-700" />
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-1.5">
+            {chips.map(c => (
+              <button key={c.id} onClick={() => setFilter(c.id)}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
+                  filter === c.id
+                    ? "bg-amber-400 border-amber-400 text-zinc-900"
+                    : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300"}`}>
+                {c.label}{c.count !== null ? ` (${c.count})` : ""}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {shops === undefined && (
         <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
           className="text-zinc-500 text-sm text-center py-10">Laden...</motion.div>
@@ -1899,10 +1965,19 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
       {shops?.length === 0 && !showCreate && (
         <div className="text-center py-10 text-zinc-600 text-sm">Noch keine Shops. Klicke Neu um den ersten anzulegen.</div>
       )}
-      {shops?.map((shop, i) => (
+      {shops && shops.length > 0 && filtered.length === 0 && (
+        <div className="text-center py-10 text-zinc-600 text-sm">Keine Treffer{q ? ` für „${search}"` : ""}.</div>
+      )}
+      {visible.map((shop, i) => (
         <ShopListItem key={shop._id} shop={shop} index={i} onSelect={() => onSelectShop(shop._id)}
           payStatus={payStatus[shop._id]} />
       ))}
+      {capped && (
+        <button onClick={() => setShowAll(true)}
+          className="w-full py-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+          Alle {filtered.length} Shops anzeigen
+        </button>
+      )}
     </motion.div>
   );
 }
