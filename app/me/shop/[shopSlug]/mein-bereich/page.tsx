@@ -109,14 +109,14 @@ export default function MeinBereichPage() {
           <ArrowLeft size={16} style={{ color: c.accent }} />
         </button>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: hexToRgba(c.accent, 0.6) }}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: c.textBody }}>
             Mein Bereich
           </p>
           <h1 className="text-base font-bold leading-tight" style={{ color: c.text }}>{shop.name}</h1>
         </div>
         {cardNumber !== undefined && (
           <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm"
-            style={{ background: hexToRgba(c.accent, 0.12), color: hexToRgba(c.accent, 0.7) }}>
+            style={{ background: hexToRgba(c.accent, 0.12), color: c.textBody }}>
             #{String(cardNumber).padStart(3, "0")}
           </span>
         )}
@@ -138,7 +138,7 @@ export default function MeinBereichPage() {
             style={{ background: cb(), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
             <Icon size={15} style={{ color: c.accent }} />
             <p className="text-xl font-bold leading-none" style={{ color: c.text }}>{value}</p>
-            <p className="text-[9px] leading-tight" style={{ color: hexToRgba(c.accent, 0.55) }}>{label}</p>
+            <p className="text-[9px] leading-tight" style={{ color: c.textBody }}>{label}</p>
           </div>
         ))}
       </motion.div>
@@ -152,11 +152,11 @@ export default function MeinBereichPage() {
               style={{ background: c.accent, color: "#0e0d0b", letterSpacing: "0.06em" }}>
               LVL {safeIdx + 1}
             </span>
-            <span className="text-[11px]" style={{ color: hexToRgba(c.accent, 0.55) }}>
+            <span className="text-[11px]" style={{ color: c.textBody }}>
               {membership.totalStampsEver} Stempel
             </span>
           </div>
-          <span className="text-[11px] font-bold" style={{ color: c.accent }}>{lvlData.label}</span>
+          <span className="text-[11px] font-bold" style={{ color: c.text }}>{lvlData.label}</span>
         </div>
         <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.12) }}>
           <motion.div initial={{ width: 0 }} animate={{ width: `${lvlProgress * 100}%` }}
@@ -165,7 +165,7 @@ export default function MeinBereichPage() {
             style={{ background: c.accent, boxShadow: `0 0 10px ${hexToRgba(c.accent, 0.5)}` }} />
         </div>
         {lvlNext && (
-          <p className="text-[9px] mt-1.5" style={{ color: hexToRgba(c.accent, 0.35) }}>
+          <p className="text-[9px] mt-1.5" style={{ color: c.textBody, opacity: 0.8 }}>
             Nächstes Level bei {lvlNext.min} Stempeln
           </p>
         )}
@@ -179,6 +179,7 @@ export default function MeinBereichPage() {
             totalStampsEver={membership.totalStampsEver}
             accent={shop.customDesignEnabled ? shop.accentColor : undefined}
             textColor={c.text}
+            textBody={c.textBody}
             cardBg={cb()}
           />
         </motion.div>
@@ -189,7 +190,7 @@ export default function MeinBereichPage() {
         style={{ background: cb(), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
         <div className="flex items-center gap-2 mb-3">
           <MessageSquare size={14} style={{ color: c.accent }} />
-          <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: hexToRgba(c.accent, 0.6) }}>
+          <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: c.textBody }}>
             Nachricht an {shop.name}
           </p>
         </div>
@@ -225,7 +226,7 @@ export default function MeinBereichPage() {
               <Send size={14} />
               {sending ? "Senden…" : "Nachricht senden"}
             </button>
-            <p className="text-[10px] text-center mt-2" style={{ color: hexToRgba(c.accent, 0.35) }}>
+            <p className="text-[10px] text-center mt-2" style={{ color: c.textBody, opacity: 0.7 }}>
               {messageText.length}/1000
             </p>
           </>

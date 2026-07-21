@@ -392,24 +392,28 @@ export function RedeemVoucher({
 // ─── MilestonesSection (außerhalb der Karte) ──────────────────────────────────
 
 export function MilestonesSection({
-  milestones, totalStampsEver, accent, textColor, cardBg,
+  milestones, totalStampsEver, accent, textColor, textBody, cardBg,
 }: {
   milestones: CardTier[];
   totalStampsEver: number;
   accent?: string;
   textColor?: string;
+  // Lesbare Sekundär-Textfarbe des Designs; Akzent-Alpha ist auf hellen
+  // Hintergründen sonst unsichtbar
+  textBody?: string;
   cardBg?: string;
 }) {
   const active = milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);
   if (!active.length) return null;
   const a = accent ?? "#fbbf24";
   const tc = textColor ?? "#f4f4f5";
+  const tb = textBody ?? hexToRgba(tc, 0.6);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
       <div className="flex items-center gap-2 mb-3">
         <Star size={13} style={{ color: a }} />
-        <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: hexToRgba(a, 0.6) }}>
+        <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: tb }}>
           Treue-Meilensteine
         </h3>
       </div>
@@ -429,7 +433,7 @@ export function MilestonesSection({
                 className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
                 style={reached
                   ? { background: hexToRgba(a, 0.22), color: a }
-                  : { background: hexToRgba(a, 0.07), color: hexToRgba(a, 0.4) }
+                  : { background: hexToRgba(a, 0.07), color: tb }
                 }
               >
                 {reached ? "✓" : i + 1}
@@ -443,7 +447,7 @@ export function MilestonesSection({
                   <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
                     style={reached
                       ? { background: hexToRgba(a, 0.15), color: a }
-                      : { background: hexToRgba(a, 0.07), color: hexToRgba(a, 0.5) }
+                      : { background: hexToRgba(a, 0.07), color: tb }
                     }
                   >
                     {totalStampsEver}/{m.stamps}
