@@ -144,7 +144,7 @@ function makeCard(cfg: ShopDesignConfig) {
         <div className="relative p-6">
           {/* Kleines QR-Icon ganz oben in der Ecke */}
           {!hideQR && onShowQR && (
-            <button onClick={onShowQR} className="absolute top-3 right-3 z-10 w-12 h-12 rounded-xl flex items-center justify-center"
+            <button onClick={onShowQR} className="absolute top-5 right-3 z-10 w-12 h-12 rounded-xl flex items-center justify-center"
               style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
               <QrCode size={24} style={{ color: A }} />
             </button>
