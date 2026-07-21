@@ -126,6 +126,7 @@ function makeCard(cfg: ShopDesignConfig) {
     const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
 
     return (
+      <>
       <div className="relative overflow-hidden rounded-3xl"
         style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
         <div className="absolute inset-0 pointer-events-none"
@@ -245,17 +246,18 @@ function makeCard(cfg: ShopDesignConfig) {
               </p>
             ) : null}
           </div>
-          {/* Großer QR-Button statt kleinem Icon oben: Kunden kommen mit einem
-              Tipp zum Vorzeige-Code */}
-          {!hideQR && onShowQR && (
-            <button onClick={onShowQR}
-              className="w-full mt-5 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
-              style={{ background: A, color: C, boxShadow: `0 4px 18px ${alpha(A, "40")}` }}>
-              <QrCode size={18} /> QR-Code zeigen
-            </button>
-          )}
         </div>
       </div>
+      {/* Großer QR-Button unter der Karte: Kunden kommen mit einem Tipp
+          zum Vorzeige-Code */}
+      {!hideQR && onShowQR && (
+        <button onClick={onShowQR}
+          className="w-full mt-3 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+          style={{ background: A, color: C, boxShadow: `0 4px 18px ${alpha(A, "40")}` }}>
+          <QrCode size={18} /> QR-Code zeigen
+        </button>
+      )}
+      </>
     );
   };
 }
