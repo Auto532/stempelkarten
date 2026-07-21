@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion } from "framer-motion";
 import { ArrowLeft, Stamp, Gift, Send, Check, MessageSquare, Trophy } from "lucide-react";
-import { hexToRgba, MilestonesSection } from "../../../components";
+import { hexToRgba, readableAccent, MilestonesSection } from "../../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 
 const SHOP_LEVELS = [
@@ -70,6 +70,9 @@ export default function MeinBereichPage() {
   const theme = getShopTheme(shop);
   const c = theme?.colors ?? DEFAULT_COLORS;
   const cb = () => hexToRgba(c.cardBg, theme ? 0.88 : 0.78);
+  // Für Balken, Icons und farbige Schrift: bei hellem Design mit hellem
+  // Akzent (z.B. Gelb) die dunkle Textfarbe verwenden
+  const a2 = readableAccent(c.accent, c.text);
 
   const shopLvlIdx = SHOP_LEVELS.findIndex(l => membership.totalStampsEver <= l.max);
   const safeIdx = shopLvlIdx === -1 ? SHOP_LEVELS.length - 1 : shopLvlIdx;
@@ -106,7 +109,7 @@ export default function MeinBereichPage() {
         <button onClick={() => router.back()}
           className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors shrink-0 backdrop-blur-sm"
           style={{ background: hexToRgba(c.accent, 0.1), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}>
-          <ArrowLeft size={16} style={{ color: c.accent }} />
+          <ArrowLeft size={16} style={{ color: a2 }} />
         </button>
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: c.textBody }}>
@@ -136,7 +139,7 @@ export default function MeinBereichPage() {
         ].map(({ icon: Icon, value, label }) => (
           <div key={label} className="rounded-2xl p-3 flex flex-col items-center gap-1.5 text-center backdrop-blur-sm"
             style={{ background: cb(), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
-            <Icon size={15} style={{ color: c.accent }} />
+            <Icon size={15} style={{ color: a2 }} />
             <p className="text-xl font-bold leading-none" style={{ color: c.text }}>{value}</p>
             <p className="text-[9px] leading-tight" style={{ color: c.textBody }}>{label}</p>
           </div>
@@ -149,7 +152,7 @@ export default function MeinBereichPage() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold px-2 py-0.5 rounded"
-              style={{ background: c.accent, color: "#0e0d0b", letterSpacing: "0.06em" }}>
+              style={{ background: a2, color: a2 === c.accent ? "#0e0d0b" : c.cardBg, letterSpacing: "0.06em" }}>
               LVL {safeIdx + 1}
             </span>
             <span className="text-[11px]" style={{ color: c.textBody }}>
@@ -158,11 +161,11 @@ export default function MeinBereichPage() {
           </div>
           <span className="text-[11px] font-bold" style={{ color: c.text }}>{lvlData.label}</span>
         </div>
-        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(c.accent, 0.12) }}>
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(a2, 0.12) }}>
           <motion.div initial={{ width: 0 }} animate={{ width: `${lvlProgress * 100}%` }}
             transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
             className="h-full rounded-full"
-            style={{ background: c.accent, boxShadow: `0 0 10px ${hexToRgba(c.accent, 0.5)}` }} />
+            style={{ background: a2, boxShadow: `0 0 10px ${hexToRgba(a2, 0.5)}` }} />
         </div>
         {lvlNext && (
           <p className="text-[9px] mt-1.5" style={{ color: c.textBody, opacity: 0.8 }}>
@@ -189,7 +192,7 @@ export default function MeinBereichPage() {
       <motion.div {...fade(5)} className="rounded-2xl px-4 py-4 backdrop-blur-sm"
         style={{ background: cb(), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
         <div className="flex items-center gap-2 mb-3">
-          <MessageSquare size={14} style={{ color: c.accent }} />
+          <MessageSquare size={14} style={{ color: a2 }} />
           <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: c.textBody }}>
             Nachricht an {shop.name}
           </p>

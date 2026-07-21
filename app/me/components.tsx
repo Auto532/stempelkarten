@@ -150,6 +150,24 @@ export function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+function hexLuminance(hex: string): number | null {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return null;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+// Heller Akzent (z.B. Gelb) auf hellem Design ist unlesbar. Helles Design
+// erkennt man an dunkler Textfarbe, dann für Balken/Schrift die Textfarbe
+// nehmen statt des Akzents.
+export function readableAccent(accent: string, textColor: string): string {
+  const a = hexLuminance(accent);
+  const t = hexLuminance(textColor);
+  if (a !== null && t !== null && a > 0.6 && t < 0.5) return textColor;
+  return accent;
+}
+
 export function getActiveTiers(shop: {
   stampsRequired: number;
   rewardText: string;
@@ -408,11 +426,13 @@ export function MilestonesSection({
   const a = accent ?? "#fbbf24";
   const tc = textColor ?? "#f4f4f5";
   const tb = textBody ?? hexToRgba(tc, 0.6);
+  // Für Balken und farbige Schrift: bei hellem Design dunkle Variante
+  const aStrong = readableAccent(a, tc);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
       <div className="flex items-center gap-2 mb-3">
-        <Star size={13} style={{ color: a }} />
+        <Star size={13} style={{ color: aStrong }} />
         <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: tb }}>
           Treue-Meilensteine
         </h3>
@@ -432,7 +452,7 @@ export function MilestonesSection({
               <div
                 className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
                 style={reached
-                  ? { background: hexToRgba(a, 0.22), color: a }
+                  ? { background: hexToRgba(a, 0.22), color: aStrong }
                   : { background: hexToRgba(a, 0.07), color: tb }
                 }
               >
@@ -446,7 +466,7 @@ export function MilestonesSection({
                   </p>
                   <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
                     style={reached
-                      ? { background: hexToRgba(a, 0.15), color: a }
+                      ? { background: hexToRgba(a, 0.15), color: aStrong }
                       : { background: hexToRgba(a, 0.07), color: tb }
                     }
                   >
@@ -454,15 +474,15 @@ export function MilestonesSection({
                   </span>
                 </div>
                 <div className="h-1.5 rounded-full overflow-hidden"
-                  style={{ background: hexToRgba(a, 0.1) }}>
+                  style={{ background: hexToRgba(aStrong, 0.12) }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress * 100}%` }}
                     transition={{ duration: 0.8, delay: 0.1 }}
                     className="h-full rounded-full"
                     style={{
-                      background: reached ? a : hexToRgba(a, 0.5),
-                      boxShadow: reached ? `0 0 6px ${hexToRgba(a, 0.45)}` : undefined,
+                      background: reached ? aStrong : hexToRgba(aStrong, 0.55),
+                      boxShadow: reached ? `0 0 6px ${hexToRgba(aStrong, 0.45)}` : undefined,
                     }}
                   />
                 </div>
