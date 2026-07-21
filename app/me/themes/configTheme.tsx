@@ -162,6 +162,12 @@ function makeCard(cfg: ShopDesignConfig) {
                 <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
               )}
             </div>
+            {!hideQR && onShowQR && (
+              <button onClick={onShowQR} className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
+                <QrCode size={26} style={{ color: A }} />
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 mb-4">
             {Array.from({ length: maxStamps }).map((_, i) => {
