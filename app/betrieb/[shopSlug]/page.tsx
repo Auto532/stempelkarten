@@ -11,6 +11,7 @@ import {
   ScanLine, Users, Award, Stamp, X, Check, QrCode,
   Mail, Printer, Search, Gift, Plus, TrendingUp, Trash2,
   Trophy, ChevronRight, ArrowLeft, Settings, KeyRound, Share2, Copy,
+  MessageSquare,
 } from "lucide-react";
 import { QRImage } from "@/app/components/QRImage";
 import { InstallHint } from "@/app/components/InstallHint";
@@ -47,7 +48,7 @@ async function printQR(rawShopName: string, rawUrl: string) {
 }
 
 type Tier = { stamps: number; text: string; enabled: boolean };
-type View = "home" | "einstellungen" | "kunden" | "einloesungen" | "qr" | "scan" | "wiederherstellung";
+type View = "home" | "einstellungen" | "kunden" | "einloesungen" | "nachrichten" | "qr" | "scan" | "wiederherstellung";
 
 export default function BetriebDashboard() {
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -101,6 +102,14 @@ export default function BetriebDashboard() {
     api.memberships.getRedemptionsForShop,
     shop?.bonusProgramEnabled && shop && adminToken ? { shopId: shop._id, adminToken, limit: showAllRedemptions ? undefined : 20 } : "skip"
   );
+  // Endkunden-Nachrichten: nur Inhaber (Mitarbeiter landen eh auf /scan,
+  // und die Query akzeptiert nur den Inhaber-Token)
+  const messages = useQuery(
+    api.messages.getMessagesForOwner,
+    shop && adminToken ? { shopId: shop._id, adminToken } : "skip"
+  );
+  const markMessagesRead = useMutation(api.messages.markMessagesReadByOwner);
+  const unreadMessages = messages?.filter(m => !m.read).length ?? 0;
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
@@ -135,6 +144,13 @@ export default function BetriebDashboard() {
   }, [shop, milestonesInit]);
 
   useShopThemeSync(shop);
+
+  // Beim Öffnen der Nachrichten-Ansicht als gelesen markieren
+  useEffect(() => {
+    if (view === "nachrichten" && shop && adminToken && unreadMessages > 0) {
+      markMessagesRead({ shopId: shop._id, adminToken });
+    }
+  }, [view, shop, adminToken, unreadMessages, markMessagesRead]);
 
   if (!authorized || shop === undefined) {
     return (
@@ -333,6 +349,13 @@ export default function BetriebDashboard() {
               sub: redemptions ? `${redemptions.length} vergeben` : "Treue Bonus",
               badge: null,
             }] : []),
+            {
+              id: "nachrichten" as View,
+              icon: MessageSquare,
+              label: "Nachrichten",
+              sub: unreadMessages > 0 ? `${unreadMessages} neu` : `${messages?.length ?? "–"} gesamt`,
+              badge: unreadMessages > 0 ? unreadMessages : null,
+            },
             {
               id: "qr" as View,
               icon: QrCode,
@@ -759,6 +782,42 @@ export default function BetriebDashboard() {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // NACHRICHTEN VIEW (Endkunden-Feedback, nur Inhaber)
+  // ══════════════════════════════════════════════════════════════════════════
+  if (view === "nachrichten") {
+    return (
+      <div className={wrapperClass}>
+        {theme && <theme.Background />}
+        <SubHeader title="Nachrichten" />
+
+        <div className="rounded-2xl overflow-hidden" style={card}>
+          {messages === undefined && <p className="px-5 py-8 text-center text-sm" style={{ color: tm }}>Laden…</p>}
+          {messages?.length === 0 && (
+            <div className="px-5 py-10 text-center">
+              <MessageSquare size={22} className="mx-auto mb-2" style={{ color: tm }} />
+              <p className="text-sm" style={{ color: tm }}>Noch keine Nachrichten</p>
+              <p className="text-[11px] mt-1" style={{ color: tm }}>Kunden können dir aus ihrem Bereich Feedback und Wünsche schicken.</p>
+            </div>
+          )}
+          {messages?.map(m => (
+            <div key={m._id} className="px-4 py-3.5" style={{ borderBottom: `1px solid ${div}` }}>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-sm font-semibold flex-1 truncate" style={{ color: tx }}>{m.customerName}</p>
+                {!m.read && (
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ic }} />
+                )}
+                <span className="text-[11px] shrink-0" style={{ color: tm }}>
+                  {new Date(m.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                </span>
+              </div>
+              <p className="text-sm whitespace-pre-wrap" style={{ color: tb }}>{m.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // SCAN VIEW (Inhaber-Kamera — navigiert zu /stamp/[token])
   // ══════════════════════════════════════════════════════════════════════════

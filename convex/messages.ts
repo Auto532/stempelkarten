@@ -1,7 +1,7 @@
 import { v, ConvexError } from "convex/values";
 import { mutation, query, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { requireAdmin } from "./auth";
+import { requireAdmin, requireShopRole } from "./auth";
 
 export const sendMessage = mutation({
   args: {
@@ -64,6 +64,44 @@ export const notifyFeedbackTelegram = internalAction({
           `\n\n💬 ${escapeHtml(args.text)}`,
       }),
     }).catch(() => {});
+  },
+});
+
+// Inhaber: Endkunden-Nachrichten lesen. role "inhaber" schließt den
+// Mitarbeiter-Token bewusst aus, Mitarbeiter sollen die Nachrichten nicht sehen.
+export const getMessagesForOwner = query({
+  args: { shopId: v.id("shops"), adminToken: v.string() },
+  handler: async (ctx, { shopId, adminToken }) => {
+    await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
+    const msgs = await ctx.db
+      .query("messages")
+      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
+      .order("desc")
+      .take(100);
+    return await Promise.all(
+      msgs.map(async (m) => {
+        const customer = await ctx.db.get(m.customerId);
+        return {
+          _id: m._id, text: m.text, read: m.read, createdAt: m.createdAt,
+          customerName: customer?.name ?? "Unbekannt",
+        };
+      })
+    );
+  },
+});
+
+export const markMessagesReadByOwner = mutation({
+  args: { shopId: v.id("shops"), adminToken: v.string() },
+  handler: async (ctx, { shopId, adminToken }) => {
+    await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
+    const msgs = await ctx.db
+      .query("messages")
+      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
+      .order("desc")
+      .take(200);
+    await Promise.all(
+      msgs.filter((m) => !m.read).map((m) => ctx.db.patch(m._id, { read: true }))
+    );
   },
 });
 
