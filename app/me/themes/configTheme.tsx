@@ -27,6 +27,8 @@ export interface ShopDesignConfig {
   // Logo-Größe auf der Karte: s/m/l (fehlend = m; wird aktuell nicht mehr
   // gerendert, das Logo ist immer groß)
   logoSize?: "s" | "m" | "l";
+  // Kleiner Zusatz-Text unter Logo/Shopname (z.B. Ladenname oder Slogan)
+  tagline?: string;
   stampIcon?: string;
   // Stempel-Form: circle/square/diamond/hex (fehlend = circle)
   stampShape?: string;
@@ -140,8 +142,15 @@ function makeCard(cfg: ShopDesignConfig) {
           </>
         )}
         <div className="relative p-6">
+          {/* Kleines QR-Icon ganz oben in der Ecke */}
+          {!hideQR && onShowQR && (
+            <button onClick={onShowQR} className="absolute top-3 right-3 z-10 w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
+              <QrCode size={24} style={{ color: A }} />
+            </button>
+          )}
           <div className="flex items-center justify-between mb-5">
-            <div className="min-w-0">
+            <div className="min-w-0 pr-12">
               <div className="flex items-center gap-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TB }}>Stempelkarte</p>
                 {cardNumber !== undefined && (
@@ -162,13 +171,10 @@ function makeCard(cfg: ShopDesignConfig) {
               ) : (
                 <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
               )}
+              {cfg.tagline && (
+                <p className="text-[11px] mt-1.5 font-medium" style={{ color: TB }}>{cfg.tagline}</p>
+              )}
             </div>
-            {!hideQR && onShowQR && (
-              <button onClick={onShowQR} className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
-                <QrCode size={26} style={{ color: A }} />
-              </button>
-            )}
           </div>
           <div className="flex flex-wrap gap-2 mb-4">
             {Array.from({ length: maxStamps }).map((_, i) => {

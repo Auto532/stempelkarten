@@ -61,6 +61,8 @@ export default defineSchema({
       logoUrl: v.optional(v.string()),
       // Logo-Größe auf der Karte: s/m/l (fehlend = m)
       logoSize: v.optional(v.union(v.literal("s"), v.literal("m"), v.literal("l"))),
+      // Kleiner Zusatz-Text unter Logo/Shopname (z.B. Ladenname oder Slogan)
+      tagline: v.optional(v.string()),
       // Stempel & Kartenstil (glow/classic/paper)
       stampIcon: v.optional(v.string()),
       // Stempel-Form: circle/square/diamond/hex (fehlend = circle)

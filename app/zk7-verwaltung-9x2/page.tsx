@@ -1309,6 +1309,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Logo
   const [logoId, setLogoId]           = useState<Id<"_storage"> | undefined>(dc?.logoId);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
+  const [tagline, setTagline]         = useState(dc?.tagline ?? "");
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
   const [stampShape, setStampShape] = useState(dc?.stampShape ?? "circle");
@@ -1354,8 +1355,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Live-Vorschau: dieselbe Komponente, die auch die Kunden sehen
   const previewCfg: ShopDesignConfig = useMemo(() => ({
     accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
-    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, stampIcon: icon, stampShape, decor,
-  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, icon, stampShape, decor]);
+    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, tagline: tagline.trim() || undefined,
+    stampIcon: icon, stampShape, decor,
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, tagline, icon, stampShape, decor]);
   const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
 
   const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
@@ -1372,6 +1374,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
         config: {
           accent, text, textBody, cardBg, bgType,
           bgColor, bgColor2, bgImageId, logoId,
+          tagline: tagline.trim() || undefined,
           stampIcon: icon, stampShape, decor,
         },
       });
@@ -1488,6 +1491,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                   className="px-2.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-500 hover:text-red-400 text-xs transition-colors">✕</button>
               )}
             </div>
+            <input value={tagline} onChange={e => setTagline(e.target.value)} maxLength={60}
+              placeholder="Kleiner Text unter Logo/Name (optional), z.B. Ladenname oder Slogan"
+              className="w-full px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />
             <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
               {ICON_CATEGORIES.map(cat => (
                 <div key={cat.label}>
