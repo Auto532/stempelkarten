@@ -156,18 +156,12 @@ function makeCard(cfg: ShopDesignConfig) {
               </div>
               {cfg.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={cfg.logoUrl} alt={shopName} className="mt-1.5 object-contain object-left"
-                  style={{ height: 96, maxWidth: "100%" }} />
+                <img src={cfg.logoUrl} alt={shopName} className="mt-2 object-contain object-left"
+                  style={{ height: 120, maxWidth: "100%" }} />
               ) : (
                 <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
               )}
             </div>
-            {!hideQR && onShowQR && (
-              <button onClick={onShowQR} className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
-                <QrCode size={26} style={{ color: A }} />
-              </button>
-            )}
           </div>
           <div className="flex flex-wrap gap-2 mb-4">
             {Array.from({ length: maxStamps }).map((_, i) => {
@@ -245,6 +239,15 @@ function makeCard(cfg: ShopDesignConfig) {
               </p>
             ) : null}
           </div>
+          {/* Großer QR-Button statt kleinem Icon oben: Kunden kommen mit einem
+              Tipp zum Vorzeige-Code */}
+          {!hideQR && onShowQR && (
+            <button onClick={onShowQR}
+              className="w-full mt-5 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+              style={{ background: A, color: C, boxShadow: `0 4px 18px ${alpha(A, "40")}` }}>
+              <QrCode size={18} /> QR-Code zeigen
+            </button>
+          )}
         </div>
       </div>
     );
