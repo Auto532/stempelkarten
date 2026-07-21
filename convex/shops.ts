@@ -250,6 +250,7 @@ export const adminSetDesignConfig = mutation({
       bgColor2:  v.optional(v.string()),
       bgImageId: v.optional(v.id("_storage")),
       logoId:    v.optional(v.id("_storage")),
+      logoSize:  v.optional(v.union(v.literal("s"), v.literal("m"), v.literal("l"))),
       stampIcon: v.optional(v.string()),
       cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"), v.literal("paper"))),
       decor:     v.optional(v.string()),

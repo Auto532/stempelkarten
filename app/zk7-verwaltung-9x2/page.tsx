@@ -10,7 +10,7 @@ import {
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy,
   Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, Clock, Search, type LucideIcon,
 } from "lucide-react";
-import { STAMP_ICONS } from "@/app/me/components";
+import { STAMP_ICONS, ICON_CATEGORIES } from "@/app/me/components";
 import { THEME_LIST } from "@/app/me/themes/registry";
 import { makeConfigTheme, normalizeDecor, type ShopDesignConfig } from "@/app/me/themes/configTheme";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -37,14 +37,20 @@ function globalLevelIdx(shopCount: number): number {
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
 const ICON_KEYWORDS: Record<string, string[]> = {
+  // Spezifische Branchen zuerst — der erste Treffer gewinnt
+  pill:      ["apotheke","pharmacy","sanitätshaus","sanitaetshaus","reformhaus","physio","physiotherapie","praxis","gesundheit"],
+  icecream:  ["eisdiele","eiscafé","eiscafe","gelato","eis "],
+  cigarette: ["kiosk","tabak","shisha","vape","e-zigarette","späti","spaeti","lotto"],
+  washing:   ["wäscherei","waescherei","waschsalon","textilreinigung","reinigung"],
+  paw:       ["tierbedarf","zoohandlung","hundesalon","tierfutter","zoo","tierladen"],
   scissors: ["friseur","friseuse","frisör","barber","barbershop","haar","haarschnitt","schnitt","salon","herrenfriseur","damenfriseur","stylist","stylistin","barbier","bartpflege","rasur"],
   coffee:   ["café","cafe","kaffee","coffee","espresso","cappuccino","latte","coffeeshop","bäckerei café","kaffeebar","bistro café"],
   utensils: ["restaurant","gaststätte","gaststatte","küche","küche","essen","mittagstisch","abendessen","speiselokal","wirtshaus","gasthaus","food","speisekarte"],
   pizza:    ["pizza","imbiss","döner","doner","kebab","fastfood","fast food","burger","mcdo","pommes","snack","lieferdienst","takeaway","take away","wrap","falafel","currywurst"],
   flame:    ["bäckerei","backerei","konditorei","brot","brötchen","kuchen","backstube","patisserie","torte","gebäck","backwaren"],
   dumbbell: ["gym","fitness","fitnessstudio","sport","training","crossfit","workout","kraftsport","yoga","pilates","boxen","kampfsport","mma","bootcamp","personal trainer"],
-  flower:   ["wellness","kosmetik","beauty","spa","massage","nagelstudio","nägel","nagel","wimpern","waxing","maniküre","pediküre","gesichtspflege","aesthetik","ästhetik"],
-  shopping: ["laden","shop","markt","supermarkt","lebensmittel","einkaufen","einzelhandel","kiosk","tabak","lotto","blumen","blumenladen","drogerie","apotheke"],
+  flower:   ["wellness","kosmetik","beauty","spa","massage","nagelstudio","nägel","nagel","wimpern","waxing","maniküre","pediküre","gesichtspflege","aesthetik","ästhetik","blumen","blumenladen","florist"],
+  shopping: ["laden","shop","markt","supermarkt","lebensmittel","einkaufen","einzelhandel","drogerie"],
   car:      ["auto","kfz","werkstatt","reifen","garage","autowäsche","tuning","karosserie","pkw","motorrad","bike shop","fahrzeug"],
   book:     ["buch","buchhandlung","literatur","bücher","antiquariat","lesen","bibliothek","schreibwaren","papeterie"],
   bike:     ["fahrrad","rad","fahrradladen","fahrradwerkstatt","cycling","velo","ebike","e-bike","radsport"],
@@ -1303,6 +1309,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Logo
   const [logoId, setLogoId]           = useState<Id<"_storage"> | undefined>(dc?.logoId);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
+  const [logoSize, setLogoSize]       = useState<"s" | "m" | "l">(dc?.logoSize ?? "m");
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
   const [decor, setDecor]         = useState<"none" | "thin" | "double" | "swirl">(normalizeDecor(dc?.decor));
@@ -1347,8 +1354,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Live-Vorschau: dieselbe Komponente, die auch die Kunden sehen
   const previewCfg: ShopDesignConfig = useMemo(() => ({
     accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
-    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, stampIcon: icon, decor,
-  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, icon, decor]);
+    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, logoSize, stampIcon: icon, decor,
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, logoSize, icon, decor]);
   const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
 
   const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
@@ -1364,7 +1371,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
         shopId: shop._id, adminSecret,
         config: {
           accent, text, textBody, cardBg, bgType,
-          bgColor, bgColor2, bgImageId, logoId,
+          bgColor, bgColor2, bgImageId, logoId, logoSize,
           stampIcon: icon, decor,
         },
       });
@@ -1481,15 +1488,41 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                   className="px-2.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-500 hover:text-red-400 text-xs transition-colors">✕</button>
               )}
             </div>
-            <div className="flex gap-1.5 flex-wrap max-h-40 overflow-y-auto pr-1">
-              {Object.entries(STAMP_ICONS).map(([key, IconComp]) => (
-                <button key={key} type="button" onClick={() => setIcon(key)}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
-                  style={icon === key
-                    ? { background: `${accent}22`, border: `1px solid ${accent}66` }
-                    : { background: "#27272a", border: "1px solid #3f3f46" }}>
-                  <IconComp size={15} style={{ color: icon === key ? accent : "#71717a" }} />
-                </button>
+            {logoPreviewUrl && (
+              <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+                {([
+                  { id: "s", label: "Klein"  },
+                  { id: "m", label: "Mittel" },
+                  { id: "l", label: "Groß"   },
+                ] as const).map(s => (
+                  <button key={s.id} type="button" onClick={() => setLogoSize(s.id)}
+                    className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                    style={logoSize === s.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+              {ICON_CATEGORIES.map(cat => (
+                <div key={cat.label}>
+                  <p className="text-[9px] uppercase tracking-wider text-zinc-600 font-semibold mb-1">{cat.label}</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {cat.keys.map(key => {
+                      const IconComp = STAMP_ICONS[key];
+                      if (!IconComp) return null;
+                      return (
+                        <button key={key} type="button" onClick={() => setIcon(key)}
+                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
+                          style={icon === key
+                            ? { background: `${accent}22`, border: `1px solid ${accent}66` }
+                            : { background: "#27272a", border: "1px solid #3f3f46" }}>
+                          <IconComp size={15} style={{ color: icon === key ? accent : "#71717a" }} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
           </Section>

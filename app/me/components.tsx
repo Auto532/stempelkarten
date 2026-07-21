@@ -9,17 +9,23 @@ import {
   // Essen & Trinken
   Beer, Wine, Martini, CupSoda, IceCream, Cake, Croissant, Cookie,
   Candy, Apple, Cherry, Fish, Beef, Drumstick, Salad, Soup, Sandwich,
-  Popcorn, Milk, Egg,
+  Popcorn, Milk, Egg, Banana, Grape, Citrus, Carrot, Wheat, Donut,
+  Lollipop, Ham,
+  // Gesundheit & Apotheke
+  Pill, Cross, Stethoscope, HeartPulse,
   // Beauty & Wellness
-  Sparkles, Heart, Sun, Moon, Leaf, Droplets, Bath, Brush, Palette,
+  Sparkles, Heart, Sun, Moon, Leaf, Droplets, Bath, Brush, Palette, SprayCan,
   // Tiere
-  PawPrint, Dog, Cat,
+  PawPrint, Dog, Cat, Bone, Bird, Rabbit, Turtle,
   // Freizeit & Kultur
   Gamepad2, Music, Guitar, Mic, Camera, Ticket, Trophy, Target, Rocket,
+  Clapperboard, Film, Headphones, Dices, Puzzle, Tent, Backpack, Compass,
   // Lifestyle & Handel
-  Crown, Gem, Watch, Glasses, Footprints, Baby, Smile,
+  Crown, Gem, Watch, Glasses, Footprints, Baby, Smile, Store, ShoppingCart,
+  Wallet, PiggyBank, Cigarette,
   // Handwerk & Service
   Wrench, Hammer, Key, Home, Plane, Anchor, Smartphone, Laptop,
+  WashingMachine, Fuel, Bus, Truck,
   // Sonstiges
   Snowflake, Zap, Umbrella, TreePine, Mountain,
 } from "lucide-react";
@@ -68,6 +74,19 @@ export const STAMP_ICONS: Record<string, LucideIcon> = {
   popcorn: Popcorn,
   milk: Milk,
   egg: Egg,
+  banana: Banana,
+  grape: Grape,
+  citrus: Citrus,
+  carrot: Carrot,
+  wheat: Wheat,
+  donut: Donut,
+  lollipop: Lollipop,
+  ham: Ham,
+  // Gesundheit & Apotheke
+  pill: Pill,
+  cross: Cross,
+  stethoscope: Stethoscope,
+  heartpulse: HeartPulse,
   // Beauty & Wellness
   sparkles: Sparkles,
   heart: Heart,
@@ -78,10 +97,15 @@ export const STAMP_ICONS: Record<string, LucideIcon> = {
   bath: Bath,
   brush: Brush,
   palette: Palette,
+  spray: SprayCan,
   // Tiere
   paw: PawPrint,
   dog: Dog,
   cat: Cat,
+  bone: Bone,
+  bird: Bird,
+  rabbit: Rabbit,
+  turtle: Turtle,
   // Freizeit & Kultur
   gamepad: Gamepad2,
   music: Music,
@@ -92,6 +116,14 @@ export const STAMP_ICONS: Record<string, LucideIcon> = {
   trophy: Trophy,
   target: Target,
   rocket: Rocket,
+  clapperboard: Clapperboard,
+  film: Film,
+  headphones: Headphones,
+  dices: Dices,
+  puzzle: Puzzle,
+  tent: Tent,
+  backpack: Backpack,
+  compass: Compass,
   // Lifestyle & Handel
   gift: Gift,
   crown: Crown,
@@ -101,6 +133,11 @@ export const STAMP_ICONS: Record<string, LucideIcon> = {
   footprints: Footprints,
   baby: Baby,
   smile: Smile,
+  store: Store,
+  cart: ShoppingCart,
+  wallet: Wallet,
+  piggybank: PiggyBank,
+  cigarette: Cigarette,
   // Handwerk & Service
   wrench: Wrench,
   hammer: Hammer,
@@ -110,6 +147,10 @@ export const STAMP_ICONS: Record<string, LucideIcon> = {
   anchor: Anchor,
   smartphone: Smartphone,
   laptop: Laptop,
+  washing: WashingMachine,
+  fuel: Fuel,
+  bus: Bus,
+  truck: Truck,
   // Sonstiges
   snowflake: Snowflake,
   zap: Zap,
@@ -117,6 +158,19 @@ export const STAMP_ICONS: Record<string, LucideIcon> = {
   tree: TreePine,
   mountain: Mountain,
 };
+
+// Kategorien für den Icon-Picker im Design-Editor: gruppiert statt eine
+// riesige flache Liste, damit man das passende Branchen-Icon schnell findet
+export const ICON_CATEGORIES: { label: string; keys: string[] }[] = [
+  { label: "Klassiker",             keys: ["stamp","star","heart","gift","sparkles","crown","gem","zap","trophy","target","rocket","smile"] },
+  { label: "Essen & Trinken",       keys: ["coffee","utensils","pizza","sandwich","soup","salad","fish","beef","chicken","ham","egg","croissant","flame","cake","donut","cookie","candy","lollipop","icecream","popcorn","apple","banana","cherry","grape","citrus","carrot","wheat","milk","soda","beer","wine","cocktail"] },
+  { label: "Gesundheit & Apotheke", keys: ["pill","cross","stethoscope","heartpulse"] },
+  { label: "Beauty & Wellness",     keys: ["scissors","flower","brush","palette","spray","bath","droplets","sun","moon","leaf"] },
+  { label: "Tiere",                 keys: ["paw","dog","cat","bone","bird","rabbit","turtle"] },
+  { label: "Sport & Freizeit",      keys: ["dumbbell","bike","footprints","gamepad","dices","puzzle","music","guitar","mic","headphones","camera","film","clapperboard","ticket","book","tent","backpack","compass","mountain","tree","snowflake","umbrella"] },
+  { label: "Handel & Lifestyle",    keys: ["shopping","cart","store","shirt","watch","glasses","baby","wallet","piggybank","cigarette"] },
+  { label: "Handwerk & Service",    keys: ["car","fuel","bus","truck","wrench","hammer","key","home","washing","plane","anchor","smartphone","laptop"] },
+];
 
 export function getStampIcon(key?: string | null): LucideIcon {
   if (key && STAMP_ICONS[key]) return STAMP_ICONS[key];

@@ -59,6 +59,8 @@ export default defineSchema({
       // Logo (auf der Karte statt/über dem Shopnamen)
       logoId:  v.optional(v.id("_storage")),
       logoUrl: v.optional(v.string()),
+      // Logo-Größe auf der Karte: s/m/l (fehlend = m)
+      logoSize: v.optional(v.union(v.literal("s"), v.literal("m"), v.literal("l"))),
       // Stempel & Kartenstil (glow/classic/paper)
       stampIcon: v.optional(v.string()),
       cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"), v.literal("paper"))),

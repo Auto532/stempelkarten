@@ -24,6 +24,8 @@ export interface ShopDesignConfig {
   bgColor2?: string;
   bgImageUrl?: string;
   logoUrl?:  string;
+  // Logo-Größe auf der Karte: s/m/l (fehlend = m)
+  logoSize?: "s" | "m" | "l";
   stampIcon?: string;
   // Altfeld, wird nicht mehr gerendert (Glow/Papier abgeschafft)
   cardStyle?: string;
@@ -146,7 +148,12 @@ function makeCard(cfg: ShopDesignConfig) {
               </div>
               {cfg.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={cfg.logoUrl} alt={shopName} className="h-10 mt-1 object-contain object-left" style={{ maxWidth: 180 }} />
+                <img src={cfg.logoUrl} alt={shopName} className="mt-1 object-contain object-left"
+                  style={cfg.logoSize === "s"
+                    ? { height: 40, maxWidth: 180 }
+                    : cfg.logoSize === "l"
+                    ? { height: 76, maxWidth: 260 }
+                    : { height: 58, maxWidth: 220 }} />
               ) : (
                 <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
               )}

@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Gift, Check, Banknote, Trophy } from "lucide-react";
-import { StampOverlay, QRCard, RedeemVoucher, LoyaltyCard, MilestonesSection, getActiveTiers, hexToRgba } from "../../components";
+import { StampOverlay, QRCard, RedeemVoucher, LoyaltyCard, MilestonesSection, getActiveTiers, hexToRgba, readableAccent } from "../../components";
 import type { CardTier } from "../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
@@ -308,9 +308,11 @@ export default function MeShopPage() {
         )}
       </AnimatePresence>
 
-      {/* Zurück-Header */}
+      {/* Zurück-Header: Farben folgen dem Shop-Design (weiße Schrift wäre auf
+          hellen Designs unsichtbar) */}
       {(() => {
         const showBack = showQR || (data.memberships.length > 1);
+        const a2 = readableAccent(c.accent, c.text);
         return (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -320,16 +322,17 @@ export default function MeShopPage() {
             {showBack && (
               <button
                 onClick={() => showQR ? setShowQR(false) : router.back()}
-                className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:border-zinc-700 transition-colors shrink-0"
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors shrink-0 backdrop-blur-sm"
+                style={{ background: hexToRgba(c.accent, 0.1), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}
               >
-                <ArrowLeft size={16} className="text-zinc-400" />
+                <ArrowLeft size={16} style={{ color: a2 }} />
               </button>
             )}
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-600">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: c.textBody }}>
                 Stempelkarte
               </p>
-              <h1 className="text-base font-bold text-zinc-100 leading-tight">{shop.name}</h1>
+              <h1 className="text-base font-bold leading-tight" style={{ color: c.text }}>{shop.name}</h1>
             </div>
           </motion.div>
         );
