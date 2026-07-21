@@ -29,6 +29,9 @@ export interface ShopDesignConfig {
   logoSize?: "s" | "m" | "l";
   // Kleiner Zusatz-Text unter Logo/Shopname (z.B. Ladenname oder Slogan)
   tagline?: string;
+  // QR-Darstellung: "button" (großer Button unter der Karte, Standard) oder
+  // "icon" (kleines Icon oben in der Karte)
+  qrStyle?: "button" | "icon";
   stampIcon?: string;
   // Stempel-Form: circle/square/diamond/hex (fehlend = circle)
   stampShape?: string;
@@ -120,6 +123,7 @@ function makeCard(cfg: ShopDesignConfig) {
   const corner = normalizeDecor(cfg.decor);
   const Icon = getStampIcon(cfg.stampIcon);
   const shape = cfg.stampShape ?? "circle";
+  const qrStyle = cfg.qrStyle ?? "button";
 
   return function ConfigLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
     const activeTiers = rewardTiers?.some(t => t.enabled)
@@ -142,15 +146,8 @@ function makeCard(cfg: ShopDesignConfig) {
           </>
         )}
         <div className="relative p-6">
-          {/* Kleines QR-Icon ganz oben in der Ecke */}
-          {!hideQR && onShowQR && (
-            <button onClick={onShowQR} className="absolute top-5 right-3 z-10 w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
-              <QrCode size={24} style={{ color: A }} />
-            </button>
-          )}
-          <div className="flex items-center justify-between mb-5">
-            <div className="min-w-0 pr-12">
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TB }}>Stempelkarte</p>
                 {cardNumber !== undefined && (
@@ -175,6 +172,13 @@ function makeCard(cfg: ShopDesignConfig) {
                 <p className="text-[11px] mt-1.5 font-medium" style={{ color: TB }}>{cfg.tagline}</p>
               )}
             </div>
+            {/* Kleines QR-Icon in der Kopfzeile (nur wenn gewählt) */}
+            {qrStyle === "icon" && !hideQR && onShowQR && (
+              <button onClick={onShowQR} className="shrink-0 mt-4 w-14 h-14 rounded-xl flex items-center justify-center"
+                style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
+                <QrCode size={26} style={{ color: A }} />
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 mb-4">
             {Array.from({ length: maxStamps }).map((_, i) => {
@@ -254,9 +258,8 @@ function makeCard(cfg: ShopDesignConfig) {
           </div>
         </div>
       </div>
-      {/* Großer QR-Button unter der Karte: Kunden kommen mit einem Tipp
-          zum Vorzeige-Code */}
-      {!hideQR && onShowQR && (
+      {/* Großer QR-Button unter der Karte (Standard): ein Tipp zum Vorzeige-Code */}
+      {qrStyle !== "icon" && !hideQR && onShowQR && (
         <button onClick={onShowQR}
           className="w-full mt-3 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
           style={{ background: A, color: C, boxShadow: `0 4px 18px ${alpha(A, "40")}` }}>

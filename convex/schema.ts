@@ -63,6 +63,9 @@ export default defineSchema({
       logoSize: v.optional(v.union(v.literal("s"), v.literal("m"), v.literal("l"))),
       // Kleiner Zusatz-Text unter Logo/Shopname (z.B. Ladenname oder Slogan)
       tagline: v.optional(v.string()),
+      // QR-Darstellung: großer Button unter der Karte (Standard) oder kleines
+      // Icon oben in der Karte
+      qrStyle: v.optional(v.union(v.literal("button"), v.literal("icon"))),
       // Stempel & Kartenstil (glow/classic/paper)
       stampIcon: v.optional(v.string()),
       // Stempel-Form: circle/square/diamond/hex (fehlend = circle)

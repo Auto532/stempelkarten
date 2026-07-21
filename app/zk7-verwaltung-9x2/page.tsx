@@ -1310,6 +1310,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const [logoId, setLogoId]           = useState<Id<"_storage"> | undefined>(dc?.logoId);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
   const [tagline, setTagline]         = useState(dc?.tagline ?? "");
+  const [qrStyle, setQrStyle]         = useState<"button" | "icon">(dc?.qrStyle ?? "button");
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
   const [stampShape, setStampShape] = useState(dc?.stampShape ?? "circle");
@@ -1356,8 +1357,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const previewCfg: ShopDesignConfig = useMemo(() => ({
     accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
     bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, tagline: tagline.trim() || undefined,
-    stampIcon: icon, stampShape, decor,
-  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, tagline, icon, stampShape, decor]);
+    qrStyle, stampIcon: icon, stampShape, decor,
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, tagline, qrStyle, icon, stampShape, decor]);
   const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
 
   const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
@@ -1375,7 +1376,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
           accent, text, textBody, cardBg, bgType,
           bgColor, bgColor2, bgImageId, logoId,
           tagline: tagline.trim() || undefined,
-          stampIcon: icon, stampShape, decor,
+          qrStyle, stampIcon: icon, stampShape, decor,
         },
       });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
@@ -1514,6 +1515,22 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                     })}
                   </div>
                 </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* QR-Code-Darstellung */}
+          <Section title="QR-Code">
+            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+              {([
+                { id: "button", label: "Button unten" },
+                { id: "icon",   label: "Klein oben"   },
+              ] as const).map(s => (
+                <button key={s.id} type="button" onClick={() => setQrStyle(s.id)}
+                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                  style={qrStyle === s.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+                  {s.label}
+                </button>
               ))}
             </div>
           </Section>
