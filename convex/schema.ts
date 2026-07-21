@@ -63,6 +63,8 @@ export default defineSchema({
       logoSize: v.optional(v.union(v.literal("s"), v.literal("m"), v.literal("l"))),
       // Stempel & Kartenstil (glow/classic/paper)
       stampIcon: v.optional(v.string()),
+      // Stempel-Form: circle/square/diamond/hex (fehlend = circle)
+      stampShape: v.optional(v.string()),
       cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"), v.literal("paper"))),
       // Ecken-Verzierung in Akzentfarbe: none/thin/double/swirl
       // (Altwerte "lines"/"full" werden vom Renderer gemappt)

@@ -24,9 +24,12 @@ export interface ShopDesignConfig {
   bgColor2?: string;
   bgImageUrl?: string;
   logoUrl?:  string;
-  // Logo-Größe auf der Karte: s/m/l (fehlend = m)
+  // Logo-Größe auf der Karte: s/m/l (fehlend = m; wird aktuell nicht mehr
+  // gerendert, das Logo ist immer groß)
   logoSize?: "s" | "m" | "l";
   stampIcon?: string;
+  // Stempel-Form: circle/square/diamond/hex (fehlend = circle)
+  stampShape?: string;
   // Altfeld, wird nicht mehr gerendert (Glow/Papier abgeschafft)
   cardStyle?: string;
   // Ecken-Verzierung in Akzentfarbe: "none" | "thin" | "double" | "swirl"
@@ -106,10 +109,15 @@ function CornerOrnament({ color, variant }: { color: string; variant: "thin" | "
   );
 }
 
+// Sechseck für die Waben-Stempelform (clip-path frisst Borders, deshalb
+// zweilagig: äußere Wabe in Akzent, innere minimal kleiner in Kartenfarbe)
+const HEX_CLIP = "polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%)";
+
 function makeCard(cfg: ShopDesignConfig) {
   const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
   const corner = normalizeDecor(cfg.decor);
   const Icon = getStampIcon(cfg.stampIcon);
+  const shape = cfg.stampShape ?? "circle";
 
   return function ConfigLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
     const activeTiers = rewardTiers?.some(t => t.enabled)
@@ -148,12 +156,8 @@ function makeCard(cfg: ShopDesignConfig) {
               </div>
               {cfg.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={cfg.logoUrl} alt={shopName} className="mt-1 object-contain object-left"
-                  style={cfg.logoSize === "s"
-                    ? { height: 40, maxWidth: 180 }
-                    : cfg.logoSize === "l"
-                    ? { height: 76, maxWidth: 260 }
-                    : { height: 58, maxWidth: 220 }} />
+                <img src={cfg.logoUrl} alt={shopName} className="mt-1.5 object-contain object-left"
+                  style={{ height: 96, maxWidth: "100%" }} />
               ) : (
                 <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
               )}
@@ -170,17 +174,55 @@ function makeCard(cfg: ShopDesignConfig) {
               const filled = i < currentStamps;
               const isAnimating = i === animateIndex;
               const isTier = activeTiers.some(t => t.stamps === i + 1);
+              const inner = filled
+                ? <Icon size={13} style={{ color: C }} />
+                : isTier ? <Gift size={11} style={{ color: alpha(A, "70") }} /> : null;
+
+              if (shape === "hex") {
+                return (
+                  <motion.div key={i}
+                    animate={isAnimating ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="relative w-8 h-8 flex items-center justify-center">
+                    <div className="absolute inset-0"
+                      style={{ clipPath: HEX_CLIP, background: filled ? A : isTier ? alpha(A, "55") : alpha(A, "30") }} />
+                    {!filled && <div className="absolute inset-[1.5px]"
+                      style={{ clipPath: HEX_CLIP, background: C }} />}
+                    <div className="relative">{inner}</div>
+                  </motion.div>
+                );
+              }
+              if (shape === "diamond") {
+                return (
+                  <motion.div key={i}
+                    animate={isAnimating ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="relative w-8 h-8 flex items-center justify-center">
+                    <div className="absolute inset-[3px]"
+                      style={{
+                        transform: "rotate(45deg)", borderRadius: 6,
+                        ...(filled
+                          ? { background: A, border: `1px solid ${alpha(A, "60")}` }
+                          : isTier ? { border: `1px solid ${alpha(A, "40")}`, background: C }
+                          : { border: `1px solid ${alpha(A, "26")}`, background: alpha(C, "88") }),
+                      }} />
+                    <div className="relative">{inner}</div>
+                  </motion.div>
+                );
+              }
               return (
                 <motion.div key={i}
                   animate={isAnimating ? { scale: [1, 1.4, 1] } : { scale: 1 }}
                   transition={{ duration: 0.5 }}
-                  className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={filled
-                    ? { background: A, border: `1px solid ${alpha(A, "60")}` }
-                    : isTier ? { border: `1px solid ${alpha(A, "40")}`, background: C }
-                    : { border: `1px solid ${alpha(A, "22")}`, background: alpha(C, "88") }}>
-                  {filled && <Icon size={13} style={{ color: C }} />}
-                  {!filled && isTier && <Gift size={11} style={{ color: alpha(A, "70") }} />}
+                  className="w-8 h-8 flex items-center justify-center"
+                  style={{
+                    borderRadius: shape === "square" ? 9 : 9999,
+                    ...(filled
+                      ? { background: A, border: `1px solid ${alpha(A, "60")}` }
+                      : isTier ? { border: `1px solid ${alpha(A, "40")}`, background: C }
+                      : { border: `1px solid ${alpha(A, "22")}`, background: alpha(C, "88") }),
+                  }}>
+                  {inner}
                 </motion.div>
               );
             })}

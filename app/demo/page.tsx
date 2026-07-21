@@ -21,7 +21,7 @@ const CONFIG_DEMOS: { id: string; label: string; color: string; config: ShopDesi
   },
   {
     id: "ozean", label: "Ozean", color: "#60a5fa",
-    config: { accent: "#60a5fa", text: "#eff6ff", textBody: "#94a3b8", cardBg: "#0f172a", bgType: "gradient", bgColor: "#020617", bgColor2: "#0f1e3a", stampIcon: "fish", cardStyle: "glow" },
+    config: { accent: "#60a5fa", text: "#eff6ff", textBody: "#94a3b8", cardBg: "#0f172a", bgType: "gradient", bgColor: "#020617", bgColor2: "#0f1e3a", stampIcon: "fish", stampShape: "hex", cardStyle: "glow" },
   },
   {
     id: "rose", label: "Rosé", color: "#ec4899",
@@ -33,7 +33,7 @@ const CONFIG_DEMOS: { id: string; label: string; color: string; config: ShopDesi
   },
   {
     id: "sonne", label: "Sonne", color: "#f59e0b",
-    config: { accent: "#f59e0b", text: "#451a03", textBody: "#a16207", cardBg: "#fffdf7", bgType: "gradient", bgColor: "#fffbeb", bgColor2: "#fde9c8", stampIcon: "sun", cardStyle: "classic" },
+    config: { accent: "#f59e0b", text: "#451a03", textBody: "#a16207", cardBg: "#fffdf7", bgType: "gradient", bgColor: "#fffbeb", bgColor2: "#fde9c8", stampIcon: "sun", stampShape: "square", cardStyle: "classic" },
   },
   {
     id: "nacht", label: "Nachtviolett", color: "#a78bfa",
@@ -41,7 +41,7 @@ const CONFIG_DEMOS: { id: string; label: string; color: string; config: ShopDesi
   },
   {
     id: "ruby", label: "Ruby", color: "#f87171",
-    config: { accent: "#f87171", text: "#fef2f2", textBody: "#b07a7a", cardBg: "#200a0c", bgType: "gradient", bgColor: "#160607", bgColor2: "#2b0d10", stampIcon: "crown", cardStyle: "glow" },
+    config: { accent: "#f87171", text: "#fef2f2", textBody: "#b07a7a", cardBg: "#200a0c", bgType: "gradient", bgColor: "#160607", bgColor2: "#2b0d10", stampIcon: "crown", stampShape: "diamond", cardStyle: "glow" },
   },
   {
     id: "mint", label: "Mint", color: "#10b981",

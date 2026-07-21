@@ -1309,9 +1309,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Logo
   const [logoId, setLogoId]           = useState<Id<"_storage"> | undefined>(dc?.logoId);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
-  const [logoSize, setLogoSize]       = useState<"s" | "m" | "l">(dc?.logoSize ?? "m");
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
+  const [stampShape, setStampShape] = useState(dc?.stampShape ?? "circle");
   const [decor, setDecor]         = useState<"none" | "thin" | "double" | "swirl">(normalizeDecor(dc?.decor));
   // Farbpalette: gewählter Grundton + Hell/Dunkel für das abgeleitete Schema
   const [paletteSel, setPaletteSel]   = useState<string | null>(null);
@@ -1354,8 +1354,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Live-Vorschau: dieselbe Komponente, die auch die Kunden sehen
   const previewCfg: ShopDesignConfig = useMemo(() => ({
     accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
-    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, logoSize, stampIcon: icon, decor,
-  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, logoSize, icon, decor]);
+    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, stampIcon: icon, stampShape, decor,
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, icon, stampShape, decor]);
   const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
 
   const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
@@ -1371,8 +1371,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
         shopId: shop._id, adminSecret,
         config: {
           accent, text, textBody, cardBg, bgType,
-          bgColor, bgColor2, bgImageId, logoId, logoSize,
-          stampIcon: icon, decor,
+          bgColor, bgColor2, bgImageId, logoId,
+          stampIcon: icon, stampShape, decor,
         },
       });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
@@ -1488,21 +1488,6 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                   className="px-2.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-500 hover:text-red-400 text-xs transition-colors">✕</button>
               )}
             </div>
-            {logoPreviewUrl && (
-              <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
-                {([
-                  { id: "s", label: "Klein"  },
-                  { id: "m", label: "Mittel" },
-                  { id: "l", label: "Groß"   },
-                ] as const).map(s => (
-                  <button key={s.id} type="button" onClick={() => setLogoSize(s.id)}
-                    className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                    style={logoSize === s.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            )}
             <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
               {ICON_CATEGORIES.map(cat => (
                 <div key={cat.label}>
@@ -1523,6 +1508,24 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                     })}
                   </div>
                 </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* Stempel-Form */}
+          <Section title="Stempel-Form">
+            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+              {([
+                { id: "circle",  label: "Kreis" },
+                { id: "square",  label: "Eckig" },
+                { id: "diamond", label: "Raute" },
+                { id: "hex",     label: "Wabe"  },
+              ] as const).map(s => (
+                <button key={s.id} type="button" onClick={() => setStampShape(s.id)}
+                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                  style={stampShape === s.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+                  {s.label}
+                </button>
               ))}
             </div>
           </Section>
