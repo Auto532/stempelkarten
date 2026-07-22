@@ -1096,11 +1096,12 @@ function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops">; admi
 // Farbpalette: gedeckte Töne quer durch alle Farbbereiche. Ein Klick leitet
 // daraus ein komplettes, dezentes Farbschema ab (Karte, Hintergrund, Texte) —
 // keine benannten Vorlagen mehr, nur Farbton wählen + Feinschliff darunter.
+// Gedeckte, aber farbige Grundtöne ("Juwelentöne"): bunt, jedoch weder grell
+// noch hell. Nach Farbspektrum sortiert (warm → grün → blau → lila → neutral).
 const COLOR_PALETTE = [
-  "#c9a560", "#b08d57", "#b57e5e", "#b5694a", "#c67d5b", "#b87070",
-  "#c69fa5", "#a4586a", "#96566e", "#8b6b8f", "#a596c7", "#8b7bbf",
-  "#7d92c4", "#5b89b4", "#8ba3b8", "#6e8fa3", "#6aa5a8", "#4a9494",
-  "#5f9e7a", "#9caf88", "#7a8f4a", "#a8a678", "#b8a98a", "#d7d2c6",
+  "#a94f3d", "#8c5a4a", "#b06a47", "#8c6239", "#a8862e", "#b5923a", "#99772f", "#6b7539",
+  "#5d7a3a", "#4a7a52", "#3a7a63", "#357d75", "#3a6b7d", "#3f6b8c", "#4a5a8c", "#5f5088",
+  "#6b4a7d", "#7d4a6b", "#8c4463", "#8f3f4e", "#9c4a4a", "#7a6b5f", "#5f6b6b", "#8a7d6b",
 ];
 
 function hexToHsl(hex: string): [number, number, number] {
