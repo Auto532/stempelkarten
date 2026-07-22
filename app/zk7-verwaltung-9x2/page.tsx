@@ -1615,7 +1615,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                 { id: "thin",    label: "Fein"        },
                 { id: "double",  label: "Doppelt"     },
                 { id: "swirl",   label: "Geschwungen" },
-                { id: "bracket", label: "Eckig"       },
+                { id: "bracket", label: "Fläche"      },
                 { id: "dots",    label: "Punkte"      },
                 { id: "ornate",  label: "Verziert"    },
               ] as const).map(d => (

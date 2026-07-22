@@ -113,7 +113,7 @@ function CornerOrnament({ color, variant }: { color: string; variant: Exclude<De
           <circle cx="2" cy="20" r="1.4" fill="currentColor" stroke="none" />
         </>
       )}
-      {variant === "bracket" && <path d="M2 13 V2 H13" strokeWidth="1.6" strokeLinecap="round" />}
+      {variant === "bracket" && <path d="M2 2 H12 L2 12 Z" fill="currentColor" stroke="none" />}
       {variant === "dots" && (
         <>
           <circle cx="3" cy="3" r="1.6" fill="currentColor" stroke="none" />
