@@ -1328,6 +1328,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Logo
   const [logoId, setLogoId]           = useState<Id<"_storage"> | undefined>(dc?.logoId);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
+  const [logoShowName, setLogoShowName] = useState(dc?.logoShowName ?? false);
   const [tagline, setTagline]         = useState(dc?.tagline ?? "");
   const [qrStyle, setQrStyle]         = useState<"button" | "icon" | "both">(dc?.qrStyle ?? "button");
   // Aufklappbare Editor-Gruppen (Akkordeon: nur eine offen)
@@ -1378,9 +1379,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Live-Vorschau: dieselbe Komponente, die auch die Kunden sehen
   const previewCfg: ShopDesignConfig = useMemo(() => ({
     accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
-    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, tagline: tagline.trim() || undefined,
+    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, logoShowName, tagline: tagline.trim() || undefined,
     qrStyle, stampIcon: icon, stampShape, decor,
-  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, tagline, qrStyle, icon, stampShape, decor]);
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, logoShowName, tagline, qrStyle, icon, stampShape, decor]);
   const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
 
   const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
@@ -1396,7 +1397,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
         shopId: shop._id, adminSecret,
         config: {
           accent, text, textBody, cardBg, bgType,
-          bgColor, bgColor2, bgImageId, logoId,
+          bgColor, bgColor2, bgImageId, logoId, logoShowName,
           tagline: tagline.trim() || undefined,
           qrStyle, stampIcon: icon, stampShape, decor,
         },
@@ -1540,6 +1541,15 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                   className="px-2.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-500 hover:text-red-400 text-xs transition-colors">✕</button>
               )}
             </div>
+            {logoPreviewUrl && (
+              <button type="button" onClick={() => setLogoShowName(v => !v)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 transition-colors">
+                <span className={`w-8 h-5 rounded-full shrink-0 flex items-center transition-colors ${logoShowName ? "bg-amber-400" : "bg-zinc-600"}`}>
+                  <span className={`w-4 h-4 rounded-full bg-white transition-transform ${logoShowName ? "translate-x-3.5" : "translate-x-0.5"}`} />
+                </span>
+                Shopname zusätzlich unter dem Logo anzeigen
+              </button>
+            )}
             <input value={tagline} onChange={e => setTagline(e.target.value)} maxLength={60}
               placeholder="Kleiner Text unter Logo/Name (optional), z.B. Ladenname oder Slogan"
               className="w-full px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />

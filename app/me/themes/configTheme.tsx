@@ -27,6 +27,8 @@ export interface ShopDesignConfig {
   // Logo-Größe auf der Karte: s/m/l (fehlend = m; wird aktuell nicht mehr
   // gerendert, das Logo ist immer groß)
   logoSize?: "s" | "m" | "l";
+  // Shopname zusätzlich unter dem Logo anzeigen
+  logoShowName?: boolean;
   // Kleiner Zusatz-Text unter Logo/Shopname (z.B. Ladenname oder Slogan)
   tagline?: string;
   // QR-Darstellung: "button" (großer Button unter der Karte, Standard),
@@ -200,9 +202,14 @@ function makeCard(cfg: ShopDesignConfig) {
                 )}
               </div>
               {cfg.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={cfg.logoUrl} alt={shopName} className="mt-2 object-contain object-left"
-                  style={{ height: 120, maxWidth: "100%" }} />
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cfg.logoUrl} alt={shopName} className="mt-2 object-contain object-left"
+                    style={{ height: 120, maxWidth: "100%" }} />
+                  {cfg.logoShowName && (
+                    <h2 className="text-base font-bold leading-tight mt-1.5" style={{ color: T }}>{shopName}</h2>
+                  )}
+                </>
               ) : (
                 <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
               )}
