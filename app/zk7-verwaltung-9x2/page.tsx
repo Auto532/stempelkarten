@@ -2069,17 +2069,19 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
 }) {
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"alle" | "offen" | "inaktiv">("alle");
+  const [filter, setFilter] = useState<"alle" | "aktiv" | "offen" | "inaktiv">("alle");
   const [showAll, setShowAll] = useState(false);
   const payStatus = usePayStatus(adminSecret);
 
   // Neueste zuerst, damit frisch angelegte Shops oben stehen
   const sorted = [...(shops ?? [])].sort((a, b) => b._creationTime - a._creationTime);
   const q = search.trim().toLowerCase();
+  const activeCount   = sorted.filter(s => s.active !== false).length;
   const openCount     = sorted.filter(s => payStatus[s._id] && !payStatus[s._id].paid).length;
   const inactiveCount = sorted.filter(s => s.active === false).length;
   const filtered = sorted.filter(s => {
     if (q && !s.name.toLowerCase().includes(q) && !s.slug.toLowerCase().includes(q)) return false;
+    if (filter === "aktiv")   return s.active !== false;
     if (filter === "offen")   return !!payStatus[s._id] && !payStatus[s._id].paid;
     if (filter === "inaktiv") return s.active === false;
     return true;
@@ -2091,6 +2093,7 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
 
   const chips: { id: typeof filter; label: string; count: number | null }[] = [
     { id: "alle",    label: "Alle",          count: sorted.length },
+    { id: "aktiv",   label: "Aktiv",         count: activeCount },
     { id: "offen",   label: "Zahlung offen", count: openCount },
     { id: "inaktiv", label: "Inaktiv",       count: inactiveCount },
   ];
@@ -2122,7 +2125,7 @@ function ShopsTab({ shops, adminSecret, onSelectShop }: {
               </button>
             )}
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {chips.map(c => (
               <button key={c.id} onClick={() => setFilter(c.id)}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
