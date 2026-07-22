@@ -418,12 +418,14 @@ export const getShopAnalyticsByPeriodAsAdmin = query({
     requireAdmin({ secret: adminSecret });
     const shop = await ctx.db.get(shopId);
 
-    let events = await ctx.db
-      .query("stampEvents")
-      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
-      .order("desc")
-      .collect();
-    if (since !== undefined) events = events.filter(e => e.timestamp >= since);
+    // Nur den nötigen Zeitraum laden; ohne Zeitraum die neuesten 15.000 Events
+    const events = since !== undefined
+      ? await ctx.db.query("stampEvents")
+          .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId).gte("timestamp", since))
+          .order("desc").collect()
+      : await ctx.db.query("stampEvents")
+          .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId))
+          .order("desc").take(15000);
 
     const stamps  = events.filter(e => e.type === "stamp").length;
     const redeems = events.filter(e => e.type === "redeem").length;
@@ -497,12 +499,11 @@ export const getGlobalStats = query({
     const memberships = await ctx.db.query("memberships").collect();
     const totalStamps = memberships.reduce((s, m) => s + m.totalStampsEver, 0);
     const totalRewards = memberships.reduce((s, m) => s + m.rewardsRedeemed, 0);
-    const shopsWithCounts = await Promise.all(
-      shops.map(async (shop) => {
-        const mems = await ctx.db.query("memberships").withIndex("by_shop", (q) => q.eq("shopId", shop._id)).collect();
-        return { ...sanitizeShop(shop), customerCount: mems.length };
-      })
-    );
+    // Kunden pro Shop aus den bereits geladenen Mitgliedschaften zählen
+    // (statt einer Extra-Abfrage pro Shop)
+    const countByShop = new Map<string, number>();
+    for (const m of memberships) countByShop.set(m.shopId.toString(), (countByShop.get(m.shopId.toString()) ?? 0) + 1);
+    const shopsWithCounts = shops.map((shop) => ({ ...sanitizeShop(shop), customerCount: countByShop.get(shop._id.toString()) ?? 0 }));
     return { totalShops: shops.length, totalCustomers: customers.length, totalStamps, totalRewards, shops: shopsWithCounts };
   },
 });
@@ -517,8 +518,20 @@ export const getGlobalAnalyticsByPeriod = query({
     requireAdmin({ secret: adminSecret });
     const shops     = await ctx.db.query("shops").collect();
     const customers = await ctx.db.query("customers").collect();
+    const allMemberships = await ctx.db.query("memberships").collect();
 
-    const allEvents = await ctx.db.query("stampEvents").order("desc").collect();
+    // Nur die wirklich benötigten Events laden: ab dem frühesten gebrauchten
+    // Zeitpunkt (prevSince für den Wachstumsvergleich). Ohne Zeitraum ("Alle")
+    // als Sicherheitsnetz die neuesten 15.000 Events statt der ganzen Historie,
+    // damit die Query auch bei sehr vielen Stempeln nicht ins Leselimit läuft.
+    const earliest = prevSince ?? since;
+    const allEvents = earliest !== undefined
+      ? await ctx.db.query("stampEvents").withIndex("by_timestamp", q => q.gte("timestamp", earliest)).collect()
+      : await ctx.db.query("stampEvents").withIndex("by_timestamp").order("desc").take(15000);
+
+    // Namen/Zuordnung über Maps statt einzelner DB-Zugriffe pro Event
+    const memById  = new Map(allMemberships.map(m => [m._id.toString(), m]));
+    const custById = new Map(customers.map(c => [c._id.toString(), c]));
 
     // Current period
     const events = since !== undefined ? allEvents.filter(e => e.timestamp >= since) : allEvents;
@@ -535,7 +548,6 @@ export const getGlobalAnalyticsByPeriod = query({
     const prevRedeems = prevEvents.filter(e => e.type === "redeem").length;
 
     // New customers in period
-    const allMemberships = await ctx.db.query("memberships").collect();
     const newMemberships = since !== undefined
       ? allMemberships.filter(m => m._creationTime >= since)
       : allMemberships;
@@ -565,30 +577,25 @@ export const getGlobalAnalyticsByPeriod = query({
     const top10ids = Array.from(membershipStampMap.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
-    const topCustomers = (await Promise.all(
-      top10ids.map(async ([mid, s]) => {
-        const membership = await ctx.db.get(mid as Id<"memberships">);
-        if (!membership) return null;
-        const customer = await ctx.db.get(membership.customerId);
-        if (!customer) return null;
-        const shop = shops.find(sh => sh._id === membership.shopId);
-        return { name: customer.name, stamps: s, shopName: shop?.name ?? "" };
-      })
-    )).filter(Boolean) as { name: string; stamps: number; shopName: string }[];
+    const topCustomers = top10ids.map(([mid, s]) => {
+      const membership = memById.get(mid);
+      if (!membership) return null;
+      const customer = custById.get(membership.customerId.toString());
+      if (!customer) return null;
+      const shop = shops.find(sh => sh._id === membership.shopId);
+      return { name: customer.name, stamps: s, shopName: shop?.name ?? "" };
+    }).filter(Boolean) as { name: string; stamps: number; shopName: string }[];
 
-    // Per-shop breakdown
-    const shopsData = await Promise.all(
-      shops.map(async (shop) => {
-        const shopEvents = events.filter(e => e.shopId === shop._id);
-        const shopStamps  = shopEvents.filter(e => e.type === "stamp").length;
-        const shopRedeems = shopEvents.filter(e => e.type === "redeem").length;
-        const activeMemberIds = new Set(
-          (await Promise.all(shopEvents.map(e => ctx.db.get(e.membershipId))))
-            .filter(Boolean).map(m => m!.customerId.toString())
-        );
-        return { _id: shop._id, name: shop.name, slug: shop.slug, stamps: shopStamps, redeems: shopRedeems, activeCustomers: activeMemberIds.size };
-      })
-    );
+    // Per-shop breakdown (Zuordnung über die Map, keine Einzel-Zugriffe)
+    const shopsData = shops.map((shop) => {
+      const shopEvents = events.filter(e => e.shopId === shop._id);
+      const shopStamps  = shopEvents.filter(e => e.type === "stamp").length;
+      const shopRedeems = shopEvents.filter(e => e.type === "redeem").length;
+      const activeMemberIds = new Set(
+        shopEvents.map(e => memById.get(e.membershipId.toString())?.customerId.toString()).filter(Boolean)
+      );
+      return { _id: shop._id, name: shop.name, slug: shop.slug, stamps: shopStamps, redeems: shopRedeems, activeCustomers: activeMemberIds.size };
+    });
 
     return {
       totalShops: shops.length,
@@ -613,12 +620,14 @@ export const getShopAnalyticsByPeriod = query({
 
     const shop = await ctx.db.get(shopId);
 
-    let events = await ctx.db
-      .query("stampEvents")
-      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
-      .order("desc")
-      .collect();
-    if (since !== undefined) events = events.filter(e => e.timestamp >= since);
+    // Nur den nötigen Zeitraum laden; ohne Zeitraum die neuesten 15.000 Events
+    const events = since !== undefined
+      ? await ctx.db.query("stampEvents")
+          .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId).gte("timestamp", since))
+          .order("desc").collect()
+      : await ctx.db.query("stampEvents")
+          .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId))
+          .order("desc").take(15000);
 
     const stamps  = events.filter(e => e.type === "stamp").length;
     const redeems = events.filter(e => e.type === "redeem").length;

@@ -123,7 +123,11 @@ export default defineSchema({
     type: v.union(v.literal("stamp"), v.literal("redeem")),
     rewardText: v.optional(v.string()),
     timestamp: v.number(),
-  }).index("by_membership", ["membershipId"]).index("by_shop", ["shopId"]),
+  })
+    .index("by_membership", ["membershipId"])
+    .index("by_shop", ["shopId"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_shop_and_timestamp", ["shopId", "timestamp"]),
 
   messages: defineTable({
     shopId: v.id("shops"),
