@@ -27,6 +27,14 @@ export type ReportData = {
   rewards: { text: string; count: number; value: string | null }[];
   customers: { name: string; stamps: number; redeems: number; currentStamps: number; required: number }[];
   progress: { cur: number; req: number; remaining: number };
+  contract?: {
+    plan: string;
+    price: string;
+    paid: boolean;
+    statusLabel: string;
+    firstPaidAt: string | null;
+    nextRenewalAt: string | null;
+  } | null;
 };
 
 // ── Lucide-Icons als SVG (stroke-basiert wie im Web) ──────────────────────────
@@ -74,13 +82,17 @@ function Icon({ name, size = 14, color = C.gold, sw = 2 }: { name: string; size?
       <Line x1="12" y1="16" x2="12" y2="12" {...common} />
       <Line x1="12" y1="8" x2="12.01" y2="8" {...common} />
     </>),
+    creditcard: (<>
+      <Rect x="2" y="5" width="20" height="14" rx="2" {...common} />
+      <Line x1="2" y1="10" x2="22" y2="10" {...common} />
+    </>),
   };
   return <Svg width={size} height={size} viewBox="0 0 24 24">{parts[name]}</Svg>;
 }
 
 const s = StyleSheet.create({
-  page: { backgroundColor: C.bg, padding: 22, fontFamily: "Helvetica", color: C.white },
-  frame: { flex: 1, borderWidth: 1, borderColor: C.gold, borderRadius: 10, padding: 22 },
+  page: { backgroundColor: C.bg, padding: 18, fontFamily: "Helvetica", color: C.white },
+  frame: { flex: 1, borderWidth: 1, borderColor: C.gold, borderRadius: 10, padding: 18 },
   // Header
   headRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   brand: { flexDirection: "row", alignItems: "center", gap: 7 },
@@ -93,33 +105,36 @@ const s = StyleSheet.create({
   subtitle: { fontSize: 8.5, color: C.gray, marginTop: 3 },
   shopName: { fontSize: 8.5, color: C.gold, fontFamily: "Helvetica-Bold" },
   // Stat cards
-  statRow: { flexDirection: "row", gap: 8, marginTop: 18 },
-  statCard: { flex: 1, backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
+  statRow: { flexDirection: "row", gap: 8, marginTop: 13 },
+  statCard: { flex: 1, backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11, flexDirection: "row", alignItems: "center", gap: 10 },
   statCircle: { width: 30, height: 30, borderRadius: 15, borderWidth: 1.4, borderColor: C.gold, alignItems: "center", justifyContent: "center" },
   statVal: { fontSize: 22, fontFamily: "Helvetica-Bold" },
   statL1: { fontSize: 6.5, color: C.gray, fontFamily: "Helvetica-Bold", marginTop: 4, letterSpacing: 0.3 },
   statL2: { fontSize: 6, color: C.goldDim, marginTop: 1 },
   underline: { width: 20, height: 2, backgroundColor: C.gold, borderRadius: 1, marginTop: 4 },
   // Section
-  sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 20, marginBottom: 8 },
+  sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 13, marginBottom: 6 },
   sectionIcon: { width: 18, height: 18, borderRadius: 4, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" },
   sectionTitle: { fontSize: 11, fontFamily: "Helvetica-Bold", color: C.gold, letterSpacing: 0.4 },
   // Table
   th: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: C.cardBd, paddingBottom: 5 },
   thTxt: { fontSize: 8, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 0.3 },
-  tr: { flexDirection: "row", borderBottomWidth: 0.6, borderBottomColor: C.cardBd, paddingVertical: 6 },
+  tr: { flexDirection: "row", borderBottomWidth: 0.6, borderBottomColor: C.cardBd, paddingVertical: 4.5 },
   tdName: { fontSize: 9.5, color: C.white, flex: 1 },
   td: { fontSize: 9.5, color: C.gray, textAlign: "right" },
   tdGold: { fontSize: 9.5, color: C.gold, textAlign: "right" },
   // Progress
-  progCard: { backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 14, marginTop: 18, flexDirection: "row", alignItems: "center", gap: 12 },
+  progCard: { backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 12, marginTop: 12, flexDirection: "row", alignItems: "center", gap: 12 },
   progMid: { flex: 1 },
   progVal: { fontSize: 12, fontFamily: "Helvetica-Bold", color: C.gold, marginBottom: 4 },
   bar: { height: 4, backgroundColor: C.barBg, borderRadius: 2 },
   barFill: { height: 4, backgroundColor: C.gold, borderRadius: 2 },
   progRight: { flexDirection: "row", alignItems: "center", gap: 6, width: 150, justifyContent: "flex-end" },
+  // Vertrag
+  contractCard: { backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 12, flexDirection: "row", alignItems: "flex-start" },
+  badge: { fontSize: 8, fontFamily: "Helvetica-Bold", paddingVertical: 3, paddingHorizontal: 8, borderRadius: 6 },
   // Footer
-  footInfo: { flexDirection: "row", gap: 30, marginTop: 18 },
+  footInfo: { flexDirection: "row", gap: 30, marginTop: 12 },
   footCol: { flexDirection: "row", alignItems: "center", gap: 7 },
   footLabel: { fontSize: 7, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 0.3 },
   footVal: { fontSize: 8, color: C.gray, marginTop: 2 },
@@ -200,16 +215,14 @@ export function LoyaltyReport({ data, logoSrc = "/logo-hell.png" }: { data: Repo
           </View>
           <View style={s.th}>
             <Text style={[s.thTxt, { flex: 1 }]}>NAME</Text>
-            <Text style={[s.thTxt, { width: 60, textAlign: "right" }]}>PUNKTE</Text>
-            <Text style={[s.thTxt, { width: 70, textAlign: "right" }]}>EINGELÖST</Text>
-            <Text style={[s.thTxt, { width: 60, textAlign: "right" }]}>AKTUELL</Text>
+            <Text style={[s.thTxt, { width: 90, textAlign: "right" }]}>PUNKTE</Text>
+            <Text style={[s.thTxt, { width: 90, textAlign: "right" }]}>EINGELÖST</Text>
           </View>
           {data.customers.map((c, i) => (
             <View style={s.tr} key={i}>
               <Text style={s.tdName}>{c.name}</Text>
-              <Text style={[s.td, { width: 60 }]}>{c.stamps}</Text>
-              <Text style={[s.td, { width: 70 }]}>{c.redeems > 0 ? c.redeems : "–"}</Text>
-              <Text style={[s.td, { width: 60 }]}>{c.currentStamps}/{c.required}</Text>
+              <Text style={[s.td, { width: 90 }]}>{c.stamps}</Text>
+              <Text style={[s.td, { width: 90 }]}>{c.redeems > 0 ? c.redeems : "–"}</Text>
             </View>
           ))}
 
@@ -232,6 +245,33 @@ export function LoyaltyReport({ data, logoSrc = "/logo-hell.png" }: { data: Repo
               </View>
             </View>
           </View>
+
+          {/* Vertrag & Zahlung */}
+          {data.contract && (
+            <>
+              <View style={s.sectionHead}>
+                <View style={s.sectionIcon}><Icon name="creditcard" size={11} color={C.bg} /></View>
+                <Text style={s.sectionTitle}>VERTRAG & ZAHLUNG</Text>
+              </View>
+              <View style={s.contractCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontFamily: "Helvetica-Bold" }}>{data.contract.plan}</Text>
+                  <Text style={{ fontSize: 8.5, color: C.gray, marginTop: 3 }}>{data.contract.price}</Text>
+                  {data.contract.firstPaidAt && (
+                    <Text style={{ fontSize: 8, color: C.gray, marginTop: 6 }}>Abgeschlossen am {data.contract.firstPaidAt}</Text>
+                  )}
+                  {data.contract.nextRenewalAt && (
+                    <Text style={{ fontSize: 8, color: C.gray, marginTop: 2 }}>Verlängerung: {data.contract.nextRenewalAt}</Text>
+                  )}
+                </View>
+                <Text style={[s.badge, data.contract.paid
+                  ? { backgroundColor: "#15351f", color: "#5fce86" }
+                  : { backgroundColor: "#3a3416", color: C.gold }]}>
+                  {data.contract.statusLabel}
+                </Text>
+              </View>
+            </>
+          )}
 
           {/* Footer-Info */}
           <View style={s.footInfo}>

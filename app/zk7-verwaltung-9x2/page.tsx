@@ -2987,7 +2987,7 @@ const PERIOD_LABELS: Record<Period, string> = {
 };
 
 // Statistik-PDF im Loyaltycard-Look (react-pdf, siehe app/components/reportPdf)
-async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
+async function exportShopPdf(shop: Doc<"shops">, period: Period, adminSecret: string, data: {
   stamps: number; redeems: number; stampValue: number | null;
   rewardBreakdown: { rewardText: string; count: number; valuePerRedemption: number | null }[];
   customers: { customerName: string; stamps: number; redeems: number; currentStamps: number }[];
@@ -3000,6 +3000,32 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
   const avg = data.customers.length
     ? Math.round(data.customers.reduce((s, c) => s + c.currentStamps, 0) / data.customers.length)
     : 0;
+
+  // Vertragsdaten aus der Affiliate-App (Modell, Preis, Bezahlstatus, Daten)
+  const fmtDate = (ts: number) => new Date(ts).toLocaleDateString("de-DE");
+  let contract: {
+    plan: string; price: string; paid: boolean; statusLabel: string;
+    firstPaidAt: string | null; nextRenewalAt: string | null;
+  } | null = null;
+  try {
+    const c = await affiliateQuery("admin:getContractForShop", { adminSecret, loatycardShopId: shop._id }) as {
+      planType: "annual" | "monthly"; recurringPrice: number; paymentCount: number;
+      payLaterAt?: number; firstPaidAt?: number; nextRenewalAt?: number;
+    } | null;
+    if (c) {
+      const per = c.planType === "annual" ? "Jahr" : "Monat";
+      const paid = c.paymentCount > 0;
+      contract = {
+        plan: c.planType === "annual" ? "Jahresabo" : "Monatsabo",
+        price: `${c.recurringPrice} €/${per}`,
+        paid,
+        statusLabel: paid ? "Bezahlt" : c.payLaterAt ? "Später zahlen" : "Zahlung offen",
+        firstPaidAt: paid && c.firstPaidAt ? fmtDate(c.firstPaidAt) : null,
+        nextRenewalAt: c.nextRenewalAt ? fmtDate(c.nextRenewalAt) : null,
+      };
+    }
+  } catch { /* kein Vertrag / Affiliate-App nicht erreichbar → Sektion entfällt */ }
+
   const reportData = {
     shopName: shop.name,
     periodLabel: PERIOD_LABELS[period],
@@ -3017,6 +3043,7 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
       name: c.customerName, stamps: c.stamps, redeems: c.redeems, currentStamps: c.currentStamps, required,
     })),
     progress: { cur: avg, req: required, remaining: Math.max(required - avg, 0) },
+    contract,
   };
   const blob = await pdf(<LoyaltyReport data={reportData} />).toBlob();
   const file = new File([blob], `${shop.slug}-bericht.pdf`, { type: "application/pdf" });
@@ -3041,7 +3068,7 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
   const handleExport = async () => {
     if (!data) return;
     setExporting(true);
-    try { await exportShopPdf(shop, period, data); }
+    try { await exportShopPdf(shop, period, adminSecret, data); }
     finally { setExporting(false); }
   };
 
