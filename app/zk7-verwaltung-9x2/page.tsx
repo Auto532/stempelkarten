@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -3342,6 +3342,91 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
 
 // ─── SettingsTab ──────────────────────────────────────────────────────────────
 
+function relTime(ts: number): string {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return "gerade eben";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `vor ${m} Min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `vor ${h} Std`;
+  return `vor ${Math.floor(h / 24)} Tg`;
+}
+
+// System & Auslastung: Live-Health-Ping + Kapazitäts-Ampel direkt in der App.
+// Detaillierte Fehler/Performance bleiben im Convex-Dashboard.
+function SystemHealthCard({ adminSecret }: { adminSecret: string }) {
+  const health = useQuery(api.system.getSystemHealth, adminSecret ? { adminSecret } : "skip");
+  const convex = useConvex();
+  const [latency, setLatency] = useState<number | null>(null);
+  const [online, setOnline] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const doPing = async () => {
+      const t0 = performance.now();
+      try {
+        await convex.query(api.system.ping, {});
+        if (!cancelled) { setLatency(Math.round(performance.now() - t0)); setOnline(true); }
+      } catch {
+        if (!cancelled) setOnline(false);
+      }
+    };
+    doPing();
+    const id = setInterval(doPing, 4000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [convex]);
+
+  // Ampel-Schwellen: Convex liest max. ~16.000 Dokumente pro Query
+  const rows = health ? [
+    { label: "Shops",            value: health.counts.shops,       warn: 300,   crit: 800 },
+    { label: "Kunden",           value: health.counts.customers,   warn: 10000, crit: 15000 },
+    { label: "Mitgliedschaften", value: health.counts.memberships, warn: 10000, crit: 15000 },
+    { label: "Stempel-Aktionen", value: health.counts.stampEvents, warn: 12000, crit: 15000 },
+  ] : [];
+  const ampel = (v: number, warn: number, crit: number) =>
+    v >= crit ? "#f87171" : v >= warn ? "#fbbf24" : "#4ade80";
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-zinc-800">
+        <BarChart2 size={15} className="text-amber-400" />
+        <span className="text-sm font-medium text-zinc-200">System & Auslastung</span>
+        <span className="ml-auto flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full" style={{ background: online ? "#4ade80" : "#f87171" }} />
+          <span className="text-[11px]" style={{ color: online ? "#4ade80" : "#f87171" }}>
+            {online ? `Online${latency != null ? ` · ${latency} ms` : ""}` : "Keine Verbindung"}
+          </span>
+        </span>
+      </div>
+      <div className="p-5 space-y-4">
+        {!health ? (
+          <p className="text-sm text-zinc-500">Laden…</p>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {rows.map(r => (
+                <div key={r.label} className="flex items-center gap-3">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ampel(r.value, r.warn, r.crit) }} />
+                  <span className="text-sm text-zinc-300 flex-1">{r.label}</span>
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: ampel(r.value, r.warn, r.crit) }}>
+                    {r.value.toLocaleString("de-DE")}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-zinc-500 pt-3 border-t border-zinc-800">
+              Letzte Stempel-Aktivität: {health.lastActivity != null ? relTime(health.lastActivity) : "noch keine"}
+            </p>
+          </>
+        )}
+        <p className="text-[10px] text-zinc-600 leading-relaxed">
+          Grün = viel Luft, Gelb = beobachten, Rot = Grenze naht. Detaillierte Fehler & Performance findest du im Convex-Dashboard.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function SettingsTab({ adminSecret }: { adminSecret: string }) {
   const clearAllData       = useMutation(api.admin.clearAllData);
   const createTestCustomer = useMutation(api.admin.adminCreateTestCustomer);
@@ -3399,6 +3484,7 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
 
   return (
     <motion.div key="settings" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+      <SystemHealthCard adminSecret={adminSecret} />
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
         <button onClick={() => setShowAdminZugang(!showAdminZugang)}
           className="w-full flex items-center gap-2 px-5 py-4 hover:bg-zinc-800/50 transition-colors">
