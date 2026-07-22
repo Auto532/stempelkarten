@@ -2996,12 +2996,15 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210;
-  const accent: [number, number, number] = (shop.customDesignEnabled && shop.accentColor)
-    ? hexToRgbPdf(shop.accentColor)
-    : [251, 191, 36];
-  const dark: [number, number, number]  = [18, 18, 18];
-  const mid: [number, number, number]   = [80, 80, 80];
-  const light: [number, number, number] = [245, 245, 245];
+  // Loyaltycard-Branding (dunkel/gold), unabhaengig vom Shop-Design
+  const gold:   [number, number, number] = [232, 184, 62];
+  const goldDk: [number, number, number] = [150, 116, 36];
+  const bg:     [number, number, number] = [12, 12, 15];
+  const card:   [number, number, number] = [26, 26, 32];
+  const cardBd: [number, number, number] = [52, 52, 62];
+  const white:  [number, number, number] = [242, 242, 244];
+  const grayT:  [number, number, number] = [148, 148, 160];
+  const H = 297;
 
   const periodLabel = period === "all" ? "Gesamt"
     : period === "7d" ? "Letzte 7 Tage"
@@ -3009,193 +3012,247 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
     : period === "90d" ? "Letzte 3 Monate"
     : "Letztes Jahr";
 
-  // ── Header ──────────────────────────────────────────────────────────────────
-  doc.setFillColor(...accent);
-  doc.rect(0, 0, W, 36, "F");
-  doc.setFillColor(...dark);
-  doc.rect(0, 0, 5, 36, "F");
-
-  doc.setTextColor(...dark);
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text(shop.name, 13, 16);
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Stempel-Bericht  ·  ${periodLabel}  ·  ${new Date().toLocaleDateString("de-DE")}`, 13, 26);
-
-  // ── Preisinfo ───────────────────────────────────────────────────────────────
-  let y = 44;
-  if (shop.priceInfo) {
-    doc.setFillColor(248, 248, 248);
-    const lines = doc.splitTextToSize(shop.priceInfo, W - 28) as string[];
-    const boxH = 8 + lines.length * 4.5;
-    doc.rect(13, y, W - 26, boxH, "F");
-    doc.setDrawColor(...accent);
-    doc.setLineWidth(0.6);
-    doc.rect(13, y, 3, boxH, "F");
+  const paintBg = () => {
+    doc.setFillColor(...bg);
+    doc.rect(0, 0, W, H, "F");
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(0.8);
+    doc.roundedRect(5, 5, W - 10, H - 10, 4, 4, "S");
     doc.setLineWidth(0.2);
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...mid);
-    doc.text("Preisinfo / Angebot", 20, y + 5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...dark);
-    lines.forEach((line: string, i: number) => {
-      doc.text(line, 20, y + 10 + i * 4.5);
-    });
-    y += boxH + 8;
-  }
+  };
+  paintBg();
 
-  // ── Stat-Boxen ──────────────────────────────────────────────────────────────
-  const bx = [13, 77, 141] as const;
-  const bw = 60;
-  const bh = 22;
-  const statData = [
-    { label: "Stempel vergeben", value: String(data.stamps) },
-    { label: "Belohnungen eingelöst", value: String(data.redeems) },
-    { label: "Aktive Kunden", value: String(data.customers.length) },
-  ];
-  statData.forEach(({ label, value }, i) => {
-    doc.setFillColor(...light);
-    doc.rect(bx[i], y, bw, bh, "F");
-    doc.setDrawColor(220, 220, 220);
-    doc.rect(bx[i], y, bw, bh, "S");
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...accent);
-    doc.text(value, bx[i] + bw / 2, y + 12, { align: "center" });
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...mid);
-    doc.text(label, bx[i] + bw / 2, y + 19, { align: "center" });
-  });
-  y += bh + 8;
-
-  if (data.stampValue && data.stamps > 0) {
-    const est = (data.stamps * data.stampValue).toLocaleString("de-DE");
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...mid);
-    doc.text(`Geschätzter Mindestumsatz: `, 13, y);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...dark);
-    doc.text(`€${est}`, 80, y);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...mid);
-    doc.text(` (€${data.stampValue} pro Stempel)`, 95, y);
-    y += 8;
-  }
-
-  // ── Belohnungs-Breakdown ─────────────────────────────────────────────────────
-  if (data.rewardBreakdown.length > 0) {
-    y += 4;
-    doc.setDrawColor(220, 220, 220);
-    doc.line(13, y, W - 13, y);
-    y += 8;
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...dark);
-    doc.text("Belohnungen", 13, y);
-    y += 7;
-
-    doc.setFillColor(...light);
-    doc.rect(13, y - 4, W - 26, 6, "F");
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...mid);
-    doc.text("Belohnung", 15, y);
-    doc.text("Anzahl", 148, y, { align: "right" });
-    if (data.stampValue) doc.text("Ø Umsatz", W - 15, y, { align: "right" });
-    y += 6;
-
-    doc.setFont("helvetica", "normal");
-    let rewardTotal = 0;
-    for (const r of data.rewardBreakdown) {
-      if (y > 260) { doc.addPage(); y = 20; }
-      doc.setTextColor(...dark);
-      doc.text(r.rewardText.slice(0, 55), 15, y);
-      doc.setTextColor(...mid);
-      doc.text(String(r.count), 148, y, { align: "right" });
-      if (r.valuePerRedemption != null && data.stampValue) {
-        const tv = r.count * r.valuePerRedemption;
-        rewardTotal += tv;
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(160, 100, 0);
-        doc.text(`€${tv.toLocaleString("de-DE")}`, W - 15, y, { align: "right" });
-        doc.setFont("helvetica", "normal");
-      }
-      y += 5.5;
+  // ── Icon-Helfer (einfache Gold-Symbole) ──────────────────────────────────────
+  const starPts = (cx: number, cy: number, ro: number, ri: number) => {
+    const pts: [number, number][] = [];
+    for (let k = 0; k < 10; k++) {
+      const a = -Math.PI / 2 + k * Math.PI / 5;
+      const r = k % 2 === 0 ? ro : ri;
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
     }
+    return pts;
+  };
+  const drawStar = (cx: number, cy: number, ro: number, style: "F" | "S") => {
+    const pts = starPts(cx, cy, ro, ro * 0.45);
+    const deltas = pts.slice(1).map((pt, k) => [pt[0] - pts[k][0], pt[1] - pts[k][1]] as [number, number]);
+    doc.lines(deltas, pts[0][0], pts[0][1], [1, 1], style, true);
+  };
+  const iconGift = (cx: number, cy: number) => {
+    doc.setDrawColor(...gold); doc.setLineWidth(0.5);
+    doc.roundedRect(cx - 3, cy - 1.5, 6, 4.5, 0.5, 0.5, "S");
+    doc.line(cx, cy - 1.5, cx, cy + 3);
+    doc.line(cx - 3, cy - 0.2, cx + 3, cy - 0.2);
+    doc.setLineWidth(0.2);
+  };
+  const iconPeople = (cx: number, cy: number) => {
+    doc.setDrawColor(...gold); doc.setLineWidth(0.5);
+    doc.circle(cx - 1.6, cy - 1, 1.1, "S");
+    doc.circle(cx + 1.6, cy - 1, 1.1, "S");
+    doc.line(cx - 3.2, cy + 2.4, cx, cy + 2.4);
+    doc.line(cx, cy + 2.4, cx + 3.2, cy + 2.4);
+    doc.setLineWidth(0.2);
+  };
+  const iconTrophy = (cx: number, cy: number) => {
+    doc.setDrawColor(...gold); doc.setLineWidth(0.5);
+    doc.line(cx - 2.4, cy - 2.4, cx + 2.4, cy - 2.4);
+    doc.line(cx - 2.4, cy - 2.4, cx - 1.4, cy + 1.2);
+    doc.line(cx + 2.4, cy - 2.4, cx + 1.4, cy + 1.2);
+    doc.line(cx - 1.4, cy + 1.2, cx + 1.4, cy + 1.2);
+    doc.line(cx, cy + 1.2, cx, cy + 3);
+    doc.line(cx - 1.6, cy + 3, cx + 1.6, cy + 3);
+    doc.setLineWidth(0.2);
+  };
+  const drawLogo = (x: number, y: number, size: number) => {
+    doc.setFillColor(...gold);
+    drawStar(x + size / 2, y + size / 2, size / 2, "F");
+  };
 
-    if (data.stampValue && rewardTotal > 0) {
-      y += 2;
-      doc.setDrawColor(200, 200, 200);
-      doc.line(130, y, W - 13, y);
-      y += 5;
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...mid);
-      doc.text("Gesamt Belohnungswert:", 130, y);
-      doc.setTextColor(...accent);
-      doc.text(`€${rewardTotal.toLocaleString("de-DE")}`, W - 15, y, { align: "right" });
-      y += 5;
-    }
-  }
-
-  // ── Kunden-Tabelle ──────────────────────────────────────────────────────────
-  y += 4;
-  doc.setDrawColor(220, 220, 220);
-  doc.line(13, y, W - 13, y);
-  y += 8;
-
-  doc.setFontSize(11);
+  // ── Header ────────────────────────────────────────────────────────────────
+  drawLogo(14, 14, 9);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...dark);
-  doc.text("Kunden im Zeitraum", 13, y);
-  y += 7;
-
-  doc.setFillColor(...light);
-  doc.rect(13, y - 4, W - 26, 6, "F");
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...mid);
-  doc.text("Name", 15, y);
-  doc.text("Stempel", 122, y, { align: "right" });
-  doc.text("Eingelöst", 148, y, { align: "right" });
-  doc.text("Aktuell", W - 15, y, { align: "right" });
-  y += 6;
+  doc.setFontSize(17);
+  doc.setTextColor(...white);
+  doc.text("Loyalty", 27, 20.5);
+  const lw = doc.getTextWidth("Loyalty");
+  doc.setTextColor(...gold);
+  doc.text("card", 27 + lw, 20.5);
 
   doc.setFont("helvetica", "normal");
-  for (let i = 0; i < data.customers.length; i++) {
-    const c = data.customers[i];
-    if (y > 272) { doc.addPage(); y = 20; }
-    if (i % 2 === 0) {
-      doc.setFillColor(250, 250, 250);
-      doc.rect(13, y - 3.5, W - 26, 5.5, "F");
+  doc.setFontSize(9);
+  doc.setTextColor(...grayT);
+  doc.text("loyaltycard.info", W - 14, 19, { align: "right" });
+  doc.setDrawColor(...grayT); doc.setLineWidth(0.3);
+  doc.circle(W - 14 - doc.getTextWidth("loyaltycard.info") - 4, 18, 1.8, "S");
+  doc.setLineWidth(0.2);
+
+  doc.setFillColor(...gold);
+  doc.rect(14, 26, 1.4, 8, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(...white);
+  doc.text("KUNDENÜBERSICHT / LOYALTY-BERICHT", 18, 30);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...gold);
+  doc.text(shop.name, 18, 35.5);
+  doc.setTextColor(...grayT);
+  const nameW = doc.getTextWidth(shop.name);
+  doc.text("  ·  Professionelle Übersicht für Ihre digitale Kundenbindung.", 18 + nameW, 35.5);
+
+  // ── Stat-Karten ────────────────────────────────────────────────────────────
+  let y = 44;
+  const cardW = 58, gap = 5, cardH = 30;
+  const cardsX = [14, 14 + cardW + gap, 14 + (cardW + gap) * 2];
+  const stats = [
+    { value: String(data.stamps),           l1: "VERGEBENE PUNKTE", l2: "/ TREUEPUNKTE", icon: iconGift },
+    { value: String(data.redeems),          l1: "BELOHNUNGEN",      l2: "EINGELÖST",     icon: (cx: number, cy: number) => drawStar(cx, cy, 3, "S") },
+    { value: String(data.customers.length), l1: "AKTIVE",           l2: "KUNDEN",        icon: iconPeople },
+  ];
+  stats.forEach((st, i) => {
+    const x = cardsX[i];
+    doc.setFillColor(...card);
+    doc.roundedRect(x, y, cardW, cardH, 2.5, 2.5, "F");
+    doc.setDrawColor(...cardBd); doc.setLineWidth(0.3);
+    doc.roundedRect(x, y, cardW, cardH, 2.5, 2.5, "S"); doc.setLineWidth(0.2);
+    doc.setDrawColor(...gold); doc.setLineWidth(0.6);
+    doc.circle(x + 11, y + 13, 6.5, "S"); doc.setLineWidth(0.2);
+    st.icon(x + 11, y + 13);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(...white);
+    doc.text(st.value, x + 22, y + 13);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); doc.setTextColor(...grayT);
+    doc.text(st.l1, x + 22, y + 19);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(6); doc.setTextColor(...goldDk);
+    doc.text(st.l2, x + 22, y + 23);
+    doc.setDrawColor(...gold); doc.setLineWidth(0.5);
+    doc.line(x + 22, y + 26, x + 32, y + 26); doc.setLineWidth(0.2);
+  });
+  y += cardH + 9;
+
+  const sectionTitle = (label: string, icon: (cx: number, cy: number) => void) => {
+    doc.setFillColor(...gold);
+    doc.roundedRect(14, y - 5, 7, 7, 1.2, 1.2, "F");
+    doc.setDrawColor(12, 12, 15);
+    icon(17.5, y - 1.5);
+    doc.setLineWidth(0.2);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...gold);
+    doc.text(label, 25, y);
+    y += 8;
+  };
+
+  const ensureSpace = (need: number) => {
+    if (y + need > H - 26) { doc.addPage(); paintBg(); y = 22; }
+  };
+
+  // ── BELOHNUNGEN ─────────────────────────────────────────────────────────────
+  if (data.rewardBreakdown.length > 0) {
+    ensureSpace(30);
+    sectionTitle("BELOHNUNGEN", (cx, cy) => iconGift(cx, cy));
+    doc.setDrawColor(...cardBd); doc.setLineWidth(0.3);
+    doc.line(14, y + 2, W - 14, y + 2);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...gold);
+    doc.text("BELOHNUNG", 17, y);
+    doc.text("ANZAHL", W - 60, y);
+    if (data.stampValue) doc.text("WERT", W - 17, y, { align: "right" });
+    y += 7;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    for (const r of data.rewardBreakdown) {
+      ensureSpace(8);
+      doc.setTextColor(...white);
+      doc.text(r.rewardText.slice(0, 48), 17, y);
+      doc.setTextColor(...grayT);
+      doc.text(String(r.count), W - 60, y);
+      if (r.valuePerRedemption != null && data.stampValue) {
+        doc.setTextColor(...gold);
+        doc.text(`€${(r.count * r.valuePerRedemption).toLocaleString("de-DE")}`, W - 17, y, { align: "right" });
+      }
+      doc.setDrawColor(...cardBd); doc.setLineWidth(0.2);
+      doc.line(14, y + 2.5, W - 14, y + 2.5);
+      y += 8;
     }
-    doc.setTextColor(...dark);
-    doc.text(c.customerName.slice(0, 42), 15, y);
-    doc.setTextColor(...mid);
-    doc.text(String(c.stamps), 122, y, { align: "right" });
-    doc.text(c.redeems > 0 ? String(c.redeems) : "—", 148, y, { align: "right" });
-    doc.text(`${c.currentStamps}/${shop.stampsRequired}`, W - 15, y, { align: "right" });
-    y += 5.5;
+    y += 4;
   }
+
+  // ── KUNDEN IM ZEITRAUM ──────────────────────────────────────────────────────
+  ensureSpace(30);
+  sectionTitle("KUNDEN IM ZEITRAUM", (cx, cy) => iconPeople(cx, cy));
+  doc.setDrawColor(...cardBd); doc.setLineWidth(0.3);
+  doc.line(14, y + 2, W - 14, y + 2);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...gold);
+  doc.text("NAME", 17, y);
+  doc.text("PUNKTE", W - 78, y, { align: "right" });
+  doc.text("EINGELÖST", W - 45, y, { align: "right" });
+  doc.text("AKTUELL", W - 17, y, { align: "right" });
+  y += 7;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+  for (const c of data.customers) {
+    ensureSpace(8);
+    doc.setTextColor(...white);
+    doc.text(c.customerName.slice(0, 34), 17, y);
+    doc.setTextColor(...grayT);
+    doc.text(String(c.stamps), W - 78, y, { align: "right" });
+    doc.text(c.redeems > 0 ? String(c.redeems) : "-", W - 45, y, { align: "right" });
+    doc.text(`${c.currentStamps}/${shop.stampsRequired}`, W - 17, y, { align: "right" });
+    doc.setDrawColor(...cardBd); doc.setLineWidth(0.2);
+    doc.line(14, y + 2.5, W - 14, y + 2.5);
+    y += 8;
+  }
+  y += 4;
+
+  // ── AKTUELLER FORTSCHRITT (Durchschnitt der Kunden) ─────────────────────────
+  ensureSpace(30);
+  const req = shop.stampsRequired || 10;
+  const avgCur = data.customers.length
+    ? Math.round(data.customers.reduce((s2, c) => s2 + c.currentStamps, 0) / data.customers.length)
+    : 0;
+  const remaining = Math.max(req - avgCur, 0);
+  const pct = Math.min(avgCur / req, 1);
+  doc.setFillColor(...card);
+  doc.roundedRect(14, y, W - 28, 26, 2.5, 2.5, "F");
+  doc.setDrawColor(...cardBd); doc.setLineWidth(0.3);
+  doc.roundedRect(14, y, W - 28, 26, 2.5, 2.5, "S"); doc.setLineWidth(0.2);
+  doc.setDrawColor(...gold); doc.setLineWidth(0.6);
+  doc.circle(27, y + 13, 6.5, "S"); doc.setLineWidth(0.2);
+  iconTrophy(27, y + 13);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...white);
+  doc.text("AKTUELLER FORTSCHRITT", 38, y + 11);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(...grayT);
+  doc.text("Zum nächsten Bonus (Durchschnitt)", 38, y + 16);
+  const barX = 100, barW = 62, barY = y + 12.5;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...gold);
+  doc.text(`${avgCur} / ${req}`, barX, y + 10);
+  doc.setFillColor(...cardBd);
+  doc.roundedRect(barX, barY, barW, 2.6, 1.3, 1.3, "F");
+  doc.setFillColor(...gold);
+  if (pct > 0) doc.roundedRect(barX, barY, Math.max(barW * pct, 2), 2.6, 1.3, 1.3, "F");
+  doc.setFillColor(...gold);
+  drawStar(W - 40, y + 10, 3.4, "F");
+  doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...white);
+  doc.text(`NOCH ${remaining} PUNKTE`, W - 34, y + 9);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(6.5); doc.setTextColor(...grayT);
+  doc.text("bis zur nächsten Belohnung", W - 34, y + 13);
+  y += 26 + 8;
+
+  // ── Info-Zeile ──────────────────────────────────────────────────────────────
+  ensureSpace(16);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor(...gold);
+  doc.text("BERICHTSZEITRAUM", 18, y);
+  doc.text("HINWEIS", W / 2 + 4, y);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...grayT);
+  doc.text(`${periodLabel}  ·  ${new Date().toLocaleDateString("de-DE")}`, 18, y + 5);
+  doc.text("Die Daten werden in Echtzeit aktualisiert.", W / 2 + 4, y + 5);
 
   // ── Footer (jede Seite) ──────────────────────────────────────────────────────
   const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p);
-    doc.setFillColor(...accent);
-    doc.rect(0, 289, W, 8, "F");
-    doc.setFillColor(...dark);
-    doc.rect(0, 289, 5, 8, "F");
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...dark);
-    doc.text("Stempelkarten App", 13, 294);
-    doc.text(`Seite ${p} / ${pageCount}`, W - 13, 294, { align: "right" });
+    doc.setDrawColor(...gold); doc.setLineWidth(0.4);
+    doc.line(14, H - 16, W - 14, H - 16); doc.setLineWidth(0.2);
+    drawLogo(14, H - 13, 6);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...white);
+    doc.text("Loyaltycard", 23, H - 8.5);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...grayT);
+    doc.text("loyaltycard.info", 58, H - 8.5);
+    doc.text(`Seite ${p} / ${pageCount}`, W - 14, H - 8.5, { align: "right" });
   }
 
   const blob = doc.output("blob");
