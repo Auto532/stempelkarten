@@ -1196,6 +1196,24 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// Aufklappbarer Editor-Abschnitt: bündelt mehrere Sektionen, damit nicht alles
+// gleichzeitig offen ist (übersichtlicher, gerade für Einsteiger).
+function EditorGroup({ title, icon: Icon, isOpen, onToggle, children }: {
+  title: string; icon: LucideIcon; isOpen: boolean; onToggle: () => void; children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <button type="button" onClick={onToggle}
+        className="w-full px-1 py-2 flex items-center gap-2 text-left">
+        <Icon size={14} className="text-amber-400 shrink-0" />
+        <span className="text-xs font-bold text-zinc-200 uppercase tracking-wide">{title}</span>
+        <ChevronRight size={14} className={`ml-auto text-zinc-600 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+      </button>
+      {isOpen && <div className="space-y-3 pt-1">{children}</div>}
+    </div>
+  );
+}
+
 // Auswahlfarben für die Farbfelder: gedeckte Töne + Neutral-/Hell-/Dunkeltöne
 // (für Text- und Flächenfarben), Stil wie die Akzentfarben-Auswahl in /me.
 const FIELD_COLORS = [
@@ -1312,6 +1330,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
   const [tagline, setTagline]         = useState(dc?.tagline ?? "");
   const [qrStyle, setQrStyle]         = useState<"button" | "icon">(dc?.qrStyle ?? "button");
+  // Aufklappbare Editor-Gruppen (Akkordeon: nur eine offen)
+  const [openGroup, setOpenGroup]     = useState<"farben" | "logo" | "extras" | null>("farben");
+  const toggleGroup = (g: "farben" | "logo" | "extras") => setOpenGroup(cur => (cur === g ? null : g));
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
   const [stampShape, setStampShape] = useState(dc?.stampShape ?? "circle");
@@ -1412,6 +1433,30 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
             </p>
           )}
 
+          {/* Vorschau immer oben sichtbar, damit Änderungen sofort zu sehen sind */}
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Vorschau (so sieht es der Kunde)</p>
+            <div className="rounded-2xl p-4 space-y-3 border border-zinc-800" style={previewBg}>
+              <previewTheme.Card
+                shopName={shop.name}
+                stampsRequired={shop.stampsRequired}
+                currentStamps={Math.min(4, shop.stampsRequired)}
+                animateIndex={null}
+                qrToken="preview"
+                onShowQR={() => {}}
+                rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
+                stampValue={shop.stampValue}
+                cardNumber={1}
+              />
+              <previewTheme.Banner
+                rewardText={shop.rewardText}
+                stampsRequired={shop.stampsRequired}
+                rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
+              />
+            </div>
+          </div>
+
+          <EditorGroup title="Farben & Hintergrund" icon={Palette} isOpen={openGroup === "farben"} onToggle={() => toggleGroup("farben")}>
           {/* Farbpalette: Ton anklicken → komplettes dezentes Schema */}
           <Section title="Farbpalette (Ton wählen, setzt das ganze Schema)">
             <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
@@ -1478,9 +1523,11 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
               </label>
             )}
           </Section>
+          </EditorGroup>
 
-          {/* Logo & Stempel-Icon */}
-          <Section title="Logo & Stempel-Icon">
+          <EditorGroup title="Logo & Stempel-Symbol" icon={Store} isOpen={openGroup === "logo"} onToggle={() => toggleGroup("logo")}>
+          {/* Logo, Zusatz-Text & Stempel-Symbol */}
+          <Section title="Logo, Text & Symbol">
             <div className="flex items-center gap-2">
               <label className="flex-1">
                 <span className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-700 transition-colors">
@@ -1519,7 +1566,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
               ))}
             </div>
           </Section>
+          </EditorGroup>
 
+          <EditorGroup title="Form & Extras" icon={QrCode} isOpen={openGroup === "extras"} onToggle={() => toggleGroup("extras")}>
           {/* QR-Code-Darstellung */}
           <Section title="QR-Code">
             <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
@@ -1571,29 +1620,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
               ))}
             </div>
           </Section>
-
-          {/* Live-Vorschau */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Vorschau (so sieht es der Kunde)</p>
-            <div className="rounded-2xl p-4 space-y-3 border border-zinc-800" style={previewBg}>
-              <previewTheme.Card
-                shopName={shop.name}
-                stampsRequired={shop.stampsRequired}
-                currentStamps={Math.min(4, shop.stampsRequired)}
-                animateIndex={null}
-                qrToken="preview"
-                onShowQR={() => {}}
-                rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
-                stampValue={shop.stampValue}
-                cardNumber={1}
-              />
-              <previewTheme.Banner
-                rewardText={shop.rewardText}
-                stampsRequired={shop.stampsRequired}
-                rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
-              />
-            </div>
-          </div>
+          </EditorGroup>
 
           {err && <p className="text-red-400 text-xs">{err}</p>}
           <div className="flex gap-2">
