@@ -1307,6 +1307,60 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
+// Hellen/weißen (auch karierten) Rand-Hintergrund eines Logos clientseitig
+// entfernen: Flood-Fill von den Ecken, damit nur das zusammenhängende Emblem
+// bleibt. Innen liegende Bildteile werden nicht angetastet. Gibt das Original
+// zurück, wenn kein klarer heller Rand erkannt wird (z.B. schon transparent).
+async function removeLogoBackground(file: File): Promise<Blob> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i); i.onerror = rej; i.src = url;
+    });
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h || w * h > 6_000_000) return file; // zu groß → unverändert
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0);
+    const image = ctx.getImageData(0, 0, w, h);
+    const d = image.data;
+
+    const isBg = (x: number, y: number) => {
+      const p = (y * w + x) * 4;
+      if (d[p + 3] < 40) return true;                    // schon transparent
+      const r = d[p], g = d[p + 1], b = d[p + 2];
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      return (mx - mn) < 36 && mn > 125;                 // hell + grau = Hintergrund
+    };
+
+    const corners: [number, number][] = [[1, 1], [w - 2, 1], [1, h - 2], [w - 2, h - 2]];
+    if (corners.filter(([x, y]) => isBg(x, y)).length < 3) return file; // kein heller Rand
+
+    const visited = new Uint8Array(w * h);
+    const stack: number[] = [];
+    for (const [x, y] of corners) if (isBg(x, y)) stack.push(x, y);
+    while (stack.length) {
+      const y = stack.pop()!, x = stack.pop()!;
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      const vi = y * w + x;
+      if (visited[vi] || !isBg(x, y)) continue;
+      visited[vi] = 1;
+      d[vi * 4 + 3] = 0;
+      stack.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1);
+    }
+    ctx.putImageData(image, 0, 0);
+    const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, "image/png"));
+    return blob ?? file;
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const generateUploadUrl = useMutation(api.shops.adminGenerateUploadUrl);
   const setDesignConfig   = useMutation(api.shops.adminSetDesignConfig);
@@ -1355,9 +1409,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const [saved, setSaved]         = useState(false);
   const [err, setErr]             = useState("");
 
-  const uploadFile = async (file: File): Promise<Id<"_storage">> => {
+  const uploadFile = async (body: Blob, contentType: string): Promise<Id<"_storage">> => {
     const url = await generateUploadUrl({ adminSecret });
-    const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": contentType }, body });
     if (!res.ok) throw new Error("Upload fehlgeschlagen");
     const { storageId } = await res.json();
     return storageId as Id<"_storage">;
@@ -1368,10 +1422,15 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
     if (!file) return;
     setUploading(kind); setErr("");
     try {
-      const id = await uploadFile(file);
-      const preview = URL.createObjectURL(file);
-      if (kind === "logo") { setLogoId(id); setLogoPreviewUrl(preview); }
-      else { setBgImageId(id); setBgPreviewUrl(preview); setBgType("image"); }
+      if (kind === "logo") {
+        // Weißen/karierten Rand automatisch entfernen, dann als PNG hochladen
+        const processed = await removeLogoBackground(file);
+        const id = await uploadFile(processed, "image/png");
+        setLogoId(id); setLogoPreviewUrl(URL.createObjectURL(processed));
+      } else {
+        const id = await uploadFile(file, file.type);
+        setBgImageId(id); setBgPreviewUrl(URL.createObjectURL(file)); setBgType("image");
+      }
     } catch (ex: unknown) {
       setErr(errMsg(ex, "Upload fehlgeschlagen"));
     } finally { setUploading(null); e.target.value = ""; }
@@ -1533,7 +1592,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
             <div className="flex items-center gap-2">
               <label className="flex-1">
                 <span className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-700 transition-colors">
-                  {uploading === "logo" ? "Lädt hoch…" : logoPreviewUrl ? "Logo ändern" : "Logo hochladen (statt Shopname)"}
+                  {uploading === "logo" ? "Verarbeite…" : logoPreviewUrl ? "Logo ändern" : "Logo hochladen (statt Shopname)"}
                 </span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleUpload("logo")} disabled={uploading !== null} />
               </label>
@@ -1542,6 +1601,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                   className="px-2.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-500 hover:text-red-400 text-xs transition-colors">✕</button>
               )}
             </div>
+            <p className="text-[10px] text-zinc-500 px-1">
+              Weißer/karierter Hintergrund wird automatisch entfernt. Am besten trotzdem ein PNG mit transparentem Hintergrund verwenden.
+            </p>
             {logoPreviewUrl && (
               <button type="button" onClick={() => setLogoShowName(v => !v)}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 transition-colors">
