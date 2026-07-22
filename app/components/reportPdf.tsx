@@ -156,7 +156,6 @@ function StatCard({ icon, value, l1, l2 }: { icon: string; value: string; l1: st
 }
 
 export function LoyaltyReport({ data, logoSrc = "/logo-hell.png" }: { data: ReportData; logoSrc?: string }) {
-  const pct = Math.min(data.progress.cur / (data.progress.req || 1), 1);
   return (
     <Document>
       <Page size="A4" style={s.page}>
@@ -225,26 +224,6 @@ export function LoyaltyReport({ data, logoSrc = "/logo-hell.png" }: { data: Repo
               <Text style={[s.td, { width: 90 }]}>{c.redeems > 0 ? c.redeems : "–"}</Text>
             </View>
           ))}
-
-          {/* Fortschritt */}
-          <View style={s.progCard}>
-            <View style={s.statCircle}><Icon name="trophy" size={15} /></View>
-            <View style={{ width: 140 }}>
-              <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>AKTUELLER FORTSCHRITT</Text>
-              <Text style={{ fontSize: 7.5, color: C.gray, marginTop: 2 }}>Zum nächsten Bonus (Ø)</Text>
-            </View>
-            <View style={s.progMid}>
-              <Text style={s.progVal}>{data.progress.cur} / {data.progress.req} Punkte</Text>
-              <View style={s.bar}><View style={[s.barFill, { width: `${Math.max(pct * 100, 3)}%` }]} /></View>
-            </View>
-            <View style={s.progRight}>
-              <Icon name="star" size={16} />
-              <View>
-                <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold" }}>NOCH {data.progress.remaining} PUNKTE</Text>
-                <Text style={{ fontSize: 6.5, color: C.gray, marginTop: 1 }}>bis zur nächsten Belohnung</Text>
-              </View>
-            </View>
-          </View>
 
           {/* Vertrag & Zahlung */}
           {data.contract && (
