@@ -3352,14 +3352,38 @@ function relTime(ts: number): string {
   return `vor ${Math.floor(h / 24)} Tg`;
 }
 
+type SystemHealth = {
+  now: number;
+  counts: { shops: number; customers: number; memberships: number; stampEvents: number };
+  lastActivity: number | null;
+};
+
 // System & Auslastung: Live-Health-Ping + Kapazitäts-Ampel direkt in der App.
 // Detaillierte Fehler/Performance bleiben im Convex-Dashboard.
 function SystemHealthCard({ adminSecret }: { adminSecret: string }) {
-  const health = useQuery(api.system.getSystemHealth, adminSecret ? { adminSecret } : "skip");
   const convex = useConvex();
+  const [health, setHealth] = useState<SystemHealth | null>(null);
   const [latency, setLatency] = useState<number | null>(null);
   const [online, setOnline] = useState(true);
+  const [open, setOpen] = useState(false);
 
+  // Auslastungs-Zahlen bewusst NICHT live-reaktiv, sondern nur alle 30s laden
+  // (spart Lesebudget) und nur solange die Karte aufgeklappt ist.
+  useEffect(() => {
+    if (!adminSecret || !open) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const h = await convex.query(api.system.getSystemHealth, { adminSecret });
+        if (!cancelled) setHealth(h);
+      } catch { /* still — nächster Tick versucht es erneut */ }
+    };
+    load();
+    const id = setInterval(load, 30000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [convex, adminSecret, open]);
+
+  // Health-Ping (nur Antwortzeit, kein DB-Zugriff) alle 4s
   useEffect(() => {
     let cancelled = false;
     const doPing = async () => {
@@ -3385,19 +3409,26 @@ function SystemHealthCard({ adminSecret }: { adminSecret: string }) {
   ] : [];
   const ampel = (v: number, warn: number, crit: number) =>
     v >= crit ? "#f87171" : v >= warn ? "#fbbf24" : "#4ade80";
+  // Ping-Ampel: <300 ms grün, <800 ms gelb, sonst rot (meist eigenes Netz)
+  const pingColor = !online ? "#f87171"
+    : latency == null ? "#4ade80"
+    : latency >= 800 ? "#f87171" : latency >= 300 ? "#fbbf24" : "#4ade80";
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-zinc-800">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className={`w-full flex items-center gap-2.5 px-5 py-4 text-left ${open ? "border-b border-zinc-800" : ""}`}>
         <BarChart2 size={15} className="text-amber-400" />
         <span className="text-sm font-medium text-zinc-200">System & Auslastung</span>
         <span className="ml-auto flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full" style={{ background: online ? "#4ade80" : "#f87171" }} />
-          <span className="text-[11px]" style={{ color: online ? "#4ade80" : "#f87171" }}>
+          <span className="w-2 h-2 rounded-full" style={{ background: pingColor }} />
+          <span className="text-[11px]" style={{ color: pingColor }}>
             {online ? `Online${latency != null ? ` · ${latency} ms` : ""}` : "Keine Verbindung"}
           </span>
         </span>
-      </div>
+        <ChevronRight size={14} className={`text-zinc-600 transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+      {open && (
       <div className="p-5 space-y-4">
         {!health ? (
           <p className="text-sm text-zinc-500">Laden…</p>
@@ -3423,6 +3454,7 @@ function SystemHealthCard({ adminSecret }: { adminSecret: string }) {
           Grün = viel Luft, Gelb = beobachten, Rot = Grenze naht. Detaillierte Fehler & Performance findest du im Convex-Dashboard.
         </p>
       </div>
+      )}
     </div>
   );
 }
