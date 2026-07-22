@@ -1329,14 +1329,14 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const [logoId, setLogoId]           = useState<Id<"_storage"> | undefined>(dc?.logoId);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
   const [tagline, setTagline]         = useState(dc?.tagline ?? "");
-  const [qrStyle, setQrStyle]         = useState<"button" | "icon">(dc?.qrStyle ?? "button");
+  const [qrStyle, setQrStyle]         = useState<"button" | "icon" | "both">(dc?.qrStyle ?? "button");
   // Aufklappbare Editor-Gruppen (Akkordeon: nur eine offen)
   const [openGroup, setOpenGroup]     = useState<"farben" | "logo" | "extras" | null>("farben");
   const toggleGroup = (g: "farben" | "logo" | "extras") => setOpenGroup(cur => (cur === g ? null : g));
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
   const [stampShape, setStampShape] = useState(dc?.stampShape ?? "circle");
-  const [decor, setDecor]         = useState<"none" | "thin" | "double" | "swirl">(normalizeDecor(dc?.decor));
+  const [decor, setDecor]         = useState<"none" | "thin" | "double" | "swirl" | "bracket" | "dots" | "ornate">(normalizeDecor(dc?.decor));
   // Farbpalette: gewählter Grundton + Hell/Dunkel für das abgeleitete Schema
   const [paletteSel, setPaletteSel]   = useState<string | null>(null);
   const [paletteMode, setPaletteMode] = useState<"dark" | "light">("dark");
@@ -1575,6 +1575,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
               {([
                 { id: "button", label: "Button unten" },
                 { id: "icon",   label: "Klein oben"   },
+                { id: "both",   label: "Beide"        },
               ] as const).map(s => (
                 <button key={s.id} type="button" onClick={() => setQrStyle(s.id)}
                   className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
@@ -1587,16 +1588,19 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
 
           {/* Stempel-Form */}
           <Section title="Stempel-Form">
-            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+            <div className="grid grid-cols-4 gap-1.5">
               {([
-                { id: "circle",  label: "Kreis" },
-                { id: "square",  label: "Eckig" },
-                { id: "diamond", label: "Raute" },
-                { id: "hex",     label: "Wabe"  },
+                { id: "circle",  label: "Kreis"   },
+                { id: "square",  label: "Eckig"   },
+                { id: "diamond", label: "Raute"   },
+                { id: "hex",     label: "Wabe"    },
+                { id: "octagon", label: "Achteck" },
+                { id: "star",    label: "Stern"   },
+                { id: "shield",  label: "Schild"  },
               ] as const).map(s => (
                 <button key={s.id} type="button" onClick={() => setStampShape(s.id)}
-                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                  style={stampShape === s.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+                  className="py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                  style={stampShape === s.id ? { background: "#fbbf24", color: "#18181b" } : { background: "#27272a", color: "#71717a" }}>
                   {s.label}
                 </button>
               ))}
@@ -1605,16 +1609,19 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
 
           {/* Ecken-Verzierung in Akzentfarbe */}
           <Section title="Ecken">
-            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
+            <div className="grid grid-cols-4 gap-1.5">
               {([
-                { id: "none",   label: "Ohne"        },
-                { id: "thin",   label: "Fein"        },
-                { id: "double", label: "Doppelt"     },
-                { id: "swirl",  label: "Geschwungen" },
+                { id: "none",    label: "Ohne"        },
+                { id: "thin",    label: "Fein"        },
+                { id: "double",  label: "Doppelt"     },
+                { id: "swirl",   label: "Geschwungen" },
+                { id: "bracket", label: "Eckig"       },
+                { id: "dots",    label: "Punkte"      },
+                { id: "ornate",  label: "Verziert"    },
               ] as const).map(d => (
                 <button key={d.id} type="button" onClick={() => setDecor(d.id)}
-                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                  style={decor === d.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
+                  className="py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                  style={decor === d.id ? { background: "#fbbf24", color: "#18181b" } : { background: "#27272a", color: "#71717a" }}>
                   {d.label}
                 </button>
               ))}

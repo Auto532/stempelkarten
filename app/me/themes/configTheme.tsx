@@ -29,9 +29,9 @@ export interface ShopDesignConfig {
   logoSize?: "s" | "m" | "l";
   // Kleiner Zusatz-Text unter Logo/Shopname (z.B. Ladenname oder Slogan)
   tagline?: string;
-  // QR-Darstellung: "button" (großer Button unter der Karte, Standard) oder
-  // "icon" (kleines Icon oben in der Karte)
-  qrStyle?: "button" | "icon";
+  // QR-Darstellung: "button" (großer Button unter der Karte, Standard),
+  // "icon" (kleines Icon oben in der Karte) oder "both" (beides)
+  qrStyle?: "button" | "icon" | "both";
   stampIcon?: string;
   // Stempel-Form: circle/square/diamond/hex (fehlend = circle)
   stampShape?: string;
@@ -84,15 +84,18 @@ function makeBackground(cfg: ShopDesignConfig) {
   };
 }
 
+type DecorVariant = "none" | "thin" | "double" | "swirl" | "bracket" | "dots" | "ornate";
+
 // Ecken-Verzierung: Altwerte aus der ersten Version auf die neuen Stile mappen
-export function normalizeDecor(decor?: string): "none" | "thin" | "double" | "swirl" {
-  if (decor === "thin" || decor === "double" || decor === "swirl") return decor;
+export function normalizeDecor(decor?: string): DecorVariant {
+  if (decor === "thin" || decor === "double" || decor === "swirl"
+    || decor === "bracket" || decor === "dots" || decor === "ornate") return decor;
   if (decor === "full") return "thin";
   return "none";
 }
 
 // Eck-Ornament in Akzentfarbe, wird 4× rotiert platziert
-function CornerOrnament({ color, variant }: { color: string; variant: "thin" | "double" | "swirl" }) {
+function CornerOrnament({ color, variant }: { color: string; variant: Exclude<DecorVariant, "none"> }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"
       style={{ width: 22, height: 22, color, opacity: 0.55 }}>
@@ -110,13 +113,47 @@ function CornerOrnament({ color, variant }: { color: string; variant: "thin" | "
           <circle cx="2" cy="20" r="1.4" fill="currentColor" stroke="none" />
         </>
       )}
+      {variant === "bracket" && <path d="M2 13 V2 H13" strokeWidth="1.6" strokeLinecap="round" />}
+      {variant === "dots" && (
+        <>
+          <circle cx="3" cy="3" r="1.6" fill="currentColor" stroke="none" />
+          <circle cx="9.5" cy="3" r="1.2" fill="currentColor" stroke="none" />
+          <circle cx="3" cy="9.5" r="1.2" fill="currentColor" stroke="none" />
+        </>
+      )}
+      {variant === "ornate" && (
+        <>
+          <path d="M2 15 V5 C2 3.3 3.3 2 5 2 H15" />
+          <path d="M2 9 C6 9 9 6 9 2" strokeWidth="0.9" />
+          <circle cx="4" cy="4" r="1.3" fill="currentColor" stroke="none" />
+        </>
+      )}
     </svg>
   );
 }
 
-// Sechseck für die Waben-Stempelform (clip-path frisst Borders, deshalb
-// zweilagig: äußere Wabe in Akzent, innere minimal kleiner in Kartenfarbe)
-const HEX_CLIP = "polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%)";
+// Stempelformen als clip-path (clip-path frisst Borders, deshalb bei leeren
+// Stempeln zweilagig: äußere Form in Akzent, innere minimal kleiner in Kartenfarbe)
+const CLIP_SHAPES: Record<string, string> = {
+  hex:     "polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%)",
+  octagon: "polygon(30% 2%, 70% 2%, 98% 30%, 98% 70%, 70% 98%, 30% 98%, 2% 70%, 2% 30%)",
+  star:    "polygon(50% 2%, 61% 36%, 97% 36%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 3% 36%, 39% 36%)",
+  shield:  "polygon(4% 4%, 96% 4%, 96% 58%, 50% 97%, 4% 58%)",
+};
+
+// Spaltenzahl so wählen, dass die Stempel möglichst gleichmäßig auf die Reihen
+// verteilt sind (10 → 5+5 statt 7+3). Bevorzugt volle letzte Reihe, Ton bei ~5.
+function evenCols(n: number): number {
+  if (n <= 5) return n;
+  let best = 5, bestScore = Infinity;
+  for (const c of [5, 6, 4, 7, 3]) {
+    if (c > n) continue;
+    const rem = n % c;
+    const score = rem === 0 ? 0 : c - rem;
+    if (score < bestScore) { bestScore = score; best = c; }
+  }
+  return best;
+}
 
 function makeCard(cfg: ShopDesignConfig) {
   const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
@@ -130,6 +167,7 @@ function makeCard(cfg: ShopDesignConfig) {
       ? [{ stamps: stampsRequired, text: "", enabled: true }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
       : [];
     const maxStamps = activeTiers.length > 0 ? activeTiers[activeTiers.length - 1].stamps : stampsRequired;
+    const cols = evenCols(maxStamps);
 
     return (
       <>
@@ -172,15 +210,15 @@ function makeCard(cfg: ShopDesignConfig) {
                 <p className="text-[11px] mt-1.5 font-medium" style={{ color: TB }}>{cfg.tagline}</p>
               )}
             </div>
-            {/* Kleines QR-Icon in der Kopfzeile (nur wenn gewählt) */}
-            {qrStyle === "icon" && !hideQR && onShowQR && (
+            {/* Kleines QR-Icon in der Kopfzeile (bei "icon" oder "both") */}
+            {(qrStyle === "icon" || qrStyle === "both") && !hideQR && onShowQR && (
               <button onClick={onShowQR} className="shrink-0 mt-4 w-14 h-14 rounded-xl flex items-center justify-center"
                 style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
                 <QrCode size={26} style={{ color: A }} />
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="grid gap-2 mb-4 w-max" style={{ gridTemplateColumns: `repeat(${cols}, max-content)` }}>
             {Array.from({ length: maxStamps }).map((_, i) => {
               const filled = i < currentStamps;
               const isAnimating = i === animateIndex;
@@ -189,16 +227,17 @@ function makeCard(cfg: ShopDesignConfig) {
                 ? <Icon size={13} style={{ color: C }} />
                 : isTier ? <Gift size={11} style={{ color: alpha(A, "70") }} /> : null;
 
-              if (shape === "hex") {
+              if (CLIP_SHAPES[shape]) {
+                const clip = CLIP_SHAPES[shape];
                 return (
                   <motion.div key={i}
                     animate={isAnimating ? { scale: [1, 1.4, 1] } : { scale: 1 }}
                     transition={{ duration: 0.5 }}
                     className="relative w-8 h-8 flex items-center justify-center">
                     <div className="absolute inset-0"
-                      style={{ clipPath: HEX_CLIP, background: filled ? A : isTier ? alpha(A, "55") : alpha(A, "30") }} />
+                      style={{ clipPath: clip, background: filled ? A : isTier ? alpha(A, "55") : alpha(A, "30") }} />
                     {!filled && <div className="absolute inset-[1.5px]"
-                      style={{ clipPath: HEX_CLIP, background: C }} />}
+                      style={{ clipPath: clip, background: C }} />}
                     <div className="relative">{inner}</div>
                   </motion.div>
                 );
@@ -258,7 +297,7 @@ function makeCard(cfg: ShopDesignConfig) {
           </div>
         </div>
       </div>
-      {/* Großer QR-Button unter der Karte (Standard): ein Tipp zum Vorzeige-Code */}
+      {/* Großer QR-Button unter der Karte (bei "button" oder "both") */}
       {qrStyle !== "icon" && !hideQR && onShowQR && (
         <button onClick={onShowQR}
           className="w-full mt-3 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
