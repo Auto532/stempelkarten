@@ -52,6 +52,12 @@ function alpha(hex: string, a: string): string {
   return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex + a : hex;
 }
 
+// Letztes Wort per geschütztem Leerzeichen anbinden, damit z.B. ein einzelnes
+// "!" nicht allein in einer neuen Zeile landet.
+function noOrphan(s: string): string {
+  return s.replace(/\s+(\S+)\s*$/, " $1");
+}
+
 function buildColors(cfg: ShopDesignConfig): ThemeColors {
   return {
     ...DEFAULT_COLORS,
@@ -207,8 +213,8 @@ function makeCard(cfg: ShopDesignConfig) {
               {cfg.logoUrl ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={cfg.logoUrl} alt={shopName} className="mt-2 object-contain object-left"
-                    style={{ maxWidth: `${cfg.logoWidth ?? 80}%`, maxHeight: 130 }} />
+                  <img src={cfg.logoUrl} alt={shopName} className="mt-2 block object-contain object-left"
+                    style={{ maxWidth: `${cfg.logoWidth ?? 80}%`, maxHeight: 130, width: "auto", height: "auto" }} />
                   {cfg.logoShowName && (
                     <h2 className="text-base font-bold leading-tight mt-1.5" style={{ color: T }}>{shopName}</h2>
                   )}
@@ -217,7 +223,7 @@ function makeCard(cfg: ShopDesignConfig) {
                 <h2 className="text-lg font-bold leading-tight" style={{ color: T }}>{shopName}</h2>
               )}
               {cfg.tagline && (
-                <p className="text-[11px] mt-1.5 font-medium" style={{ color: TB }}>{cfg.tagline}</p>
+                <p className="text-xs mt-1.5 font-bold" style={{ color: TB, textWrap: "pretty" }}>{noOrphan(cfg.tagline)}</p>
               )}
             </div>
             {/* Kleines QR-Icon in der Kopfzeile (bei "icon" oder "both") */}
