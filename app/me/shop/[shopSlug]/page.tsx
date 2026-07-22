@@ -313,6 +313,9 @@ export default function MeShopPage() {
       {(() => {
         const showBack = showQR || (data.memberships.length > 1);
         const a2 = readableAccent(c.accent, c.text);
+        // Zeigt die Karte selbst schon Logo + Name, würde der Name hier doppelt
+        // stehen → Titel oben weglassen
+        const logoWithName = !!(shop.designConfig?.logoUrl && shop.designConfig?.logoShowName);
         return (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -328,12 +331,14 @@ export default function MeShopPage() {
                 <ArrowLeft size={16} style={{ color: a2 }} />
               </button>
             )}
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: c.textBody }}>
-                Stempelkarte
-              </p>
-              <h1 className="text-base font-bold leading-tight" style={{ color: c.text }}>{shop.name}</h1>
-            </div>
+            {!logoWithName && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: c.textBody }}>
+                  Stempelkarte
+                </p>
+                <h1 className="text-base font-bold leading-tight" style={{ color: c.text }}>{shop.name}</h1>
+              </div>
+            )}
           </motion.div>
         );
       })()}

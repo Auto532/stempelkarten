@@ -253,6 +253,7 @@ export const adminSetDesignConfig = mutation({
       logoSize:  v.optional(v.union(v.literal("s"), v.literal("m"), v.literal("l"))),
       logoShowName: v.optional(v.boolean()),
       logoHeight: v.optional(v.number()),
+      logoWidth: v.optional(v.number()),
       tagline:   v.optional(v.string()),
       qrStyle:   v.optional(v.union(v.literal("button"), v.literal("icon"), v.literal("both"))),
       stampIcon: v.optional(v.string()),

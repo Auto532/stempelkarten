@@ -1383,7 +1383,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const [logoId, setLogoId]           = useState<Id<"_storage"> | undefined>(dc?.logoId);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>(dc?.logoUrl);
   const [logoShowName, setLogoShowName] = useState(dc?.logoShowName ?? false);
-  const [logoHeight, setLogoHeight]   = useState(dc?.logoHeight ?? 120);
+  const [logoWidth, setLogoWidth]     = useState(dc?.logoWidth ?? 80);
   const [tagline, setTagline]         = useState(dc?.tagline ?? "");
   const [qrStyle, setQrStyle]         = useState<"button" | "icon" | "both">(dc?.qrStyle ?? "button");
   // Aufklappbare Editor-Gruppen (Akkordeon: nur eine offen)
@@ -1439,9 +1439,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Live-Vorschau: dieselbe Komponente, die auch die Kunden sehen
   const previewCfg: ShopDesignConfig = useMemo(() => ({
     accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
-    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, logoShowName, logoHeight, tagline: tagline.trim() || undefined,
+    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, logoShowName, logoWidth, tagline: tagline.trim() || undefined,
     qrStyle, stampIcon: icon, stampShape, decor,
-  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, logoShowName, logoHeight, tagline, qrStyle, icon, stampShape, decor]);
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, logoShowName, logoWidth, tagline, qrStyle, icon, stampShape, decor]);
   const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
 
   const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
@@ -1457,7 +1457,7 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
         shopId: shop._id, adminSecret,
         config: {
           accent, text, textBody, cardBg, bgType,
-          bgColor, bgColor2, bgImageId, logoId, logoShowName, logoHeight,
+          bgColor, bgColor2, bgImageId, logoId, logoShowName, logoWidth,
           tagline: tagline.trim() || undefined,
           qrStyle, stampIcon: icon, stampShape, decor,
         },
@@ -1616,11 +1616,11 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
             {logoPreviewUrl && (
               <div className="px-1">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] text-zinc-400">Logo-Größe</label>
-                  <span className="text-[11px] text-zinc-500 tabular-nums">{logoHeight}px</span>
+                  <label className="text-[11px] text-zinc-400">Logo-Größe (Breite)</label>
+                  <span className="text-[11px] text-zinc-500 tabular-nums">{logoWidth}%</span>
                 </div>
-                <input type="range" min={48} max={220} step={4} value={logoHeight}
-                  onChange={e => setLogoHeight(Number(e.target.value))}
+                <input type="range" min={40} max={100} step={5} value={logoWidth}
+                  onChange={e => setLogoWidth(Number(e.target.value))}
                   className="w-full accent-amber-400" />
               </div>
             )}

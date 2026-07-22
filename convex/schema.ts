@@ -63,8 +63,11 @@ export default defineSchema({
       logoSize: v.optional(v.union(v.literal("s"), v.literal("m"), v.literal("l"))),
       // Shopname zusätzlich unter dem Logo anzeigen (sonst ersetzt Logo den Namen)
       logoShowName: v.optional(v.boolean()),
-      // Logo-Höhe auf der Karte in px (fehlend = 120)
+      // Logo-Höhe auf der Karte in px (Altfeld, wird nicht mehr gerendert)
       logoHeight: v.optional(v.number()),
+      // Logo-Breite in % der Karte (fehlend = 80); Höhe ist gedeckelt, damit
+      // die Karte nicht mitwächst
+      logoWidth: v.optional(v.number()),
       // Kleiner Zusatz-Text unter Logo/Shopname (z.B. Ladenname oder Slogan)
       tagline: v.optional(v.string()),
       // QR-Darstellung: großer Button unter der Karte (Standard), kleines Icon
