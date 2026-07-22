@@ -1,0 +1,266 @@
+"use client";
+
+import React from "react";
+import {
+  Document, Page, View, Text, Image, Svg, Path, Circle, Rect, Line, StyleSheet,
+} from "@react-pdf/renderer";
+
+// ── Farben (Loyaltycard dunkel/gold) ──────────────────────────────────────────
+const C = {
+  bg:      "#0b0b0e",
+  card:    "#17171c",
+  cardBd:  "#2b2b34",
+  gold:    "#E6B54A",
+  goldDim: "#8a6f2e",
+  white:   "#F2F2F4",
+  gray:    "#8A8A96",
+  barBg:   "#26262e",
+};
+
+export type ReportData = {
+  shopName: string;
+  periodLabel: string;
+  dateStr: string;
+  stamps: number;
+  redeems: number;
+  customerCount: number;
+  rewards: { text: string; count: number; value: string | null }[];
+  customers: { name: string; stamps: number; redeems: number; currentStamps: number; required: number }[];
+  progress: { cur: number; req: number; remaining: number };
+};
+
+// ── Lucide-Icons als SVG (stroke-basiert wie im Web) ──────────────────────────
+function Icon({ name, size = 14, color = C.gold, sw = 2 }: { name: string; size?: number; color?: string; sw?: number }) {
+  const common = { stroke: color, strokeWidth: sw, fill: "none" as const };
+  const parts: Record<string, React.ReactNode> = {
+    gift: (<>
+      <Rect x="3" y="8" width="18" height="4" rx="1" {...common} />
+      <Path d="M12 8v13" {...common} />
+      <Path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" {...common} />
+      <Path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" {...common} />
+    </>),
+    award: (<>
+      <Path d="M15.477 12.89 16.99 21.4a.5.5 0 0 1-.81.47l-3.58-2.68a1 1 0 0 0-1.2 0l-3.58 2.68a.5.5 0 0 1-.81-.47l1.51-8.52" {...common} />
+      <Circle cx="12" cy="8" r="6" {...common} />
+    </>),
+    users: (<>
+      <Path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" {...common} />
+      <Circle cx="9" cy="7" r="4" {...common} />
+      <Path d="M22 21v-2a4 4 0 0 0-3-3.87" {...common} />
+      <Path d="M16 3.13a4 4 0 0 1 0 7.75" {...common} />
+    </>),
+    trophy: (<>
+      <Path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" {...common} />
+      <Path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" {...common} />
+      <Path d="M4 22h16" {...common} />
+      <Path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" {...common} />
+      <Path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" {...common} />
+      <Path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" {...common} />
+    </>),
+    star: (<Path d="M11.5 2.3a.5.5 0 0 1 1 0l2.3 4.68a2 2 0 0 0 1.6 1.16l5.16.75a.5.5 0 0 1 .3.9l-3.73 3.64a2 2 0 0 0-.61 1.88l.88 5.14a.5.5 0 0 1-.77.56l-4.62-2.43a2 2 0 0 0-1.97 0L6.4 21.01a.5.5 0 0 1-.77-.56l.88-5.14a2 2 0 0 0-.61-1.88L2.16 9.8a.5.5 0 0 1 .3-.9l5.16-.76a2 2 0 0 0 1.6-1.16z" {...common} />),
+    globe: (<>
+      <Circle cx="12" cy="12" r="10" {...common} />
+      <Path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" {...common} />
+      <Line x1="2" y1="12" x2="22" y2="12" {...common} />
+    </>),
+    calendar: (<>
+      <Path d="M8 2v4" {...common} />
+      <Path d="M16 2v4" {...common} />
+      <Rect x="3" y="4" width="18" height="18" rx="2" {...common} />
+      <Line x1="3" y1="10" x2="21" y2="10" {...common} />
+    </>),
+    info: (<>
+      <Circle cx="12" cy="12" r="10" {...common} />
+      <Line x1="12" y1="16" x2="12" y2="12" {...common} />
+      <Line x1="12" y1="8" x2="12.01" y2="8" {...common} />
+    </>),
+  };
+  return <Svg width={size} height={size} viewBox="0 0 24 24">{parts[name]}</Svg>;
+}
+
+const s = StyleSheet.create({
+  page: { backgroundColor: C.bg, padding: 22, fontFamily: "Helvetica", color: C.white },
+  frame: { flex: 1, borderWidth: 1, borderColor: C.gold, borderRadius: 10, padding: 22 },
+  // Header
+  headRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  brand: { flexDirection: "row", alignItems: "center", gap: 7 },
+  brandTxt: { fontSize: 17, fontFamily: "Helvetica-Bold" },
+  info: { flexDirection: "row", alignItems: "center", gap: 4 },
+  infoTxt: { fontSize: 9, color: C.gray },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 14 },
+  titleBar: { width: 3, height: 15, backgroundColor: C.gold, borderRadius: 2 },
+  title: { fontSize: 12.5, fontFamily: "Helvetica-Bold", letterSpacing: 0.4 },
+  subtitle: { fontSize: 8.5, color: C.gray, marginTop: 3 },
+  shopName: { fontSize: 8.5, color: C.gold, fontFamily: "Helvetica-Bold" },
+  // Stat cards
+  statRow: { flexDirection: "row", gap: 8, marginTop: 18 },
+  statCard: { flex: 1, backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
+  statCircle: { width: 30, height: 30, borderRadius: 15, borderWidth: 1.4, borderColor: C.gold, alignItems: "center", justifyContent: "center" },
+  statVal: { fontSize: 22, fontFamily: "Helvetica-Bold" },
+  statL1: { fontSize: 6.5, color: C.gray, fontFamily: "Helvetica-Bold", marginTop: 4, letterSpacing: 0.3 },
+  statL2: { fontSize: 6, color: C.goldDim, marginTop: 1 },
+  underline: { width: 20, height: 2, backgroundColor: C.gold, borderRadius: 1, marginTop: 4 },
+  // Section
+  sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 20, marginBottom: 8 },
+  sectionIcon: { width: 18, height: 18, borderRadius: 4, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" },
+  sectionTitle: { fontSize: 11, fontFamily: "Helvetica-Bold", color: C.gold, letterSpacing: 0.4 },
+  // Table
+  th: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: C.cardBd, paddingBottom: 5 },
+  thTxt: { fontSize: 8, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 0.3 },
+  tr: { flexDirection: "row", borderBottomWidth: 0.6, borderBottomColor: C.cardBd, paddingVertical: 6 },
+  tdName: { fontSize: 9.5, color: C.white, flex: 1 },
+  td: { fontSize: 9.5, color: C.gray, textAlign: "right" },
+  tdGold: { fontSize: 9.5, color: C.gold, textAlign: "right" },
+  // Progress
+  progCard: { backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 14, marginTop: 18, flexDirection: "row", alignItems: "center", gap: 12 },
+  progMid: { flex: 1 },
+  progVal: { fontSize: 12, fontFamily: "Helvetica-Bold", color: C.gold, marginBottom: 4 },
+  bar: { height: 4, backgroundColor: C.barBg, borderRadius: 2 },
+  barFill: { height: 4, backgroundColor: C.gold, borderRadius: 2 },
+  progRight: { flexDirection: "row", alignItems: "center", gap: 6, width: 150, justifyContent: "flex-end" },
+  // Footer
+  footInfo: { flexDirection: "row", gap: 30, marginTop: 18 },
+  footCol: { flexDirection: "row", alignItems: "center", gap: 7 },
+  footLabel: { fontSize: 7, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 0.3 },
+  footVal: { fontSize: 8, color: C.gray, marginTop: 2 },
+  footBar: { marginTop: "auto", borderTopWidth: 1, borderTopColor: C.gold, paddingTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+});
+
+function StatCard({ icon, value, l1, l2 }: { icon: string; value: string; l1: string; l2: string }) {
+  return (
+    <View style={s.statCard}>
+      <View style={s.statCircle}><Icon name={icon} size={15} /></View>
+      <View>
+        <Text style={s.statVal}>{value}</Text>
+        <Text style={s.statL1}>{l1}</Text>
+        <Text style={s.statL2}>{l2}</Text>
+        <View style={s.underline} />
+      </View>
+    </View>
+  );
+}
+
+export function LoyaltyReport({ data, logoSrc = "/logo-hell.png" }: { data: ReportData; logoSrc?: string }) {
+  const pct = Math.min(data.progress.cur / (data.progress.req || 1), 1);
+  return (
+    <Document>
+      <Page size="A4" style={s.page}>
+        <View style={s.frame}>
+          {/* Header */}
+          <View style={s.headRow}>
+            <Image src={logoSrc} style={{ width: 62, height: 46 }} />
+            <View style={s.info}>
+              <Icon name="globe" size={11} color={C.gray} sw={1.6} />
+              <Text style={s.infoTxt}>loyaltycard.info</Text>
+            </View>
+          </View>
+
+          <View style={s.titleRow}>
+            <View style={s.titleBar} />
+            <Text style={s.title}>KUNDENÜBERSICHT / LOYALTY-BERICHT</Text>
+          </View>
+          <Text style={s.subtitle}>
+            <Text style={s.shopName}>{data.shopName}</Text>
+            <Text>{"  ·  Professionelle Übersicht für Ihre digitale Kundenbindung."}</Text>
+          </Text>
+
+          {/* Stat-Karten */}
+          <View style={s.statRow}>
+            <StatCard icon="gift"  value={String(data.stamps)}        l1="VERGEBENE PUNKTE" l2="/ Treuepunkte" />
+            <StatCard icon="award" value={String(data.redeems)}       l1="BELOHNUNGEN"      l2="eingelöst" />
+            <StatCard icon="users" value={String(data.customerCount)} l1="AKTIVE"           l2="Kunden" />
+          </View>
+
+          {/* Belohnungen */}
+          {data.rewards.length > 0 && (
+            <>
+              <View style={s.sectionHead}>
+                <View style={s.sectionIcon}><Icon name="gift" size={11} color={C.bg} /></View>
+                <Text style={s.sectionTitle}>BELOHNUNGEN</Text>
+              </View>
+              <View style={s.th}>
+                <Text style={[s.thTxt, { flex: 1 }]}>BELOHNUNG</Text>
+                <Text style={[s.thTxt, { width: 70, textAlign: "right" }]}>ANZAHL</Text>
+                {data.rewards.some(r => r.value) && <Text style={[s.thTxt, { width: 70, textAlign: "right" }]}>WERT</Text>}
+              </View>
+              {data.rewards.map((r, i) => (
+                <View style={s.tr} key={i}>
+                  <Text style={s.tdName}>{r.text}</Text>
+                  <Text style={[s.td, { width: 70 }]}>{r.count}</Text>
+                  {data.rewards.some(x => x.value) && <Text style={[s.tdGold, { width: 70 }]}>{r.value ?? "–"}</Text>}
+                </View>
+              ))}
+            </>
+          )}
+
+          {/* Kunden */}
+          <View style={s.sectionHead}>
+            <View style={s.sectionIcon}><Icon name="users" size={11} color={C.bg} /></View>
+            <Text style={s.sectionTitle}>KUNDEN IM ZEITRAUM</Text>
+          </View>
+          <View style={s.th}>
+            <Text style={[s.thTxt, { flex: 1 }]}>NAME</Text>
+            <Text style={[s.thTxt, { width: 60, textAlign: "right" }]}>PUNKTE</Text>
+            <Text style={[s.thTxt, { width: 70, textAlign: "right" }]}>EINGELÖST</Text>
+            <Text style={[s.thTxt, { width: 60, textAlign: "right" }]}>AKTUELL</Text>
+          </View>
+          {data.customers.map((c, i) => (
+            <View style={s.tr} key={i}>
+              <Text style={s.tdName}>{c.name}</Text>
+              <Text style={[s.td, { width: 60 }]}>{c.stamps}</Text>
+              <Text style={[s.td, { width: 70 }]}>{c.redeems > 0 ? c.redeems : "–"}</Text>
+              <Text style={[s.td, { width: 60 }]}>{c.currentStamps}/{c.required}</Text>
+            </View>
+          ))}
+
+          {/* Fortschritt */}
+          <View style={s.progCard}>
+            <View style={s.statCircle}><Icon name="trophy" size={15} /></View>
+            <View style={{ width: 140 }}>
+              <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>AKTUELLER FORTSCHRITT</Text>
+              <Text style={{ fontSize: 7.5, color: C.gray, marginTop: 2 }}>Zum nächsten Bonus (Ø)</Text>
+            </View>
+            <View style={s.progMid}>
+              <Text style={s.progVal}>{data.progress.cur} / {data.progress.req} Punkte</Text>
+              <View style={s.bar}><View style={[s.barFill, { width: `${Math.max(pct * 100, 3)}%` }]} /></View>
+            </View>
+            <View style={s.progRight}>
+              <Icon name="star" size={16} />
+              <View>
+                <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold" }}>NOCH {data.progress.remaining} PUNKTE</Text>
+                <Text style={{ fontSize: 6.5, color: C.gray, marginTop: 1 }}>bis zur nächsten Belohnung</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Footer-Info */}
+          <View style={s.footInfo}>
+            <View style={s.footCol}>
+              <Icon name="calendar" size={16} sw={1.7} />
+              <View>
+                <Text style={s.footLabel}>BERICHTSZEITRAUM</Text>
+                <Text style={s.footVal}>{data.periodLabel}  ·  {data.dateStr}</Text>
+              </View>
+            </View>
+            <View style={s.footCol}>
+              <Icon name="info" size={16} sw={1.7} />
+              <View>
+                <Text style={s.footLabel}>HINWEIS</Text>
+                <Text style={s.footVal}>Die Daten werden in Echtzeit aktualisiert.</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Footer-Bar */}
+          <View style={s.footBar}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+              <Image src={logoSrc} style={{ width: 30, height: 22 }} />
+              <Text style={{ fontSize: 8, color: C.gray }}>loyaltycard.info</Text>
+            </View>
+            <Text style={{ fontSize: 8, color: C.gray }}>Seite 1 / 1</Text>
+          </View>
+        </View>
+      </Page>
+    </Document>
+  );
+}

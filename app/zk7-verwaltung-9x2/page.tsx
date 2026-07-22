@@ -2982,286 +2982,47 @@ function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
 
 // ─── ShopAnalytics (pro Shop, wird in ShopWorkspace eingebettet) ──────────────
 
-function hexToRgbPdf(hex: string): [number, number, number] {
-  const h = hex.replace("#", "");
-  if (h.length !== 6) return [251, 191, 36];
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
+const PERIOD_LABELS: Record<Period, string> = {
+  "7d": "Letzte 7 Tage", "30d": "Letzter Monat", "90d": "Letzte 3 Monate", "365d": "Letztes Jahr", "all": "Gesamt",
+};
 
+// Statistik-PDF im Loyaltycard-Look (react-pdf, siehe app/components/reportPdf)
 async function exportShopPdf(shop: Doc<"shops">, period: Period, data: {
   stamps: number; redeems: number; stampValue: number | null;
   rewardBreakdown: { rewardText: string; count: number; valuePerRedemption: number | null }[];
   customers: { customerName: string; stamps: number; redeems: number; currentStamps: number }[];
 }) {
-  const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const W = 210;
-  // Loyaltycard-Branding (dunkel/gold), unabhaengig vom Shop-Design
-  const gold:   [number, number, number] = [232, 184, 62];
-  const goldDk: [number, number, number] = [150, 116, 36];
-  const bg:     [number, number, number] = [12, 12, 15];
-  const card:   [number, number, number] = [26, 26, 32];
-  const cardBd: [number, number, number] = [52, 52, 62];
-  const white:  [number, number, number] = [242, 242, 244];
-  const grayT:  [number, number, number] = [148, 148, 160];
-  const H = 297;
-
-  const periodLabel = period === "all" ? "Gesamt"
-    : period === "7d" ? "Letzte 7 Tage"
-    : period === "30d" ? "Letzter Monat"
-    : period === "90d" ? "Letzte 3 Monate"
-    : "Letztes Jahr";
-
-  const paintBg = () => {
-    doc.setFillColor(...bg);
-    doc.rect(0, 0, W, H, "F");
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(0.8);
-    doc.roundedRect(5, 5, W - 10, H - 10, 4, 4, "S");
-    doc.setLineWidth(0.2);
-  };
-  paintBg();
-
-  // ── Icon-Helfer (einfache Gold-Symbole) ──────────────────────────────────────
-  const starPts = (cx: number, cy: number, ro: number, ri: number) => {
-    const pts: [number, number][] = [];
-    for (let k = 0; k < 10; k++) {
-      const a = -Math.PI / 2 + k * Math.PI / 5;
-      const r = k % 2 === 0 ? ro : ri;
-      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
-    }
-    return pts;
-  };
-  const drawStar = (cx: number, cy: number, ro: number, style: "F" | "S") => {
-    const pts = starPts(cx, cy, ro, ro * 0.45);
-    const deltas = pts.slice(1).map((pt, k) => [pt[0] - pts[k][0], pt[1] - pts[k][1]] as [number, number]);
-    doc.lines(deltas, pts[0][0], pts[0][1], [1, 1], style, true);
-  };
-  const iconGift = (cx: number, cy: number) => {
-    doc.setDrawColor(...gold); doc.setLineWidth(0.5);
-    doc.roundedRect(cx - 3, cy - 1.5, 6, 4.5, 0.5, 0.5, "S");
-    doc.line(cx, cy - 1.5, cx, cy + 3);
-    doc.line(cx - 3, cy - 0.2, cx + 3, cy - 0.2);
-    doc.setLineWidth(0.2);
-  };
-  const iconPeople = (cx: number, cy: number) => {
-    doc.setDrawColor(...gold); doc.setLineWidth(0.5);
-    doc.circle(cx - 1.6, cy - 1, 1.1, "S");
-    doc.circle(cx + 1.6, cy - 1, 1.1, "S");
-    doc.line(cx - 3.2, cy + 2.4, cx, cy + 2.4);
-    doc.line(cx, cy + 2.4, cx + 3.2, cy + 2.4);
-    doc.setLineWidth(0.2);
-  };
-  const iconTrophy = (cx: number, cy: number) => {
-    doc.setDrawColor(...gold); doc.setLineWidth(0.5);
-    doc.line(cx - 2.4, cy - 2.4, cx + 2.4, cy - 2.4);
-    doc.line(cx - 2.4, cy - 2.4, cx - 1.4, cy + 1.2);
-    doc.line(cx + 2.4, cy - 2.4, cx + 1.4, cy + 1.2);
-    doc.line(cx - 1.4, cy + 1.2, cx + 1.4, cy + 1.2);
-    doc.line(cx, cy + 1.2, cx, cy + 3);
-    doc.line(cx - 1.6, cy + 3, cx + 1.6, cy + 3);
-    doc.setLineWidth(0.2);
-  };
-  const drawLogo = (x: number, y: number, size: number) => {
-    doc.setFillColor(...gold);
-    drawStar(x + size / 2, y + size / 2, size / 2, "F");
-  };
-
-  // ── Header ────────────────────────────────────────────────────────────────
-  drawLogo(14, 14, 9);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(17);
-  doc.setTextColor(...white);
-  doc.text("Loyalty", 27, 20.5);
-  const lw = doc.getTextWidth("Loyalty");
-  doc.setTextColor(...gold);
-  doc.text("card", 27 + lw, 20.5);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(...grayT);
-  doc.text("loyaltycard.info", W - 14, 19, { align: "right" });
-  doc.setDrawColor(...grayT); doc.setLineWidth(0.3);
-  doc.circle(W - 14 - doc.getTextWidth("loyaltycard.info") - 4, 18, 1.8, "S");
-  doc.setLineWidth(0.2);
-
-  doc.setFillColor(...gold);
-  doc.rect(14, 26, 1.4, 8, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.setTextColor(...white);
-  doc.text("KUNDENÜBERSICHT / LOYALTY-BERICHT", 18, 30);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(...gold);
-  doc.text(shop.name, 18, 35.5);
-  doc.setTextColor(...grayT);
-  const nameW = doc.getTextWidth(shop.name);
-  doc.text("  ·  Professionelle Übersicht für Ihre digitale Kundenbindung.", 18 + nameW, 35.5);
-
-  // ── Stat-Karten ────────────────────────────────────────────────────────────
-  let y = 44;
-  const cardW = 58, gap = 5, cardH = 30;
-  const cardsX = [14, 14 + cardW + gap, 14 + (cardW + gap) * 2];
-  const stats = [
-    { value: String(data.stamps),           l1: "VERGEBENE PUNKTE", l2: "/ TREUEPUNKTE", icon: iconGift },
-    { value: String(data.redeems),          l1: "BELOHNUNGEN",      l2: "EINGELÖST",     icon: (cx: number, cy: number) => drawStar(cx, cy, 3, "S") },
-    { value: String(data.customers.length), l1: "AKTIVE",           l2: "KUNDEN",        icon: iconPeople },
-  ];
-  stats.forEach((st, i) => {
-    const x = cardsX[i];
-    doc.setFillColor(...card);
-    doc.roundedRect(x, y, cardW, cardH, 2.5, 2.5, "F");
-    doc.setDrawColor(...cardBd); doc.setLineWidth(0.3);
-    doc.roundedRect(x, y, cardW, cardH, 2.5, 2.5, "S"); doc.setLineWidth(0.2);
-    doc.setDrawColor(...gold); doc.setLineWidth(0.6);
-    doc.circle(x + 11, y + 13, 6.5, "S"); doc.setLineWidth(0.2);
-    st.icon(x + 11, y + 13);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(...white);
-    doc.text(st.value, x + 22, y + 13);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); doc.setTextColor(...grayT);
-    doc.text(st.l1, x + 22, y + 19);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(6); doc.setTextColor(...goldDk);
-    doc.text(st.l2, x + 22, y + 23);
-    doc.setDrawColor(...gold); doc.setLineWidth(0.5);
-    doc.line(x + 22, y + 26, x + 32, y + 26); doc.setLineWidth(0.2);
-  });
-  y += cardH + 9;
-
-  const sectionTitle = (label: string, icon: (cx: number, cy: number) => void) => {
-    doc.setFillColor(...gold);
-    doc.roundedRect(14, y - 5, 7, 7, 1.2, 1.2, "F");
-    doc.setDrawColor(12, 12, 15);
-    icon(17.5, y - 1.5);
-    doc.setLineWidth(0.2);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...gold);
-    doc.text(label, 25, y);
-    y += 8;
-  };
-
-  const ensureSpace = (need: number) => {
-    if (y + need > H - 26) { doc.addPage(); paintBg(); y = 22; }
-  };
-
-  // ── BELOHNUNGEN ─────────────────────────────────────────────────────────────
-  if (data.rewardBreakdown.length > 0) {
-    ensureSpace(30);
-    sectionTitle("BELOHNUNGEN", (cx, cy) => iconGift(cx, cy));
-    doc.setDrawColor(...cardBd); doc.setLineWidth(0.3);
-    doc.line(14, y + 2, W - 14, y + 2);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...gold);
-    doc.text("BELOHNUNG", 17, y);
-    doc.text("ANZAHL", W - 60, y);
-    if (data.stampValue) doc.text("WERT", W - 17, y, { align: "right" });
-    y += 7;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-    for (const r of data.rewardBreakdown) {
-      ensureSpace(8);
-      doc.setTextColor(...white);
-      doc.text(r.rewardText.slice(0, 48), 17, y);
-      doc.setTextColor(...grayT);
-      doc.text(String(r.count), W - 60, y);
-      if (r.valuePerRedemption != null && data.stampValue) {
-        doc.setTextColor(...gold);
-        doc.text(`€${(r.count * r.valuePerRedemption).toLocaleString("de-DE")}`, W - 17, y, { align: "right" });
-      }
-      doc.setDrawColor(...cardBd); doc.setLineWidth(0.2);
-      doc.line(14, y + 2.5, W - 14, y + 2.5);
-      y += 8;
-    }
-    y += 4;
-  }
-
-  // ── KUNDEN IM ZEITRAUM ──────────────────────────────────────────────────────
-  ensureSpace(30);
-  sectionTitle("KUNDEN IM ZEITRAUM", (cx, cy) => iconPeople(cx, cy));
-  doc.setDrawColor(...cardBd); doc.setLineWidth(0.3);
-  doc.line(14, y + 2, W - 14, y + 2);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...gold);
-  doc.text("NAME", 17, y);
-  doc.text("PUNKTE", W - 78, y, { align: "right" });
-  doc.text("EINGELÖST", W - 45, y, { align: "right" });
-  doc.text("AKTUELL", W - 17, y, { align: "right" });
-  y += 7;
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-  for (const c of data.customers) {
-    ensureSpace(8);
-    doc.setTextColor(...white);
-    doc.text(c.customerName.slice(0, 34), 17, y);
-    doc.setTextColor(...grayT);
-    doc.text(String(c.stamps), W - 78, y, { align: "right" });
-    doc.text(c.redeems > 0 ? String(c.redeems) : "-", W - 45, y, { align: "right" });
-    doc.text(`${c.currentStamps}/${shop.stampsRequired}`, W - 17, y, { align: "right" });
-    doc.setDrawColor(...cardBd); doc.setLineWidth(0.2);
-    doc.line(14, y + 2.5, W - 14, y + 2.5);
-    y += 8;
-  }
-  y += 4;
-
-  // ── AKTUELLER FORTSCHRITT (Durchschnitt der Kunden) ─────────────────────────
-  ensureSpace(30);
-  const req = shop.stampsRequired || 10;
-  const avgCur = data.customers.length
-    ? Math.round(data.customers.reduce((s2, c) => s2 + c.currentStamps, 0) / data.customers.length)
+  const [{ pdf }, { LoyaltyReport }] = await Promise.all([
+    import("@react-pdf/renderer"),
+    import("@/app/components/reportPdf"),
+  ]);
+  const required = shop.stampsRequired || 10;
+  const avg = data.customers.length
+    ? Math.round(data.customers.reduce((s, c) => s + c.currentStamps, 0) / data.customers.length)
     : 0;
-  const remaining = Math.max(req - avgCur, 0);
-  const pct = Math.min(avgCur / req, 1);
-  doc.setFillColor(...card);
-  doc.roundedRect(14, y, W - 28, 26, 2.5, 2.5, "F");
-  doc.setDrawColor(...cardBd); doc.setLineWidth(0.3);
-  doc.roundedRect(14, y, W - 28, 26, 2.5, 2.5, "S"); doc.setLineWidth(0.2);
-  doc.setDrawColor(...gold); doc.setLineWidth(0.6);
-  doc.circle(27, y + 13, 6.5, "S"); doc.setLineWidth(0.2);
-  iconTrophy(27, y + 13);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...white);
-  doc.text("AKTUELLER FORTSCHRITT", 38, y + 11);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(...grayT);
-  doc.text("Zum nächsten Bonus (Durchschnitt)", 38, y + 16);
-  const barX = 100, barW = 62, barY = y + 12.5;
-  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...gold);
-  doc.text(`${avgCur} / ${req}`, barX, y + 10);
-  doc.setFillColor(...cardBd);
-  doc.roundedRect(barX, barY, barW, 2.6, 1.3, 1.3, "F");
-  doc.setFillColor(...gold);
-  if (pct > 0) doc.roundedRect(barX, barY, Math.max(barW * pct, 2), 2.6, 1.3, 1.3, "F");
-  doc.setFillColor(...gold);
-  drawStar(W - 40, y + 10, 3.4, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...white);
-  doc.text(`NOCH ${remaining} PUNKTE`, W - 34, y + 9);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(6.5); doc.setTextColor(...grayT);
-  doc.text("bis zur nächsten Belohnung", W - 34, y + 13);
-  y += 26 + 8;
-
-  // ── Info-Zeile ──────────────────────────────────────────────────────────────
-  ensureSpace(16);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor(...gold);
-  doc.text("BERICHTSZEITRAUM", 18, y);
-  doc.text("HINWEIS", W / 2 + 4, y);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...grayT);
-  doc.text(`${periodLabel}  ·  ${new Date().toLocaleDateString("de-DE")}`, 18, y + 5);
-  doc.text("Die Daten werden in Echtzeit aktualisiert.", W / 2 + 4, y + 5);
-
-  // ── Footer (jede Seite) ──────────────────────────────────────────────────────
-  const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
-    doc.setDrawColor(...gold); doc.setLineWidth(0.4);
-    doc.line(14, H - 16, W - 14, H - 16); doc.setLineWidth(0.2);
-    drawLogo(14, H - 13, 6);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...white);
-    doc.text("Loyaltycard", 23, H - 8.5);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...grayT);
-    doc.text("loyaltycard.info", 58, H - 8.5);
-    doc.text(`Seite ${p} / ${pageCount}`, W - 14, H - 8.5, { align: "right" });
-  }
-
-  const blob = doc.output("blob");
+  const reportData = {
+    shopName: shop.name,
+    periodLabel: PERIOD_LABELS[period],
+    dateStr: new Date().toLocaleDateString("de-DE"),
+    stamps: data.stamps,
+    redeems: data.redeems,
+    customerCount: data.customers.length,
+    rewards: data.rewardBreakdown.map((r) => ({
+      text: r.rewardText,
+      count: r.count,
+      value: r.valuePerRedemption != null && data.stampValue
+        ? `€${(r.count * r.valuePerRedemption).toLocaleString("de-DE")}` : null,
+    })),
+    customers: data.customers.slice(0, 10).map((c) => ({
+      name: c.customerName, stamps: c.stamps, redeems: c.redeems, currentStamps: c.currentStamps, required,
+    })),
+    progress: { cur: avg, req: required, remaining: Math.max(required - avg, 0) },
+  };
+  const blob = await pdf(<LoyaltyReport data={reportData} />).toBlob();
   const file = new File([blob], `${shop.slug}-bericht.pdf`, { type: "application/pdf" });
-  if (typeof navigator !== "undefined" && (navigator as Navigator & { share?: (data: object) => Promise<void> }).share) {
-    try {
-      await (navigator as Navigator & { share: (d: object) => Promise<void> }).share({ files: [file], title: `${shop.name} Bericht` });
-      return;
-    } catch { /* fallback to download */ }
+  const nav = navigator as Navigator & { share?: (d: object) => Promise<void> };
+  if (typeof navigator !== "undefined" && nav.share) {
+    try { await nav.share({ files: [file], title: `${shop.name} Bericht` }); return; } catch { /* Download-Fallback */ }
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
