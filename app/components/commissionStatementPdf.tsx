@@ -44,7 +44,7 @@ const euro = (n: number) => `${n.toLocaleString("de-DE", { minimumFractionDigits
 const s = StyleSheet.create({
   page: { backgroundColor: C.bg, paddingTop: 30, paddingBottom: 46, paddingHorizontal: 30, fontFamily: "Helvetica", color: C.white },
   frame: { position: "absolute", top: 16, left: 16, right: 16, bottom: 16, borderWidth: 1, borderColor: C.gold, borderRadius: 10 },
-  headRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headRow: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
   info: { flexDirection: "row", alignItems: "center", gap: 5 },
   infoTxt: { fontSize: 11, color: C.gray },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 14 },

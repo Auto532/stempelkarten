@@ -136,7 +136,7 @@ const s = StyleSheet.create({
   page: { backgroundColor: C.bg, padding: 18, fontFamily: "Helvetica", color: C.white },
   frame: { flex: 1, borderWidth: 1, borderColor: C.gold, borderRadius: 10, padding: 18 },
   // Header
-  headRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headRow: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
   brand: { flexDirection: "row", alignItems: "center", gap: 7 },
   brandTxt: { fontSize: 17, fontFamily: "Helvetica-Bold" },
   info: { flexDirection: "row", alignItems: "center", gap: 5 },
@@ -175,6 +175,15 @@ const s = StyleSheet.create({
   // Vertrag
   contractCard: { backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 12, flexDirection: "row", alignItems: "flex-start" },
   badge: { fontSize: 8, fontFamily: "Helvetica-Bold", paddingVertical: 3, paddingHorizontal: 8, borderRadius: 6 },
+  // Info-Box (Erklärung für den Kunden)
+  infoBox: { flexDirection: "row", gap: 9, alignItems: "flex-start", backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11, marginTop: 14 },
+  infoBadge: { width: 18, height: 18, borderRadius: 4, backgroundColor: C.gold, alignItems: "center", justifyContent: "center", marginTop: 1 },
+  infoTitle: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: C.white },
+  infoText: { fontSize: 8, color: C.gray, marginTop: 3, lineHeight: 1.5 },
+  // Kontakt-Karte
+  contactCard: { flexDirection: "row", gap: 9, alignItems: "center", backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11, marginTop: 8 },
+  contactName: { fontSize: 9, fontFamily: "Helvetica-Bold", color: C.white },
+  contactLine: { fontSize: 8, color: C.gray, marginTop: 2 },
   // Footer
   footInfo: { flexDirection: "row", gap: 30, marginTop: 12 },
   footCol: { flexDirection: "row", alignItems: "center", gap: 7 },
@@ -305,7 +314,19 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
             </>
           )}
 
-          {/* Footer-Info */}
+          {/* Info-Box: kurze Erklärung für den Kunden */}
+          <View style={s.infoBox}>
+            <View style={s.infoBadge}><Icon name="gift" size={11} color={C.ink} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.infoTitle}>Ihre digitale Stempelkarte</Text>
+              <Text style={s.infoText}>
+                Bei jedem Besuch sammeln Sie Stempel und sichern sich Ihre Belohnungen. Diese Übersicht fasst Ihren
+                aktuellen Punktestand und Ihre eingelösten Prämien zusammen und wird laufend aktualisiert.
+              </Text>
+            </View>
+          </View>
+
+          {/* Berichtszeitraum */}
           <View style={s.footInfo}>
             <View style={s.footCol}>
               <Icon name="calendar" size={16} sw={1.7} />
@@ -314,18 +335,21 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
                 <Text style={s.footVal}>{data.periodLabel}  ·  {data.dateStr}</Text>
               </View>
             </View>
-            <View style={s.footCol}>
-              <Icon name="info" size={16} sw={1.7} />
-              <View>
-                <Text style={s.footLabel}>KONTAKT BEI FRAGEN</Text>
-                <Text style={s.footVal}>
-                  {data.company && (data.company.email || data.company.phone)
-                    ? [data.company.companyName, data.company.email, data.company.phone].filter(Boolean).join("\n")
-                    : "Die Daten werden in Echtzeit aktualisiert."}
+          </View>
+
+          {/* Kontakt-Karte (Anbieter, für Rückfragen) */}
+          {data.company && (data.company.email || data.company.phone) && (
+            <View style={s.contactCard}>
+              <View style={s.infoBadge}><Icon name="info" size={11} color={C.ink} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.footLabel}>FRAGEN? WIR HELFEN GERN</Text>
+                {data.company.companyName ? <Text style={s.contactName}>{data.company.companyName}</Text> : null}
+                <Text style={s.contactLine}>
+                  {[data.company.email, data.company.phone].filter(Boolean).join("      ·      ")}
                 </Text>
               </View>
             </View>
-          </View>
+          )}
 
           {/* Footer-Bar */}
           <View style={s.footBar}>
