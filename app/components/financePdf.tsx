@@ -39,22 +39,19 @@ export type FinanceReportData = {
 const euro = (n: number) => `${n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 
 const s = StyleSheet.create({
-  page: { backgroundColor: C.bg, paddingTop: 22, paddingBottom: 34, paddingHorizontal: 22, fontFamily: "Helvetica", color: C.white },
-  // Header / Firmenkopf
+  // Seite + goldener Rahmen (wie LoyaltyReport, aber auf jeder Seite via fixed)
+  page: { backgroundColor: C.bg, paddingTop: 30, paddingBottom: 46, paddingHorizontal: 30, fontFamily: "Helvetica", color: C.white },
+  frame: { position: "absolute", top: 16, left: 16, right: 16, bottom: 16, borderWidth: 1, borderColor: C.gold, borderRadius: 10 },
+  // Header (identisch zum anderen PDF)
   headRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  brand: { flexDirection: "row", alignItems: "center", gap: 9 },
-  brandName: { fontSize: 15, fontFamily: "Helvetica-Bold", color: C.white },
-  addr: { fontSize: 8, color: C.gray, marginTop: 3, lineHeight: 1.5 },
-  issuerRight: { alignItems: "flex-end" },
-  issuerLabel: { fontSize: 6.5, color: C.goldDim, fontFamily: "Helvetica-Bold", letterSpacing: 0.3, marginTop: 4 },
-  issuerVal: { fontSize: 8.5, color: C.gray },
-  rule: { height: 1, backgroundColor: C.gold, marginTop: 12, marginBottom: 12, opacity: 0.85 },
-  // Titel
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  info: { flexDirection: "row", alignItems: "center", gap: 4 },
+  infoTxt: { fontSize: 9, color: C.gray },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 14 },
   titleBar: { width: 3, height: 15, backgroundColor: C.gold, borderRadius: 2 },
-  title: { fontSize: 13, fontFamily: "Helvetica-Bold", letterSpacing: 0.5 },
-  subtitle: { fontSize: 8.5, color: C.gray, marginTop: 4 },
-  kleinBadge: { alignSelf: "flex-start", marginTop: 6, fontSize: 7.5, color: C.gold, backgroundColor: "#2c2712", borderWidth: 1, borderColor: C.goldDim, borderRadius: 5, paddingVertical: 3, paddingHorizontal: 7 },
+  title: { fontSize: 12.5, fontFamily: "Helvetica-Bold", letterSpacing: 0.4 },
+  subtitle: { fontSize: 8.5, color: C.gray, marginTop: 3 },
+  shopName: { fontSize: 8.5, color: C.gold, fontFamily: "Helvetica-Bold" },
+  kleinBadge: { alignSelf: "flex-start", marginTop: 7, fontSize: 7.5, color: C.gold, backgroundColor: "#2c2712", borderWidth: 1, borderColor: C.goldDim, borderRadius: 5, paddingVertical: 3, paddingHorizontal: 7 },
   // Stat-Karten
   statRow: { flexDirection: "row", gap: 8, marginTop: 13 },
   statCard: { flex: 1, backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11 },
@@ -86,9 +83,14 @@ const s = StyleSheet.create({
   tdGreen: { fontSize: 8.5, color: "#5fce86", textAlign: "right" },
   tdRed: { fontSize: 8.5, color: "#d98a8a", textAlign: "right" },
   tdGold: { fontSize: 8.5, color: C.gold, fontFamily: "Helvetica-Bold", textAlign: "right" },
-  // Footer
-  footer: { position: "absolute", bottom: 14, left: 22, right: 22, borderTopWidth: 1, borderTopColor: C.gold, paddingTop: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  footTxt: { fontSize: 7, color: C.gray },
+  // Aussteller-Infoblock (wie footInfo im anderen PDF)
+  footInfo: { flexDirection: "row", gap: 26, marginTop: 14 },
+  footCol: { flexDirection: "row", alignItems: "flex-start", gap: 7, maxWidth: 175 },
+  footLabel: { fontSize: 7, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 0.3 },
+  footVal: { fontSize: 8, color: C.gray, marginTop: 2, lineHeight: 1.5 },
+  // Fuß-Bar (identisch zum anderen PDF, auf jeder Seite via fixed)
+  footBar: { position: "absolute", bottom: 26, left: 30, right: 30, borderTopWidth: 1, borderTopColor: C.gold, paddingTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  footBarTxt: { fontSize: 8, color: C.gray },
 });
 
 function StatCard({ icon, label, value, sub, color = C.white }: { icon: string; label: string; value: string; sub: string; color?: string }) {
@@ -110,40 +112,44 @@ const J = { date: 46, model: 128, gross: 62, comm: 62 };
 export function FinanceReport({ data, logoSrc = "/logo-hell.png" }: { data: FinanceReportData; logoSrc?: string }) {
   const co = data.company;
   const klein = co?.smallBusiness !== false; // Default: Kleinunternehmer §19
-  const cityLine = [co?.zip, co?.city].filter(Boolean).join(" ");
   const t = data.totals;
+
+  const addrLines = [
+    co?.ownerName || null,
+    co?.street || null,
+    [co?.zip, co?.city].filter(Boolean).join(" ") || null,
+    co?.country || null,
+  ].filter(Boolean).join("\n");
+  const steuerLines = [
+    co?.taxId ? `Steuernr.: ${co.taxId}` : null,
+    co?.vatId ? `USt-IdNr.: ${co.vatId}` : null,
+    co?.email || null,
+    co?.phone || null,
+  ].filter(Boolean).join("\n");
 
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        {/* ── Firmenkopf (Aussteller) ── */}
+        {/* Goldener Rahmen auf jeder Seite */}
+        <View style={s.frame} fixed />
+
+        {/* ── Header (wie LoyaltyReport) ── */}
         <View style={s.headRow}>
-          <View style={{ flexDirection: "row", gap: 9, maxWidth: 320 }}>
-            <Image src={logoSrc} style={{ width: 40, height: 30 }} />
-            <View>
-              <Text style={s.brandName}>{co?.companyName || "Firmenname im Admin hinterlegen"}</Text>
-              <Text style={s.addr}>
-                {co?.ownerName ? `${co.ownerName}\n` : ""}
-                {co?.street ? `${co.street}\n` : ""}
-                {cityLine || ""}{co?.country ? `\n${co.country}` : ""}
-              </Text>
-            </View>
-          </View>
-          <View style={s.issuerRight}>
-            {co?.taxId   ? (<><Text style={s.issuerLabel}>STEUERNUMMER</Text><Text style={s.issuerVal}>{co.taxId}</Text></>) : null}
-            {co?.vatId   ? (<><Text style={s.issuerLabel}>UST-IDNR.</Text><Text style={s.issuerVal}>{co.vatId}</Text></>) : null}
-            {co?.email   ? (<><Text style={s.issuerLabel}>E-MAIL</Text><Text style={s.issuerVal}>{co.email}</Text></>) : null}
-            {co?.website ? (<><Text style={s.issuerLabel}>WEB</Text><Text style={s.issuerVal}>{co.website}</Text></>) : null}
+          <Image src={logoSrc} style={{ width: 62, height: 46 }} />
+          <View style={s.info}>
+            <Icon name="globe" size={11} color={C.gray} sw={1.6} />
+            <Text style={s.infoTxt}>loyaltycard.info</Text>
           </View>
         </View>
-        <View style={s.rule} />
 
-        {/* ── Titel ── */}
         <View style={s.titleRow}>
           <View style={s.titleBar} />
           <Text style={s.title}>FINANZBERICHT / EINNAHMENÜBERSICHT</Text>
         </View>
-        <Text style={s.subtitle}>Berichtszeitraum: {data.periodLabel}   ·   Erstellt am {data.dateStr}</Text>
+        <Text style={s.subtitle}>
+          <Text style={s.shopName}>{co?.companyName || "Firmenname im Admin hinterlegen"}</Text>
+          <Text>{`  ·  Einnahmenübersicht · Berichtszeitraum: ${data.periodLabel}`}</Text>
+        </Text>
         {klein && (
           <Text style={s.kleinBadge}>Kein Ausweis von Umsatzsteuer gemäß §19 UStG (Kleinunternehmer)</Text>
         )}
@@ -239,12 +245,33 @@ export function FinanceReport({ data, logoSrc = "/logo-hell.png" }: { data: Fina
           </>
         )}
 
-        {/* ── Footer (jede Seite) ── */}
-        <View style={s.footer} fixed>
-          <Text style={s.footTxt}>
-            {(co?.companyName || "Finanzbericht")}{klein ? "  ·  Kleinunternehmer gem. §19 UStG" : ""}
-          </Text>
-          <Text style={s.footTxt} render={({ pageNumber, totalPages }) => `Seite ${pageNumber} / ${totalPages}`} />
+        {/* ── Aussteller-Infoblock (wie footInfo im anderen PDF) ── */}
+        <View style={s.footInfo}>
+          {addrLines ? (
+            <View style={s.footCol}>
+              <Icon name="building" size={16} sw={1.7} />
+              <View><Text style={s.footLabel}>AUSSTELLER</Text><Text style={s.footVal}>{addrLines}</Text></View>
+            </View>
+          ) : null}
+          {steuerLines ? (
+            <View style={s.footCol}>
+              <Icon name="receipt" size={16} sw={1.7} />
+              <View><Text style={s.footLabel}>STEUER / KONTAKT</Text><Text style={s.footVal}>{steuerLines}</Text></View>
+            </View>
+          ) : null}
+          <View style={s.footCol}>
+            <Icon name="calendar" size={16} sw={1.7} />
+            <View><Text style={s.footLabel}>ERSTELLT</Text><Text style={s.footVal}>{data.dateStr}</Text></View>
+          </View>
+        </View>
+
+        {/* ── Fuß-Bar (jede Seite, wie LoyaltyReport) ── */}
+        <View style={s.footBar} fixed>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+            <Image src={logoSrc} style={{ width: 30, height: 22 }} />
+            <Text style={s.footBarTxt}>loyaltycard.info</Text>
+          </View>
+          <Text style={s.footBarTxt} render={({ pageNumber, totalPages }) => `Seite ${pageNumber} / ${totalPages}`} />
         </View>
       </Page>
     </Document>
