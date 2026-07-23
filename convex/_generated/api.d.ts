@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as billingSync from "../billingSync.js";
+import type * as company from "../company.js";
 import type * as customers from "../customers.js";
 import type * as htmlEscape from "../htmlEscape.js";
 import type * as http from "../http.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
   billingSync: typeof billingSync;
+  company: typeof company;
   customers: typeof customers;
   htmlEscape: typeof htmlEscape;
   http: typeof http;

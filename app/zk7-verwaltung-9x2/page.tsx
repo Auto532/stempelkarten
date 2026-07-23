@@ -8,7 +8,7 @@ import {
   Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
   QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
   Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy,
-  Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, Clock, Search, type LucideIcon,
+  Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, Clock, Search, Building2, type LucideIcon,
 } from "lucide-react";
 import { STAMP_ICONS, ICON_CATEGORIES } from "@/app/me/components";
 import { THEME_LIST } from "@/app/me/themes/registry";
@@ -2513,6 +2513,107 @@ function EarningsCard({ adminSecret }: { adminSecret: string }) {
   );
 }
 
+// ─── Firmenprofil (Kopf des Finanzberichts, editierbar) ───────────────────────
+
+function CompanyProfileEditor({ adminSecret, company }: {
+  adminSecret: string; company: Doc<"companyProfile"> | null | undefined;
+}) {
+  const save = useMutation(api.company.setCompanyProfile);
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({
+    companyName: "", ownerName: "", street: "", zip: "", city: "", country: "",
+    taxId: "", vatId: "", email: "", phone: "", website: "", smallBusiness: true,
+  });
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "err">("idle");
+  const [err, setErr] = useState("");
+
+  // Bestehendes Profil beim Laden in die Felder übernehmen
+  useEffect(() => {
+    if (company) {
+      setF({
+        companyName: company.companyName ?? "", ownerName: company.ownerName ?? "",
+        street: company.street ?? "", zip: company.zip ?? "", city: company.city ?? "",
+        country: company.country ?? "", taxId: company.taxId ?? "", vatId: company.vatId ?? "",
+        email: company.email ?? "", phone: company.phone ?? "", website: company.website ?? "",
+        smallBusiness: company.smallBusiness !== false,
+      });
+    }
+  }, [company]);
+
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setF(prev => ({ ...prev, [k]: e.target.value }));
+
+  const handleSave = async () => {
+    if (!f.companyName.trim()) { setErr("Firmenname ist Pflicht"); setStatus("err"); return; }
+    setStatus("saving"); setErr("");
+    try {
+      const trim = (v: string) => v.trim() || undefined;
+      await save({
+        adminSecret,
+        profile: {
+          companyName: f.companyName.trim(),
+          ownerName: trim(f.ownerName), street: trim(f.street), zip: trim(f.zip),
+          city: trim(f.city), country: trim(f.country), taxId: trim(f.taxId),
+          vatId: trim(f.vatId), email: trim(f.email), phone: trim(f.phone),
+          website: trim(f.website), smallBusiness: f.smallBusiness,
+        },
+      });
+      setStatus("saved"); setTimeout(() => setStatus("idle"), 2500);
+    } catch (ex: unknown) { setErr(errMsg(ex, "Fehler beim Speichern")); setStatus("err"); }
+  };
+
+  const fields: { k: keyof typeof f; label: string; ph?: string; col?: string }[] = [
+    { k: "companyName", label: "Firmenname / Name *", ph: "Mustermann Digital" },
+    { k: "ownerName",   label: "Inhaber (falls abweichend)" },
+    { k: "street",      label: "Straße & Hausnr." },
+    { k: "zip",         label: "PLZ",  col: "w-24" },
+    { k: "city",        label: "Ort" },
+    { k: "country",     label: "Land" },
+    { k: "taxId",       label: "Steuernummer", ph: "123/456/78901" },
+    { k: "vatId",       label: "USt-IdNr. (falls vorhanden)", ph: "DE123456789" },
+    { k: "email",       label: "E-Mail" },
+    { k: "phone",       label: "Telefon" },
+    { k: "website",     label: "Website" },
+  ];
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-3 flex items-center gap-2 text-left">
+        <Building2 size={14} className={company ? "text-amber-400" : "text-zinc-500"} />
+        <span className="text-sm font-semibold text-zinc-200">Firmenprofil (PDF-Kopf)</span>
+        {!company && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-400/15 text-red-400">fehlt</span>}
+        <ChevronRight size={14} className={`ml-auto text-zinc-600 transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-2 border-t border-zinc-800 pt-3">
+          <p className="text-[10px] text-zinc-500">
+            Diese Angaben stehen im Kopf des Finanzberichts (für dich / das Finanzamt). Steuerlich relevant, bitte korrekt ausfüllen.
+          </p>
+          {fields.map(fd => (
+            <div key={fd.k}>
+              <label className="text-[10px] text-zinc-500 uppercase tracking-wider">{fd.label}</label>
+              <input value={String(f[fd.k])} onChange={set(fd.k)} placeholder={fd.ph}
+                className="w-full mt-0.5 px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-700 text-sm text-zinc-100 placeholder-zinc-600 focus:border-amber-400/50 outline-none" />
+            </div>
+          ))}
+          <label className="flex items-center gap-2 pt-1 cursor-pointer">
+            <input type="checkbox" checked={f.smallBusiness}
+              onChange={e => setF(prev => ({ ...prev, smallBusiness: e.target.checked }))}
+              className="accent-amber-400" />
+            <span className="text-xs text-zinc-300">Kleinunternehmer §19 UStG (keine Umsatzsteuer ausweisen)</span>
+          </label>
+          {err && <p className="text-red-400 text-xs">{err}</p>}
+          <button type="button" onClick={handleSave} disabled={status === "saving"}
+            className="w-full mt-1 py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 text-sm font-semibold rounded-xl transition-colors">
+            {status === "saving" ? "Speichert…" : status === "saved" ? "Gespeichert ✓" : "Firmenprofil speichern"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Finanzen-Detailansicht (Monate / Jahre / Zahlungen + PDF-Export) ─────────
 
 function FinanceDetailModal({ adminSecret, summary, onClose }: {
@@ -2522,6 +2623,7 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
   const [err, setErr]           = useState("");
   const [view, setView]         = useState<"month" | "year" | "list">("month");
   const [exporting, setExporting] = useState(false);
+  const company = useQuery(api.company.getCompanyProfile, { adminSecret });
 
   useEffect(() => {
     affiliateQuery("admin:getEarningsDetail", { adminSecret })
@@ -2532,7 +2634,7 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
   const handlePdf = async () => {
     if (!payments) return;
     setExporting(true);
-    try { await exportFinancePdf(summary, payments); }
+    try { await exportFinancePdf(summary, payments, company); }
     finally { setExporting(false); }
   };
 
@@ -2556,6 +2658,9 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
         </div>
 
         <div className="p-4 space-y-4">
+          {/* Firmenprofil für den PDF-Kopf */}
+          <CompanyProfileEditor adminSecret={adminSecret} company={company} />
+
           {/* Zusammenfassung */}
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -2662,187 +2767,57 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
 
 // ─── Finanzbericht als PDF ────────────────────────────────────────────────────
 
-async function exportFinancePdf(summary: EarningsSummary, payments: PaymentRow[]) {
-  const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const W = 210;
-  const accent: [number, number, number] = [251, 191, 36];
-  const dark: [number, number, number]   = [18, 18, 18];
-  const mid: [number, number, number]    = [80, 80, 80];
-  const light: [number, number, number]  = [245, 245, 245];
-  const green: [number, number, number]  = [22, 130, 60];
-  const red: [number, number, number]    = [180, 50, 50];
+async function exportFinancePdf(
+  summary: EarningsSummary,
+  payments: PaymentRow[],
+  company: Doc<"companyProfile"> | null | undefined,
+) {
+  const [{ pdf }, { FinanceReport }] = await Promise.all([
+    import("@react-pdf/renderer"),
+    import("@/app/components/financePdf"),
+  ]);
 
-  const euro = (n: number) => `€${n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const today = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" });
+  const months = groupPayments(payments, "month").map(g => ({
+    label: g.label, count: g.count, revenue: g.revenue,
+    commission: g.commission, net: g.revenue - g.commission,
+  }));
 
-  // ── Header ──────────────────────────────────────────────────────────────────
-  doc.setFillColor(...accent);
-  doc.rect(0, 0, W, 36, "F");
-  doc.setFillColor(...dark);
-  doc.rect(0, 0, 5, 36, "F");
-  doc.setTextColor(...dark);
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text("Finanzbericht", 13, 16);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text(`LoyaltyCard  ·  Stand: ${today}`, 13, 26);
+  const rows = payments.map(p => ({
+    date: new Date(p.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    shopName: p.shopName,
+    model: `${p.planType === "annual" ? "Jahresabo" : "Monatsabo"} #${p.paymentNumber}`
+      + (p.discountCode ? ` · ${p.discountCode}` : "") + (p.direct ? " · Direkt" : ""),
+    gross: p.paidAmount,
+    commission: p.commission,
+    net: p.paidAmount - p.commission,
+  }));
 
-  // ── Zusammenfassung ─────────────────────────────────────────────────────────
-  let y = 46;
-  const bx = [13, 77, 141] as const;
-  const bw = 60; const bh = 24;
-  const boxes = [
-    { label: "Gesamtumsatz",          value: euro(summary.revenueTotal), color: green  },
-    { label: "Provisionen an Partner", value: euro(summary.commTotal),   color: red    },
-    { label: "Mein Anteil (Netto)",    value: euro(summary.netEarnings), color: accent },
-  ];
-  boxes.forEach(({ label, value, color }, i) => {
-    doc.setFillColor(...light);
-    doc.rect(bx[i], y, bw, bh, "F");
-    doc.setDrawColor(220, 220, 220);
-    doc.rect(bx[i], y, bw, bh, "S");
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...color);
-    doc.text(value, bx[i] + bw / 2, y + 12, { align: "center" });
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...mid);
-    doc.text(label, bx[i] + bw / 2, y + 20, { align: "center" });
-  });
-  y += bh + 7;
-
-  doc.setFontSize(8);
-  doc.setTextColor(...mid);
-  doc.text(
-    `${summary.payingContracts ?? summary.activeContracts} zahlende Shops  ·  ${payments.length} Zahlungen  ·  ` +
-    `Provisionen: ${euro(summary.commPending)} ausstehend, ${euro(summary.commConfirmed)} bestätigt, ${euro(summary.commPaid)} ausgezahlt` +
-    ((summary.setupFeesTotal ?? 0) > 0
-      ? `  ·  Umsatz: ${euro(summary.aboRevenue ?? 0)} Abo + ${euro(summary.setupFeesTotal ?? 0)} Einrichtung (einmalig)`
-      : ""),
-    13, y
-  );
-  y += 8;
-
-  // ── Tabellen-Helfer ─────────────────────────────────────────────────────────
-  const ensureSpace = (needed: number) => {
-    if (y + needed > 278) { doc.addPage(); y = 20; }
+  const data = {
+    company: company ?? null,
+    periodLabel: "Gesamter Zeitraum",
+    dateStr: new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" }),
+    totals: {
+      revenue:    summary.revenueTotal,
+      commission: summary.commTotal,
+      net:        summary.netEarnings,
+      setupFees:  summary.setupFeesTotal ?? 0,
+      aboRevenue: summary.aboRevenue ?? (summary.revenueTotal - (summary.setupFeesTotal ?? 0)),
+      payingContracts: summary.payingContracts ?? summary.activeContracts,
+      paymentCount:    payments.length,
+      commPending:   summary.commPending,
+      commConfirmed: summary.commConfirmed,
+      commPaid:      summary.commPaid,
+    },
+    months,
+    payments: rows,
   };
-  const sectionTitle = (title: string) => {
-    ensureSpace(20);
-    doc.setDrawColor(220, 220, 220);
-    doc.line(13, y, W - 13, y);
-    y += 8;
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...dark);
-    doc.text(title, 13, y);
-    y += 7;
-  };
-  const tableHead = (cols: { label: string; x: number; align?: "right" }[]) => {
-    doc.setFillColor(...light);
-    doc.rect(13, y - 4, W - 26, 6, "F");
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...mid);
-    cols.forEach(c => doc.text(c.label, c.x, y, c.align ? { align: c.align } : undefined));
-    y += 6;
-    doc.setFont("helvetica", "normal");
-  };
-
-  // ── Monats-/Jahresübersicht ─────────────────────────────────────────────────
-  for (const mode of ["month", "year"] as const) {
-    const groups = groupPayments(payments, mode);
-    if (groups.length === 0) continue;
-    if (mode === "year" && groups.length < 2) continue; // Jahresübersicht erst ab 2 Jahren sinnvoll
-    sectionTitle(mode === "month" ? "Monatsübersicht" : "Jahresübersicht");
-    tableHead([
-      { label: mode === "month" ? "Monat" : "Jahr", x: 15 },
-      { label: "Zahlungen",   x: 105, align: "right" },
-      { label: "Umsatz",      x: 135, align: "right" },
-      { label: "Provisionen", x: 165, align: "right" },
-      { label: "Netto",       x: W - 15, align: "right" },
-    ]);
-    groups.forEach((g, i) => {
-      ensureSpace(8);
-      if (i % 2 === 0) {
-        doc.setFillColor(250, 250, 250);
-        doc.rect(13, y - 3.5, W - 26, 5.5, "F");
-      }
-      doc.setTextColor(...dark);
-      doc.text(g.label, 15, y);
-      doc.setTextColor(...mid);
-      doc.text(String(g.count), 105, y, { align: "right" });
-      doc.setTextColor(...green);
-      doc.text(euro(g.revenue), 135, y, { align: "right" });
-      doc.setTextColor(...red);
-      doc.text(g.commission > 0 ? `- ${euro(g.commission)}` : "—", 165, y, { align: "right" });
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...dark);
-      doc.text(euro(g.revenue - g.commission), W - 15, y, { align: "right" });
-      doc.setFont("helvetica", "normal");
-      y += 5.5;
-    });
-    y += 4;
-  }
-
-  // ── Einzelne Zahlungen ──────────────────────────────────────────────────────
-  if (payments.length > 0) {
-    sectionTitle("Einzelne Zahlungen");
-    tableHead([
-      { label: "Datum",     x: 15 },
-      { label: "Shop",      x: 38 },
-      { label: "Modell",    x: 100 },
-      { label: "Betrag",    x: 152, align: "right" },
-      { label: "Provision", x: W - 15, align: "right" },
-    ]);
-    payments.forEach((p, i) => {
-      ensureSpace(8);
-      if (i % 2 === 0) {
-        doc.setFillColor(250, 250, 250);
-        doc.rect(13, y - 3.5, W - 26, 5.5, "F");
-      }
-      doc.setTextColor(...mid);
-      doc.text(new Date(p.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }), 15, y);
-      doc.setTextColor(...dark);
-      doc.text(p.shopName.slice(0, 32), 38, y);
-      doc.setTextColor(...mid);
-      const model = `${p.planType === "annual" ? "Jahresabo" : "Monatsabo"} #${p.paymentNumber}`
-        + (p.discountCode ? ` · ${p.discountCode}` : "") + (p.direct ? " · Direkt" : "");
-      doc.text(model, 100, y);
-      doc.setTextColor(...green);
-      doc.text(euro(p.paidAmount), 152, y, { align: "right" });
-      doc.setTextColor(...(p.commission > 0 ? red : mid));
-      doc.text(p.commission > 0 ? `- ${euro(p.commission)}` : "—", W - 15, y, { align: "right" });
-      y += 5.5;
-    });
-  }
-
-  // ── Footer (jede Seite) ──────────────────────────────────────────────────────
-  const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
-    doc.setFillColor(...accent);
-    doc.rect(0, 289, W, 8, "F");
-    doc.setFillColor(...dark);
-    doc.rect(0, 289, 5, 8, "F");
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...dark);
-    doc.text("LoyaltyCard · Finanzbericht", 13, 294);
-    doc.text(`Seite ${p} / ${pageCount}`, W - 13, 294, { align: "right" });
-  }
 
   const stamp = new Date().toISOString().slice(0, 10);
-  const blob = doc.output("blob");
-  const file = new File([blob], `loatycard-finanzbericht-${stamp}.pdf`, { type: "application/pdf" });
-  if (typeof navigator !== "undefined" && (navigator as Navigator & { share?: (data: object) => Promise<void> }).share) {
-    try {
-      await (navigator as Navigator & { share: (d: object) => Promise<void> }).share({ files: [file], title: "Finanzbericht" });
-      return;
-    } catch { /* fallback to download */ }
+  const blob = await pdf(<FinanceReport data={data} />).toBlob();
+  const file = new File([blob], `finanzbericht-${stamp}.pdf`, { type: "application/pdf" });
+  const nav = navigator as Navigator & { share?: (d: object) => Promise<void> };
+  if (typeof navigator !== "undefined" && nav.share) {
+    try { await nav.share({ files: [file], title: "Finanzbericht" }); return; } catch { /* Download-Fallback */ }
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

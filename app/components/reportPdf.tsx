@@ -6,7 +6,7 @@ import {
 } from "@react-pdf/renderer";
 
 // ── Farben (Loyaltycard dunkel/gold) ──────────────────────────────────────────
-const C = {
+export const C = {
   bg:      "#0b0b0e",
   card:    "#17171c",
   cardBd:  "#2b2b34",
@@ -38,7 +38,7 @@ export type ReportData = {
 };
 
 // ── Lucide-Icons als SVG (stroke-basiert wie im Web) ──────────────────────────
-function Icon({ name, size = 14, color = C.gold, sw = 2 }: { name: string; size?: number; color?: string; sw?: number }) {
+export function Icon({ name, size = 14, color = C.gold, sw = 2 }: { name: string; size?: number; color?: string; sw?: number }) {
   const common = { stroke: color, strokeWidth: sw, fill: "none" as const };
   const parts: Record<string, React.ReactNode> = {
     gift: (<>
@@ -85,6 +85,37 @@ function Icon({ name, size = 14, color = C.gold, sw = 2 }: { name: string; size?
     creditcard: (<>
       <Rect x="2" y="5" width="20" height="14" rx="2" {...common} />
       <Line x1="2" y1="10" x2="22" y2="10" {...common} />
+    </>),
+    wallet: (<>
+      <Path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5" {...common} />
+      <Path d="M16 12h.01" {...common} />
+    </>),
+    building: (<>
+      <Rect x="4" y="2" width="16" height="20" rx="2" {...common} />
+      <Path d="M9 22v-4h6v4" {...common} />
+      <Line x1="8" y1="6" x2="8" y2="6.01" {...common} />
+      <Line x1="16" y1="6" x2="16" y2="6.01" {...common} />
+      <Line x1="8" y1="10" x2="8" y2="10.01" {...common} />
+      <Line x1="16" y1="10" x2="16" y2="10.01" {...common} />
+      <Line x1="8" y1="14" x2="8" y2="14.01" {...common} />
+      <Line x1="16" y1="14" x2="16" y2="14.01" {...common} />
+    </>),
+    receipt: (<>
+      <Path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" {...common} />
+      <Path d="M8 7h8" {...common} />
+      <Path d="M8 11h8" {...common} />
+      <Path d="M8 15h5" {...common} />
+    </>),
+    coins: (<>
+      <Circle cx="8" cy="8" r="6" {...common} />
+      <Path d="M18.09 10.37A6 6 0 1 1 10.34 18" {...common} />
+      <Path d="M7 6h1v4" {...common} />
+      <Path d="m16.71 13.88.7.71-2.82 2.82" {...common} />
+    </>),
+    percent: (<>
+      <Line x1="19" y1="5" x2="5" y2="19" {...common} />
+      <Circle cx="6.5" cy="6.5" r="2.5" {...common} />
+      <Circle cx="17.5" cy="17.5" r="2.5" {...common} />
     </>),
   };
   return <Svg width={size} height={size} viewBox="0 0 24 24">{parts[name]}</Svg>;

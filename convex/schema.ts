@@ -171,4 +171,23 @@ export default defineSchema({
     windowStart: v.number(),
     lockedUntil: v.optional(v.number()),
   }).index("by_key", ["key"]),
+
+  // Firmenprofil (Einzeldatensatz) für den Kopf des Finanzberichts. Steuerlich
+  // relevante Angaben, damit das PDF ans Finanzamt übermittelbar ist.
+  companyProfile: defineTable({
+    companyName:   v.string(),        // Firmenname / Einzelunternehmer-Name
+    ownerName:     v.optional(v.string()),
+    street:        v.optional(v.string()),   // Straße + Hausnummer
+    zip:           v.optional(v.string()),
+    city:          v.optional(v.string()),
+    country:       v.optional(v.string()),
+    taxId:         v.optional(v.string()),   // Steuernummer
+    vatId:         v.optional(v.string()),   // USt-IdNr.
+    email:         v.optional(v.string()),
+    phone:         v.optional(v.string()),
+    website:       v.optional(v.string()),
+    // Kleinunternehmer §19 UStG (Default true): dann kein USt-Ausweis im PDF
+    smallBusiness: v.optional(v.boolean()),
+    updatedAt:     v.number(),
+  }),
 });
