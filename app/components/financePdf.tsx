@@ -109,7 +109,7 @@ function StatCard({ icon, label, value, sub, color = C.white }: { icon: string; 
 // Spaltenbreiten Journal
 const J = { date: 46, model: 128, gross: 62, comm: 62 };
 
-export function FinanceReport({ data, logoSrc = "/logo-dunkel.png" }: { data: FinanceReportData; logoSrc?: string }) {
+export function FinanceReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/logo-mark.png" }: { data: FinanceReportData; logoSrc?: string; markSrc?: string }) {
   const co = data.company;
   const klein = co?.smallBusiness !== false; // Default: Kleinunternehmer §19
   const t = data.totals;
@@ -135,7 +135,7 @@ export function FinanceReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Fi
 
         {/* ── Header (wie LoyaltyReport) ── */}
         <View style={s.headRow}>
-          <Brand />
+          <Brand markSrc={markSrc} />
         </View>
 
         <View style={s.titleRow}>

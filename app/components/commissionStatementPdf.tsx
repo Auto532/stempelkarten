@@ -45,6 +45,7 @@ const s = StyleSheet.create({
   page: { backgroundColor: C.bg, paddingTop: 30, paddingBottom: 46, paddingHorizontal: 30, fontFamily: "Helvetica", color: C.white },
   frame: { position: "absolute", top: 16, left: 16, right: 16, bottom: 16, borderWidth: 1, borderColor: C.gold, borderRadius: 10 },
   headRow: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
+  headerRule: { height: 1, backgroundColor: C.gold, opacity: 0.85, marginTop: 10, marginBottom: 2 },
   info: { flexDirection: "row", alignItems: "center", gap: 5 },
   infoTxt: { fontSize: 11, color: C.gray },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 14 },
@@ -112,7 +113,7 @@ function StatCard({ icon, label, value, sub, color = C.white }: { icon: string; 
 
 const T = { date: 46, model: 120, base: 58, rate: 40, amount: 62 };
 
-export function CommissionStatement({ data, logoSrc = "/logo-dunkel.png" }: { data: CommissionStatementData; logoSrc?: string }) {
+export function CommissionStatement({ data, logoSrc = "/logo-dunkel.png", markSrc = "/logo-mark.png" }: { data: CommissionStatementData; logoSrc?: string; markSrc?: string }) {
   const co = data.company;
   const p = data.partner;
   // USt nur bei Gewerbe-Partnern mit USt-IdNr. (Gutschrift mit USt-Ausweis).
@@ -131,8 +132,9 @@ export function CommissionStatement({ data, logoSrc = "/logo-dunkel.png" }: { da
 
         {/* Header */}
         <View style={s.headRow}>
-          <Brand />
+          <Brand markSrc={markSrc} />
         </View>
+        <View style={s.headerRule} />
 
         <View style={s.titleRow}>
           <View style={s.titleBar} />

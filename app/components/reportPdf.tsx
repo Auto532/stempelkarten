@@ -136,21 +136,22 @@ export function Icon({ name, size = 14, color = C.gold, sw = 2 }: { name: string
 }
 
 const s = StyleSheet.create({
-  page: { backgroundColor: C.bg, padding: 18, fontFamily: "Helvetica", color: C.white },
-  frame: { flex: 1, borderWidth: 1, borderColor: C.gold, borderRadius: 10, padding: 18 },
+  page: { backgroundColor: C.bg, paddingTop: 28, paddingBottom: 44, paddingHorizontal: 28, fontFamily: "Helvetica", color: C.white },
+  frame: { position: "absolute", top: 15, left: 15, right: 15, bottom: 15, borderWidth: 1, borderColor: C.gold, borderRadius: 10 },
   // Header
   headRow: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
+  headerRule: { height: 1, backgroundColor: C.gold, opacity: 0.85, marginTop: 10, marginBottom: 2 },
   brand: { flexDirection: "row", alignItems: "center", gap: 7 },
   brandTxt: { fontSize: 17, fontFamily: "Helvetica-Bold" },
   info: { flexDirection: "row", alignItems: "center", gap: 5 },
   infoTxt: { fontSize: 11, color: C.gray },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 14 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 8 },
   titleBar: { width: 3, height: 15, backgroundColor: C.gold, borderRadius: 2 },
   title: { fontSize: 12.5, fontFamily: "Helvetica-Bold", letterSpacing: 0.4 },
   subtitle: { fontSize: 8.5, color: C.gray, marginTop: 3 },
   shopName: { fontSize: 8.5, color: C.gold, fontFamily: "Helvetica-Bold" },
   // Stat cards
-  statRow: { flexDirection: "row", gap: 8, marginTop: 13 },
+  statRow: { flexDirection: "row", gap: 8, marginTop: 10 },
   statCard: { flex: 1, backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11, flexDirection: "row", alignItems: "center", gap: 10 },
   statCircle: { width: 30, height: 30, borderRadius: 15, borderWidth: 1.4, borderColor: C.gold, alignItems: "center", justifyContent: "center" },
   statVal: { fontSize: 22, fontFamily: "Helvetica-Bold" },
@@ -158,14 +159,14 @@ const s = StyleSheet.create({
   statL2: { fontSize: 6, color: C.goldDim, marginTop: 1 },
   underline: { width: 20, height: 2, backgroundColor: C.gold, borderRadius: 1, marginTop: 4 },
   // Section
-  sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 13, marginBottom: 6 },
+  sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, marginBottom: 5 },
   sectionIcon: { width: 18, height: 18, borderRadius: 4, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" },
   sectionTitle: { fontSize: 11, fontFamily: "Helvetica-Bold", color: C.gold, letterSpacing: 0.4 },
   sectionSub: { fontSize: 8, color: C.gray, marginTop: -2, marginBottom: 6 },
   // Table
   th: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: C.cardBd, paddingBottom: 5 },
   thTxt: { fontSize: 8, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 0.3 },
-  tr: { flexDirection: "row", borderBottomWidth: 0.6, borderBottomColor: C.cardBd, paddingVertical: 4.5 },
+  tr: { flexDirection: "row", borderBottomWidth: 0.6, borderBottomColor: C.cardBd, paddingVertical: 3.3 },
   tdName: { fontSize: 9.5, color: C.white, flex: 1 },
   td: { fontSize: 9.5, color: C.gray, textAlign: "right" },
   tdGold: { fontSize: 9.5, color: C.gold, textAlign: "right" },
@@ -180,21 +181,21 @@ const s = StyleSheet.create({
   contractCard: { backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 12, flexDirection: "row", alignItems: "flex-start" },
   badge: { fontSize: 8, fontFamily: "Helvetica-Bold", paddingVertical: 3, paddingHorizontal: 8, borderRadius: 6 },
   // Info-Box (Erklärung für den Kunden)
-  infoBox: { flexDirection: "row", gap: 9, alignItems: "flex-start", backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11, marginTop: 14 },
+  infoBox: { flexDirection: "row", gap: 9, alignItems: "flex-start", backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 10, marginTop: 9 },
   infoBadge: { width: 18, height: 18, borderRadius: 4, backgroundColor: C.gold, alignItems: "center", justifyContent: "center", marginTop: 1 },
   infoTitle: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: C.white },
   infoText: { fontSize: 8, color: C.gray, marginTop: 3, lineHeight: 1.5 },
   // Kontakt-Karte
-  contactCard: { flexDirection: "row", gap: 9, alignItems: "center", backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11, marginTop: 8 },
+  contactCard: { flexDirection: "row", gap: 9, alignItems: "flex-start", backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 10, marginTop: 6 },
   contactText: { fontSize: 8, color: C.gray, marginTop: 3, marginBottom: 4, lineHeight: 1.5 },
   contactName: { fontSize: 9, fontFamily: "Helvetica-Bold", color: C.white },
   contactLine: { fontSize: 8, color: C.gray, marginTop: 2 },
   // Footer
-  footInfo: { flexDirection: "row", gap: 30, marginTop: 12 },
+  footInfo: { flexDirection: "row", gap: 30, marginTop: 8 },
   footCol: { flexDirection: "row", alignItems: "center", gap: 7 },
   footLabel: { fontSize: 7, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 0.3 },
   footVal: { fontSize: 8, color: C.gray, marginTop: 2 },
-  footBar: { marginTop: "auto", borderTopWidth: 1, borderTopColor: C.gold, paddingTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  footBar: { position: "absolute", bottom: 24, left: 28, right: 28, borderTopWidth: 1, borderTopColor: C.gold, paddingTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
 });
 
 // Marken-Kopf: LC-Zeichen (freigestellt) + Schriftzug "Loyalty"(dunkel)"card"(gold)
@@ -206,7 +207,7 @@ export function Brand({ markSrc = "/logo-mark.png", height = 40 }: { markSrc?: s
     <View style={{ position: "relative", width: "100%", height, justifyContent: "center", alignItems: "center" }}>
       <Image src={markSrc} style={{ position: "absolute", left: 0, top: 0, width: height * MARK_RATIO, height }} />
       <Text style={{ fontSize: height * 0.56, fontFamily: "Helvetica-Bold" }}>
-        <Text style={{ color: C.white }}>Loyalty</Text>
+        <Text style={{ color: "#0d0d0d" }}>Loyalty</Text>
         <Text style={{ color: C.gold }}>card</Text>
       </Text>
     </View>
@@ -227,15 +228,16 @@ function StatCard({ icon, value, l1, l2 }: { icon: string; value: string; l1: st
   );
 }
 
-export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: ReportData; logoSrc?: string }) {
+export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/logo-mark.png" }: { data: ReportData; logoSrc?: string; markSrc?: string }) {
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        <View style={s.frame}>
-          {/* Header */}
-          <View style={s.headRow}>
-            <Brand />
-          </View>
+        <View style={s.frame} fixed />
+        {/* Header */}
+        <View style={s.headRow}>
+          <Brand markSrc={markSrc} />
+        </View>
+        <View style={s.headerRule} />
 
           <View style={s.titleRow}>
             <View style={s.titleBar} />
@@ -322,7 +324,7 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
           )}
 
           {/* Info-Box: kurze Erklärung für den Kunden */}
-          <View style={s.infoBox}>
+          <View style={s.infoBox} wrap={false}>
             <View style={s.infoBadge}><Icon name="gift" size={11} color={C.ink} /></View>
             <View style={{ flex: 1 }}>
               <Text style={s.infoTitle}>Ihre digitale Stempelkarte</Text>
@@ -346,7 +348,7 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
 
           {/* Kontakt (Anbieter, für Rückfragen) — ganz unten, ausführlich */}
           {data.company && (data.company.email || data.company.phone) && (
-            <View style={s.contactCard}>
+            <View style={s.contactCard} wrap={false}>
               <View style={s.infoBadge}><Icon name="info" size={11} color={C.ink} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.footLabel}>FRAGEN ODER UNKLARHEITEN?</Text>
@@ -372,16 +374,15 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
           )}
 
           {/* Footer-Bar */}
-          <View style={s.footBar}>
+          <View style={s.footBar} fixed>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
               <Image src={logoSrc} style={{ width: 30, height: 22 }} />
               <Text style={{ fontSize: 8, color: C.gray }}>
                 loyaltycard.info{data.company?.website ? `  ·  ${data.company.website}` : ""}
               </Text>
             </View>
-            <Text style={{ fontSize: 8, color: C.gray }}>Seite 1 / 1</Text>
+            <Text style={{ fontSize: 8, color: C.gray }} render={({ pageNumber, totalPages }) => `Seite ${pageNumber} / ${totalPages}`} />
           </View>
-        </View>
       </Page>
     </Document>
   );
