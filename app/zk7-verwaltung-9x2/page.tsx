@@ -3004,7 +3004,7 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, adminSecret: st
   stamps: number; redeems: number; stampValue: number | null;
   rewardBreakdown: { rewardText: string; count: number; valuePerRedemption: number | null }[];
   customers: { customerName: string; stamps: number; redeems: number; currentStamps: number }[];
-}) {
+}, company?: Doc<"companyProfile"> | null) {
   const [{ pdf }, { LoyaltyReport }] = await Promise.all([
     import("@react-pdf/renderer"),
     import("@/app/components/reportPdf"),
@@ -3057,6 +3057,7 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, adminSecret: st
     })),
     progress: { cur: avg, req: required, remaining: Math.max(required - avg, 0) },
     contract,
+    company: company ?? null,
   };
   const blob = await pdf(<LoyaltyReport data={reportData} />).toBlob();
   const file = new File([blob], `${shop.slug}-bericht.pdf`, { type: "application/pdf" });
@@ -3077,11 +3078,12 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
     api.shops.getShopAnalyticsByPeriodAsAdmin,
     { shopId: shop._id, adminSecret, since: periodToSince(period) }
   );
+  const company = useQuery(api.company.getCompanyProfile, { adminSecret });
 
   const handleExport = async () => {
     if (!data) return;
     setExporting(true);
-    try { await exportShopPdf(shop, period, adminSecret, data); }
+    try { await exportShopPdf(shop, period, adminSecret, data, company); }
     finally { setExporting(false); }
   };
 

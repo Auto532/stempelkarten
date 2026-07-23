@@ -39,6 +39,13 @@ export type ReportData = {
     firstPaidAt: string | null;
     nextRenewalAt: string | null;
   } | null;
+  // Anbieter-Kontakt für die Fußzeile (Rückfragen des Kunden), aus dem Firmenprofil
+  company?: {
+    companyName?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    website?: string | null;
+  } | null;
 };
 
 // ── Lucide-Icons als SVG (stroke-basiert wie im Web) ──────────────────────────
@@ -176,6 +183,21 @@ const s = StyleSheet.create({
   footBar: { marginTop: "auto", borderTopWidth: 1, borderTopColor: C.gold, paddingTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
 });
 
+// Marken-Kopf: LC-Zeichen (freigestellt) + Schriftzug "Loyalty"(dunkel)"card"(gold)
+// als echter Text daneben, vertikal mittig. Wird in allen PDF-Köpfen genutzt.
+const MARK_RATIO = 515 / 473; // Seitenverhältnis von logo-mark.png
+export function Brand({ markSrc = "/logo-mark.png", height = 40 }: { markSrc?: string; height?: number }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <Image src={markSrc} style={{ width: height * MARK_RATIO, height }} />
+      <Text style={{ fontSize: height * 0.56, fontFamily: "Helvetica-Bold" }}>
+        <Text style={{ color: C.white }}>Loyalty</Text>
+        <Text style={{ color: C.gold }}>card</Text>
+      </Text>
+    </View>
+  );
+}
+
 function StatCard({ icon, value, l1, l2 }: { icon: string; value: string; l1: string; l2: string }) {
   return (
     <View style={s.statCard}>
@@ -197,11 +219,7 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
         <View style={s.frame}>
           {/* Header */}
           <View style={s.headRow}>
-            <Image src={logoSrc} style={{ width: 86, height: 58 }} />
-            <View style={s.info}>
-              <Icon name="globe" size={13} color={C.gray} sw={1.6} />
-              <Text style={s.infoTxt}>loyaltycard.info</Text>
-            </View>
+            <Brand />
           </View>
 
           <View style={s.titleRow}>
@@ -299,8 +317,12 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
             <View style={s.footCol}>
               <Icon name="info" size={16} sw={1.7} />
               <View>
-                <Text style={s.footLabel}>HINWEIS</Text>
-                <Text style={s.footVal}>Die Daten werden in Echtzeit aktualisiert.</Text>
+                <Text style={s.footLabel}>KONTAKT BEI FRAGEN</Text>
+                <Text style={s.footVal}>
+                  {data.company && (data.company.email || data.company.phone)
+                    ? [data.company.companyName, data.company.email, data.company.phone].filter(Boolean).join("\n")
+                    : "Die Daten werden in Echtzeit aktualisiert."}
+                </Text>
               </View>
             </View>
           </View>
@@ -309,7 +331,9 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
           <View style={s.footBar}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
               <Image src={logoSrc} style={{ width: 30, height: 22 }} />
-              <Text style={{ fontSize: 8, color: C.gray }}>loyaltycard.info</Text>
+              <Text style={{ fontSize: 8, color: C.gray }}>
+                loyaltycard.info{data.company?.website ? `  ·  ${data.company.website}` : ""}
+              </Text>
             </View>
             <Text style={{ fontSize: 8, color: C.gray }}>Seite 1 / 1</Text>
           </View>

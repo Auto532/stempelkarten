@@ -4,7 +4,7 @@ import React from "react";
 import {
   Document, Page, View, Text, Image, StyleSheet,
 } from "@react-pdf/renderer";
-import { C, Icon } from "./reportPdf";
+import { C, Icon, Brand } from "./reportPdf";
 import type { CompanyInfo } from "./financePdf";
 
 // ── Datenformen ───────────────────────────────────────────────────────────────
@@ -127,11 +127,7 @@ export function CommissionStatement({ data, logoSrc = "/logo-dunkel.png" }: { da
 
         {/* Header */}
         <View style={s.headRow}>
-          <Image src={logoSrc} style={{ width: 86, height: 58 }} />
-          <View style={s.info}>
-            <Icon name="globe" size={13} color={C.gray} sw={1.6} />
-            <Text style={s.infoTxt}>loyaltycard.info</Text>
-          </View>
+          <Brand />
         </View>
 
         <View style={s.titleRow}>
