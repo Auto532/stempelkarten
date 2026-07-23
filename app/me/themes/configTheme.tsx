@@ -40,6 +40,10 @@ export interface ShopDesignConfig {
   stampIcon?: string;
   // Stempel-Form: circle/square/diamond/hex (fehlend = circle)
   stampShape?: string;
+  // Stempel-Umrandung: eigene Farbe (Hex, fehlend = Akzentfarbe)
+  stampBorderColor?: string;
+  // Stempel-Umrandung: "thin" (fein, Default) oder "bold" (fett)
+  stampBorderStyle?: "thin" | "bold";
   // Altfeld, wird nicht mehr gerendert (Glow/Papier abgeschafft)
   cardStyle?: string;
   // Ecken-Verzierung in Akzentfarbe: "none" | "thin" | "double" | "swirl"
@@ -172,6 +176,11 @@ function makeCard(cfg: ShopDesignConfig) {
   const Icon = getStampIcon(cfg.stampIcon);
   const shape = cfg.stampShape ?? "circle";
   const qrStyle = cfg.qrStyle ?? "button";
+  // Stempel-Umrandung: eigene Farbe (sonst Akzent) + Stärke. "bold" = dickere
+  // Linie mit höherer Deckkraft, damit die leeren Stempel deutlicher wirken.
+  const BC = cfg.stampBorderColor ?? A;
+  const bold = cfg.stampBorderStyle === "bold";
+  const bw = bold ? "2px" : "1px";
 
   return function ConfigLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
     const activeTiers = rewardTiers?.some(t => t.enabled)
@@ -251,9 +260,8 @@ function makeCard(cfg: ShopDesignConfig) {
                     transition={{ duration: 0.5 }}
                     className="relative w-8 h-8 flex items-center justify-center">
                     <div className="absolute inset-0"
-                      style={{ clipPath: clip, background: filled ? A : isTier ? alpha(A, "55") : alpha(A, "30") }} />
-                    {!filled && <div className="absolute inset-[1.5px]"
-                      style={{ clipPath: clip, background: C }} />}
+                      style={{ clipPath: clip, background: filled ? A : isTier ? alpha(BC, bold ? "80" : "55") : alpha(BC, bold ? "60" : "30") }} />
+                    {!filled && <div className="absolute" style={{ inset: bold ? "2.5px" : "1.5px", clipPath: clip, background: C }} />}
                     <div className="relative">{inner}</div>
                   </motion.div>
                 );
@@ -268,9 +276,9 @@ function makeCard(cfg: ShopDesignConfig) {
                       style={{
                         transform: "rotate(45deg)", borderRadius: 6,
                         ...(filled
-                          ? { background: A, border: `1px solid ${alpha(A, "60")}` }
-                          : isTier ? { border: `1px solid ${alpha(A, "40")}`, background: C }
-                          : { border: `1px solid ${alpha(A, "26")}`, background: alpha(C, "88") }),
+                          ? { background: A, border: `${bw} solid ${alpha(BC, "60")}` }
+                          : isTier ? { border: `${bw} solid ${alpha(BC, bold ? "70" : "40")}`, background: C }
+                          : { border: `${bw} solid ${alpha(BC, bold ? "55" : "26")}`, background: alpha(C, "88") }),
                       }} />
                     <div className="relative">{inner}</div>
                   </motion.div>
@@ -284,9 +292,9 @@ function makeCard(cfg: ShopDesignConfig) {
                   style={{
                     borderRadius: shape === "square" ? 9 : 9999,
                     ...(filled
-                      ? { background: A, border: `1px solid ${alpha(A, "60")}` }
-                      : isTier ? { border: `1px solid ${alpha(A, "40")}`, background: C }
-                      : { border: `1px solid ${alpha(A, "22")}`, background: alpha(C, "88") }),
+                      ? { background: A, border: `${bw} solid ${alpha(BC, "60")}` }
+                      : isTier ? { border: `${bw} solid ${alpha(BC, bold ? "70" : "40")}`, background: C }
+                      : { border: `${bw} solid ${alpha(BC, bold ? "55" : "22")}`, background: alpha(C, "88") }),
                   }}>
                   {inner}
                 </motion.div>

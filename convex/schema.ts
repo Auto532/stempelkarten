@@ -77,6 +77,10 @@ export default defineSchema({
       stampIcon: v.optional(v.string()),
       // Stempel-Form: circle/square/diamond/hex (fehlend = circle)
       stampShape: v.optional(v.string()),
+      // Stempel-Umrandung: eigene Farbe (Hex, fehlend = Akzentfarbe)
+      stampBorderColor: v.optional(v.string()),
+      // Stempel-Umrandung: Stärke thin (fein, Default) / bold (fett)
+      stampBorderStyle: v.optional(v.union(v.literal("thin"), v.literal("bold"))),
       cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"), v.literal("paper"))),
       // Ecken-Verzierung in Akzentfarbe: none/thin/double/swirl
       // (Altwerte "lines"/"full" werden vom Renderer gemappt)

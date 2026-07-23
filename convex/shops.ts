@@ -258,6 +258,8 @@ export const adminSetDesignConfig = mutation({
       qrStyle:   v.optional(v.union(v.literal("button"), v.literal("icon"), v.literal("both"))),
       stampIcon: v.optional(v.string()),
       stampShape: v.optional(v.string()),
+      stampBorderColor: v.optional(v.string()),
+      stampBorderStyle: v.optional(v.union(v.literal("thin"), v.literal("bold"))),
       cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"), v.literal("paper"))),
       decor:     v.optional(v.string()),
     })),

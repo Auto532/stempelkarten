@@ -1392,6 +1392,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   // Stempel & Stil
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
   const [stampShape, setStampShape] = useState(dc?.stampShape ?? "circle");
+  // Stempel-Umrandung: eigene Farbe (leer = Akzentfarbe) + Stärke
+  const [stampBorderColor, setStampBorderColor] = useState<string>(dc?.stampBorderColor ?? "");
+  const [stampBorderStyle, setStampBorderStyle] = useState<"thin" | "bold">(dc?.stampBorderStyle ?? "thin");
   const [decor, setDecor]         = useState<"none" | "thin" | "double" | "swirl" | "bracket" | "dots" | "ornate">(normalizeDecor(dc?.decor));
   // Farbpalette: gewählter Grundton + Hell/Dunkel für das abgeleitete Schema
   const [paletteSel, setPaletteSel]   = useState<string | null>(null);
@@ -1440,8 +1443,9 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
   const previewCfg: ShopDesignConfig = useMemo(() => ({
     accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
     bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, logoShowName, logoWidth, tagline: tagline.trim() || undefined,
-    qrStyle, stampIcon: icon, stampShape, decor,
-  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, logoShowName, logoWidth, tagline, qrStyle, icon, stampShape, decor]);
+    qrStyle, stampIcon: icon, stampShape,
+    stampBorderColor: stampBorderColor || undefined, stampBorderStyle, decor,
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, logoShowName, logoWidth, tagline, qrStyle, icon, stampShape, stampBorderColor, stampBorderStyle, decor]);
   const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
 
   const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
@@ -1459,7 +1463,8 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
           accent, text, textBody, cardBg, bgType,
           bgColor, bgColor2, bgImageId, logoId, logoShowName, logoWidth,
           tagline: tagline.trim() || undefined,
-          qrStyle, stampIcon: icon, stampShape, decor,
+          qrStyle, stampIcon: icon, stampShape,
+          stampBorderColor: stampBorderColor || undefined, stampBorderStyle, decor,
         },
       });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
@@ -1689,6 +1694,39 @@ function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: 
                 </button>
               ))}
             </div>
+          </Section>
+
+          {/* Stempel-Umrandung: Stärke + eigene Farbe */}
+          <Section title="Stempel-Umrandung">
+            <div className="grid grid-cols-2 gap-1.5 mb-2">
+              {([
+                { id: "thin", label: "Fein" },
+                { id: "bold", label: "Fett" },
+              ] as const).map(s => (
+                <button key={s.id} type="button" onClick={() => setStampBorderStyle(s.id)}
+                  className="py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                  style={stampBorderStyle === s.id ? { background: "#fbbf24", color: "#18181b" } : { background: "#27272a", color: "#71717a" }}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button type="button" onClick={() => setStampBorderColor("")}
+                className="py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                style={!stampBorderColor ? { background: "#fbbf24", color: "#18181b" } : { background: "#27272a", color: "#71717a" }}>
+                Akzentfarbe
+              </button>
+              <button type="button" onClick={() => setStampBorderColor(c => c || accent)}
+                className="py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                style={stampBorderColor ? { background: "#fbbf24", color: "#18181b" } : { background: "#27272a", color: "#71717a" }}>
+                Eigene Farbe
+              </button>
+            </div>
+            {stampBorderColor && (
+              <div className="mt-1.5">
+                <ColorField label="Umrandungsfarbe" value={stampBorderColor} onChange={setStampBorderColor} />
+              </div>
+            )}
           </Section>
 
           {/* Ecken-Verzierung in Akzentfarbe */}
