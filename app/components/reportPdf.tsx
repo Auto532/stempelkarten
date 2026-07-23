@@ -196,9 +196,10 @@ const s = StyleSheet.create({
 // als echter Text daneben, vertikal mittig. Wird in allen PDF-Köpfen genutzt.
 const MARK_RATIO = 515 / 473; // Seitenverhältnis von logo-mark.png
 export function Brand({ markSrc = "/logo-mark.png", height = 40 }: { markSrc?: string; height?: number }) {
+  // Zeichen links verankert, Schriftzug über die volle Breite mittig.
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 18 }}>
-      <Image src={markSrc} style={{ width: height * MARK_RATIO, height }} />
+    <View style={{ position: "relative", width: "100%", height, justifyContent: "center", alignItems: "center" }}>
+      <Image src={markSrc} style={{ position: "absolute", left: 0, top: 0, width: height * MARK_RATIO, height }} />
       <Text style={{ fontSize: height * 0.56, fontFamily: "Helvetica-Bold" }}>
         <Text style={{ color: C.white }}>Loyalty</Text>
         <Text style={{ color: C.gold }}>card</Text>
