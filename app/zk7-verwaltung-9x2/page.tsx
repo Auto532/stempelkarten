@@ -4426,22 +4426,30 @@ function PartnerTab({ adminSecret }: { adminSecret: string }) {
                 {pending.length > 0 && (
                   <div className="space-y-1.5">
                     <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Ausstehend (nach 14 Tagen bestätigen)</p>
-                    {pending.map((c: any) => (
+                    {pending.map((c: any) => {
+                      // 14 Tage Widerrufsfrist ab Zahlungsbestätigung (triggeredAt)
+                      const payableAt = c.triggeredAt + 14 * 24 * 60 * 60 * 1000;
+                      const payable = Date.now() >= payableAt;
+                      return (
                       <div key={c._id} className="flex items-center gap-2 rounded-lg px-3 py-2"
                         style={{ background: "rgba(249,115,22,.07)", border: "1px solid rgba(249,115,22,.2)" }}>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-zinc-200">€{c.amount.toFixed(2)}</p>
                           <p className="text-[10px] text-zinc-500">
-                            {new Date(c.triggeredAt).toLocaleDateString("de-DE")}
+                            {payable
+                              ? new Date(c.triggeredAt).toLocaleDateString("de-DE")
+                              : `auszahlbar ab ${new Date(payableAt).toLocaleDateString("de-DE")}`}
                           </p>
                         </div>
-                        <button onClick={() => handleConfirmCommission(c._id)} disabled={confirming === c._id}
+                        <button onClick={() => handleConfirmCommission(c._id)} disabled={confirming === c._id || !payable}
+                          title={!payable ? "Erst nach 14 Tagen Widerrufsfrist auszahlbar" : undefined}
                           className="text-xs px-2.5 py-1 rounded-lg font-semibold text-green-400 disabled:opacity-40 transition-opacity"
                           style={{ background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.2)" }}>
                           {confirming === c._id ? "..." : "Bestätigen"}
                         </button>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
