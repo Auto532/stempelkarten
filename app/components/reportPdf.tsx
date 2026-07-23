@@ -129,11 +129,11 @@ const s = StyleSheet.create({
   page: { backgroundColor: C.bg, padding: 18, fontFamily: "Helvetica", color: C.white },
   frame: { flex: 1, borderWidth: 1, borderColor: C.gold, borderRadius: 10, padding: 18 },
   // Header
-  headRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  headRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   brand: { flexDirection: "row", alignItems: "center", gap: 7 },
   brandTxt: { fontSize: 17, fontFamily: "Helvetica-Bold" },
-  info: { flexDirection: "row", alignItems: "center", gap: 4 },
-  infoTxt: { fontSize: 9, color: C.gray },
+  info: { flexDirection: "row", alignItems: "center", gap: 5 },
+  infoTxt: { fontSize: 11, color: C.gray },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 14 },
   titleBar: { width: 3, height: 15, backgroundColor: C.gold, borderRadius: 2 },
   title: { fontSize: 12.5, fontFamily: "Helvetica-Bold", letterSpacing: 0.4 },
@@ -197,9 +197,9 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
         <View style={s.frame}>
           {/* Header */}
           <View style={s.headRow}>
-            <Image src={logoSrc} style={{ width: 62, height: 46 }} />
+            <Image src={logoSrc} style={{ width: 86, height: 58 }} />
             <View style={s.info}>
-              <Icon name="globe" size={11} color={C.gray} sw={1.6} />
+              <Icon name="globe" size={13} color={C.gray} sw={1.6} />
               <Text style={s.infoTxt}>loyaltycard.info</Text>
             </View>
           </View>

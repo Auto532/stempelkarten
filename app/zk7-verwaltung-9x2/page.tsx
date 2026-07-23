@@ -3825,6 +3825,58 @@ function PModalRow({ label, value, mono }: { label: string; value?: string; mono
   );
 }
 
+// Provisionsabrechnung (Gutschrift) als PDF im hellen Look erzeugen.
+async function exportCommissionStatementPdf(
+  adminSecret: string,
+  affiliateId: string,
+  company: Doc<"companyProfile"> | null | undefined,
+) {
+  const stmt = await affiliateQuery("admin:getPartnerCommissionStatement", { adminSecret, affiliateId }) as {
+    partner: Record<string, unknown> & { referralCode: string };
+    rows: { date: number; shopName: string; planType: "annual" | "monthly"; paymentNumber: number; baseAmount: number; rate: number; amount: number; status: string }[];
+    totals: { count: number; pending: number; confirmed: number; paid: number; canceled: number; payableTotal: number };
+  } | null;
+  if (!stmt) throw new Error("Keine Daten für diesen Partner");
+
+  const [{ pdf }, { CommissionStatement }] = await Promise.all([
+    import("@react-pdf/renderer"),
+    import("@/app/components/commissionStatementPdf"),
+  ]);
+
+  const statusLabel = (s: string) =>
+    s === "paid" ? "ausgezahlt" : s === "confirmed" ? "bestätigt" : s === "pending" ? "offen" : s;
+  const rows = stmt.rows
+    .filter(r => r.status !== "canceled")
+    .map(r => ({
+      date: new Date(r.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }),
+      shopName: r.shopName,
+      model: `${r.planType === "annual" ? "Jahresabo" : "Monatsabo"} #${r.paymentNumber}`,
+      baseAmount: r.baseAmount, rate: r.rate, amount: r.amount, statusLabel: statusLabel(r.status),
+    }));
+
+  const now = new Date();
+  const data = {
+    company: company ?? null,
+    partner: stmt.partner as never,
+    statementNo: `PA-${now.getFullYear()}-${stmt.partner.referralCode}`,
+    dateStr: now.toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" }),
+    periodLabel: "Gesamter Zeitraum",
+    rows,
+    totals: stmt.totals,
+  };
+
+  const blob = await pdf(<CommissionStatement data={data} />).toBlob();
+  const file = new File([blob], `provisionsabrechnung-${stmt.partner.referralCode}.pdf`, { type: "application/pdf" });
+  const nav = navigator as Navigator & { share?: (d: object) => Promise<void> };
+  if (typeof navigator !== "undefined" && nav.share) {
+    try { await nav.share({ files: [file], title: "Provisionsabrechnung" }); return; } catch { /* Download-Fallback */ }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = file.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
 function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
   adminSecret: string; affiliateId: string; onClose: () => void; onChanged: () => void;
 }) {
@@ -3832,6 +3884,15 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy]       = useState(false);
   const [err, setErr]         = useState("");
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const company = useQuery(api.company.getCompanyProfile, { adminSecret });
+
+  const handleStatement = async () => {
+    setPdfBusy(true); setErr("");
+    try { await exportCommissionStatementPdf(adminSecret, affiliateId, company); }
+    catch (e: any) { setErr(e?.message ?? "Fehler beim Erstellen"); }
+    finally { setPdfBusy(false); }
+  };
 
   const load = async () => {
     setLoading(true); setErr("");
@@ -3868,7 +3929,15 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
         onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-4 py-3 flex items-center justify-between z-10">
           <p className="text-sm font-semibold text-zinc-100">Partner-Details</p>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 text-lg leading-none">✕</button>
+          <div className="flex items-center gap-2">
+            {a && (data?.commissions?.count ?? 0) > 0 && (
+              <button onClick={handleStatement} disabled={pdfBusy}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-400 text-xs font-semibold hover:bg-amber-400/20 disabled:opacity-40 transition-colors">
+                <FileText size={13} /> {pdfBusy ? "Erstelle…" : "Abrechnung"}
+              </button>
+            )}
+            <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 text-lg leading-none">✕</button>
+          </div>
         </div>
 
         {loading ? (
