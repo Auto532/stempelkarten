@@ -588,6 +588,7 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
   const [savingLegal, setSavingLegal]             = useState(false);
   const [savedLegal, setSavedLegal]               = useState(false);
   const [legalOpen, setLegalOpen]                 = useState(false); // Rechtstexte standardmäßig eingeklappt
+  const [themesOpen, setThemesOpen]               = useState(false); // Signature-Themes standardmäßig eingeklappt
 
   // Toggles
   const [togglingLeads, setTogglingLeads]           = useState(false);
@@ -808,10 +809,18 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
         </div>
       </div>
 
-      {/* Signature-Themes */}
+      {/* Signature-Themes (einklappbar) */}
       {shop.customDesignEnabled && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
-          <p className="text-sm font-semibold text-zinc-200">Signature-Themes</p>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+          <button type="button" onClick={() => setThemesOpen(o => !o)}
+            className="w-full flex items-center gap-2 px-4 py-3 text-left">
+            <Palette size={14} className={shop.theme ? "text-amber-400" : "text-zinc-500"} />
+            <span className="text-sm font-semibold text-zinc-200">Signature-Themes</span>
+            {shop.theme && <span className="text-[10px] text-amber-400">aktiv</span>}
+            <ChevronRight size={14} className={`ml-auto text-zinc-600 transition-transform ${themesOpen ? "rotate-90" : ""}`} />
+          </button>
+          {themesOpen && (
+          <div className="px-4 pb-4 pt-3 border-t border-zinc-800 space-y-3">
           <div className="flex gap-1.5 flex-wrap">
             {THEME_LIST.map(({ id, label, color }) => (
               <button key={id} onClick={() => handleSetTheme(id, color)} disabled={!!settingTheme}
@@ -830,6 +839,8 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
               </button>
             )}
           </div>
+          </div>
+          )}
         </div>
       )}
 
@@ -889,6 +900,7 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
 function ShopVertragTab({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const [contract, setContract] = useState<any | null | undefined>(undefined);
   const [copied, setCopied]     = useState(false);
+  const [histOpen, setHistOpen] = useState(false); // Zahlungshistorie standardmäßig zu
 
   useEffect(() => {
     let cancelled = false;
@@ -1001,15 +1013,18 @@ function ShopVertragTab({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret
         </div>
       </div>
 
-      {/* Zahlungshistorie */}
+      {/* Zahlungshistorie (einklappbar) */}
       {(contract.payments?.length ?? 0) > 0 && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+          <button type="button" onClick={() => setHistOpen(o => !o)}
+            className="w-full flex items-center gap-2 px-4 py-3 text-left">
             <TrendingUp size={14} className="text-zinc-500" />
             <span className="text-sm font-medium text-zinc-200">Zahlungshistorie</span>
             <span className="ml-auto text-xs text-zinc-600">{contract.payments.length}</span>
-          </div>
-          <div className="divide-y divide-zinc-800/50">
+            <ChevronRight size={14} className={`text-zinc-600 transition-transform ${histOpen ? "rotate-90" : ""}`} />
+          </button>
+          {histOpen && (
+          <div className="divide-y divide-zinc-800/50 border-t border-zinc-800">
             {[...contract.payments].reverse().map((p: any) => (
               <div key={p.paymentNumber} className="flex items-center justify-between px-4 py-2.5">
                 <div className="flex items-center gap-2">
@@ -1025,6 +1040,7 @@ function ShopVertragTab({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret
               </div>
             ))}
           </div>
+          )}
         </div>
       )}
 
