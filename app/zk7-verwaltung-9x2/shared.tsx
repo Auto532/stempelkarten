@@ -182,3 +182,18 @@ export const PERIOD_LABELS: Record<Period, string> = {
   "7d": "Letzte 7 Tage", "30d": "Letzter Monat", "90d": "Letzte 3 Monate", "365d": "Letztes Jahr", "all": "Gesamt",
 };
 
+
+// Globales Level-System (spiegelt me/page.tsx)
+export const GLOBAL_LEVELS = [
+  { min: 1,  max: 1,         label: "Neuling"   },
+  { min: 2,  max: 2,         label: "Entdecker" },
+  { min: 3,  max: 4,         label: "Stammgast" },
+  { min: 5,  max: 7,         label: "Loyaler"   },
+  { min: 8,  max: 12,        label: "VIP"       },
+  { min: 13, max: Infinity,  label: "Legende"   },
+];
+
+export function globalLevelIdx(shopCount: number): number {
+  const idx = GLOBAL_LEVELS.findIndex(l => shopCount <= l.max);
+  return idx === -1 ? GLOBAL_LEVELS.length - 1 : idx;
+}
