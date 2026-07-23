@@ -351,8 +351,8 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
               <View style={{ flex: 1 }}>
                 <Text style={s.footLabel}>FRAGEN ODER UNKLARHEITEN?</Text>
                 <Text style={s.contactText}>
-                  Sollten Sie Fragen haben oder etwas nicht verstehen, schreiben oder rufen Sie uns gerne an
-                  {" — "}wir helfen Ihnen jederzeit weiter.
+                  Sollten Sie Fragen haben oder etwas nicht verstehen, schreiben oder rufen Sie uns gerne an.
+                  Wir helfen Ihnen jederzeit weiter.
                 </Text>
                 {data.company.companyName ? <Text style={s.contactName}>{data.company.companyName}</Text> : null}
                 {[data.company.street, [data.company.zip, data.company.city].filter(Boolean).join(" ")].filter(Boolean).length > 0 && (

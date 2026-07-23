@@ -91,6 +91,10 @@ const s = StyleSheet.create({
   note: { fontSize: 7.5, color: C.gray, marginTop: 10, lineHeight: 1.5 },
   // Bank
   bankCard: { backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11, marginTop: 12, flexDirection: "row", alignItems: "center", gap: 9 },
+  // Kontakt (Rückfragen des Partners)
+  contactCard: { backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11, marginTop: 10, flexDirection: "row", alignItems: "flex-start", gap: 9 },
+  contactText: { fontSize: 8, color: C.gray, marginTop: 3, marginBottom: 3, lineHeight: 1.5 },
+  contactName: { fontSize: 9, fontFamily: "Helvetica-Bold", color: C.white, marginTop: 2 },
   // Footer
   footBar: { position: "absolute", bottom: 26, left: 30, right: 30, borderTopWidth: 1, borderTopColor: C.gold, paddingTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   footBarTxt: { fontSize: 8, color: C.gray },
@@ -236,6 +240,28 @@ export function CommissionStatement({ data, logoSrc = "/logo-dunkel.png" }: { da
             ? "Gutschrift mit USt-Ausweis: Die Provisionsbeträge verstehen sich netto zzgl. 19% Umsatzsteuer. Diese Abrechnung gilt als Gutschrift i.S.d. §14 Abs. 2 UStG; ein Widerspruch ist innerhalb der gesetzlichen Frist möglich."
             : "Kein Ausweis von Umsatzsteuer (Empfänger ohne USt-Pflicht / Kleinunternehmer gem. §19 UStG). Diese Abrechnung gilt als Gutschrift über die vereinbarte Vermittlungsprovision."}
         </Text>
+
+        {/* Kontakt bei Rückfragen zur Abrechnung */}
+        {co && (co.email || co.phone) && (
+          <View style={s.contactCard}>
+            <View style={s.sectionIcon}><Icon name="info" size={11} color={C.ink} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.partyLabel}>FRAGEN ODER UNKLARHEITEN?</Text>
+              <Text style={s.contactText}>
+                Sollten Sie Fragen zu dieser Abrechnung haben, schreiben oder rufen Sie uns gerne an.
+                Wir helfen Ihnen jederzeit weiter.
+              </Text>
+              {co.companyName ? <Text style={s.contactName}>{co.companyName}</Text> : null}
+              <Text style={s.partyLine}>
+                {[
+                  co.email ? `E-Mail: ${co.email}` : null,
+                  co.phone ? `Telefon: ${co.phone}` : null,
+                  co.website || null,
+                ].filter(Boolean).join("      ·      ")}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Footer */}
         <View style={s.footBar} fixed>

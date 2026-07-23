@@ -3414,7 +3414,7 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
           <Sliders size={14} className="text-zinc-400 shrink-0" />
           <p className="text-sm font-medium text-zinc-200">Gerät zurücksetzen</p>
         </div>
-        <p className="text-[11px] text-zinc-500">Löscht alle gespeicherten Tokens auf <span className="text-zinc-400 font-medium">diesem Gerät</span> (QR-Token, Admin-PIN, Shop-Login). Nur lokal — keine Daten in der Datenbank werden gelöscht.</p>
+        <p className="text-[11px] text-zinc-500">Löscht alle gespeicherten Tokens auf <span className="text-zinc-400 font-medium">diesem Gerät</span> (QR-Token, Admin-PIN, Shop-Login). Nur lokal, keine Daten in der Datenbank werden gelöscht.</p>
         <button onClick={() => {
           ["qrToken","adminTestQrToken","adminToken","adminShopSlug","adminRole","adminPinLS","meAccentColor","meBgPreset","meStarsOn"].forEach(k => localStorage.removeItem(k));
           sessionStorage.removeItem("adminPin");
