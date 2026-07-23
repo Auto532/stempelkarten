@@ -357,11 +357,6 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/
                   Wir helfen Ihnen jederzeit weiter.
                 </Text>
                 {data.company.companyName ? <Text style={s.contactName}>{data.company.companyName}</Text> : null}
-                {[data.company.street, [data.company.zip, data.company.city].filter(Boolean).join(" ")].filter(Boolean).length > 0 && (
-                  <Text style={s.contactLine}>
-                    {[data.company.street, [data.company.zip, data.company.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")}
-                  </Text>
-                )}
                 <Text style={s.contactLine}>
                   {[
                     data.company.email ? `E-Mail: ${data.company.email}` : null,

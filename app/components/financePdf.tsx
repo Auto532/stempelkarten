@@ -44,6 +44,7 @@ const s = StyleSheet.create({
   frame: { position: "absolute", top: 16, left: 16, right: 16, bottom: 16, borderWidth: 1, borderColor: C.gold, borderRadius: 10 },
   // Header (identisch zum anderen PDF)
   headRow: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
+  headerRule: { height: 1, backgroundColor: C.gold, opacity: 0.85, marginTop: 10, marginBottom: 2 },
   info: { flexDirection: "row", alignItems: "center", gap: 5 },
   infoTxt: { fontSize: 11, color: C.gray },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 14 },
@@ -137,6 +138,7 @@ export function FinanceReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/
         <View style={s.headRow}>
           <Brand markSrc={markSrc} />
         </View>
+        <View style={s.headerRule} />
 
         <View style={s.titleRow}>
           <View style={s.titleBar} />
@@ -242,7 +244,7 @@ export function FinanceReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/
         )}
 
         {/* ── Aussteller-Infoblock (wie footInfo im anderen PDF) ── */}
-        <View style={s.footInfo}>
+        <View style={s.footInfo} wrap={false}>
           {addrLines ? (
             <View style={s.footCol}>
               <Icon name="building" size={16} sw={1.7} />

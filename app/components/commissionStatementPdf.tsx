@@ -152,7 +152,7 @@ export function CommissionStatement({ data, logoSrc = "/logo-dunkel.png", markSr
             <Text style={s.partyName}>{co?.companyName || "Firmenprofil im Admin hinterlegen"}</Text>
             <Text style={s.partyLine}>
               {partyAddr(co?.companyName ?? "", null, [
-                co?.ownerName, co?.street, [co?.zip, co?.city].filter(Boolean).join(" ") || null, co?.country,
+                co?.ownerName,
                 co?.taxId ? `Steuernr.: ${co.taxId}` : null,
                 co?.vatId ? `USt-IdNr.: ${co.vatId}` : null,
               ])}
