@@ -42,6 +42,9 @@ export type ReportData = {
   // Anbieter-Kontakt für die Fußzeile (Rückfragen des Kunden), aus dem Firmenprofil
   company?: {
     companyName?: string | null;
+    street?: string | null;
+    zip?: string | null;
+    city?: string | null;
     email?: string | null;
     phone?: string | null;
     website?: string | null;
@@ -158,6 +161,7 @@ const s = StyleSheet.create({
   sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 13, marginBottom: 6 },
   sectionIcon: { width: 18, height: 18, borderRadius: 4, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" },
   sectionTitle: { fontSize: 11, fontFamily: "Helvetica-Bold", color: C.gold, letterSpacing: 0.4 },
+  sectionSub: { fontSize: 8, color: C.gray, marginTop: -2, marginBottom: 6 },
   // Table
   th: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: C.cardBd, paddingBottom: 5 },
   thTxt: { fontSize: 8, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 0.3 },
@@ -182,6 +186,7 @@ const s = StyleSheet.create({
   infoText: { fontSize: 8, color: C.gray, marginTop: 3, lineHeight: 1.5 },
   // Kontakt-Karte
   contactCard: { flexDirection: "row", gap: 9, alignItems: "center", backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11, marginTop: 8 },
+  contactText: { fontSize: 8, color: C.gray, marginTop: 3, marginBottom: 4, lineHeight: 1.5 },
   contactName: { fontSize: 9, fontFamily: "Helvetica-Bold", color: C.white },
   contactLine: { fontSize: 8, color: C.gray, marginTop: 2 },
   // Footer
@@ -253,10 +258,11 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
             <>
               <View style={s.sectionHead}>
                 <View style={s.sectionIcon}><Icon name="gift" size={11} color={C.ink} /></View>
-                <Text style={s.sectionTitle}>BELOHNUNGEN</Text>
+                <Text style={s.sectionTitle}>EINGELÖSTE BELOHNUNGEN</Text>
               </View>
+              <Text style={s.sectionSub}>Diese Prämien haben Ihre Kunden im Zeitraum eingelöst:</Text>
               <View style={s.th}>
-                <Text style={[s.thTxt, { flex: 1 }]}>BELOHNUNG</Text>
+                <Text style={[s.thTxt, { flex: 1 }]}>PRÄMIE</Text>
                 <Text style={[s.thTxt, { width: 70, textAlign: "right" }]}>ANZAHL</Text>
                 {data.rewards.some(r => r.value) && <Text style={[s.thTxt, { width: 70, textAlign: "right" }]}>WERT</Text>}
               </View>
@@ -338,15 +344,28 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: Re
             </View>
           </View>
 
-          {/* Kontakt-Karte (Anbieter, für Rückfragen) */}
+          {/* Kontakt (Anbieter, für Rückfragen) — ganz unten, ausführlich */}
           {data.company && (data.company.email || data.company.phone) && (
             <View style={s.contactCard}>
               <View style={s.infoBadge}><Icon name="info" size={11} color={C.ink} /></View>
               <View style={{ flex: 1 }}>
-                <Text style={s.footLabel}>FRAGEN? WIR HELFEN GERN</Text>
+                <Text style={s.footLabel}>FRAGEN ODER UNKLARHEITEN?</Text>
+                <Text style={s.contactText}>
+                  Sollten Sie Fragen haben oder etwas nicht verstehen, schreiben oder rufen Sie uns gerne an
+                  {" — "}wir helfen Ihnen jederzeit weiter.
+                </Text>
                 {data.company.companyName ? <Text style={s.contactName}>{data.company.companyName}</Text> : null}
+                {[data.company.street, [data.company.zip, data.company.city].filter(Boolean).join(" ")].filter(Boolean).length > 0 && (
+                  <Text style={s.contactLine}>
+                    {[data.company.street, [data.company.zip, data.company.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")}
+                  </Text>
+                )}
                 <Text style={s.contactLine}>
-                  {[data.company.email, data.company.phone].filter(Boolean).join("      ·      ")}
+                  {[
+                    data.company.email ? `E-Mail: ${data.company.email}` : null,
+                    data.company.phone ? `Telefon: ${data.company.phone}` : null,
+                    data.company.website || null,
+                  ].filter(Boolean).join("      ·      ")}
                 </Text>
               </View>
             </View>
