@@ -1,43 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
-import { useMutation, useQuery, useConvex } from "convex/react";
+import { useState, useEffect, useRef } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Plus, Store, Users, Stamp, Award, ChevronRight, Link, X, Check,
-  QrCode, Eye, EyeOff, BarChart2, Settings, AlertTriangle, Trash2,
-  Shield, TrendingUp, ArrowLeft, Printer, Palette, FileText, Trophy,
-  Sliders, LayoutDashboard, LayoutGrid, User, Gift, MessageSquare, Clock, Search, Building2, type LucideIcon,
-} from "lucide-react";
-import { STAMP_ICONS } from "@/app/me/components";
-import { THEME_LIST } from "@/app/me/themes/registry";
+import { BarChart2, Store, TrendingUp, Users, MessageSquare, Settings, Shield, type LucideIcon } from "lucide-react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import QRCode from "qrcode";
-import { QRImage } from "@/app/components/QRImage";
 import { errMsg } from "@/app/lib/errMsg";
-import {
-  affiliateQuery, affiliateMutation, AFFILIATE_URL, AFFILIATE_APP_URL,
-  type AffiliateLead, type AffiliatePartner, type AffiliateDashboard,
-} from "./lib/affiliate";
-import { DesignEditor } from "./DesignEditor";
+import { affiliateQuery } from "./lib/affiliate";
 import { PartnerTab } from "./PartnerTab";
 import { SupportTab } from "./SupportTab";
-import { AnalyticsTab, PayLaterCard } from "./AnalyticsTab";
+import { AnalyticsTab } from "./AnalyticsTab";
 import { SettingsTab } from "./SettingsTab";
-import { ShopWorkspace, CreateShopForm, ShopListItem } from "./shop";
+import { ShopWorkspace } from "./shop";
 import { OverviewTab, ShopsTab } from "./overview";
-import {
-  usePayStatus, PayBadge, ToggleSwitch, PeriodSelector, MiniBarChart, GrowthCard,
-  periodToSince, periodToPrevSince, groupPayments, PERIOD_LABELS,
-  type PayStatus, type Tier, type Period, type EarningsSummary, type PaymentRow,
-} from "./shared";
-
-
-// ─── Utilities ────────────────────────────────────────────────────────────────
-
-// ─── PeriodSelector ───────────────────────────────────────────────────────────
-
 
 type Tab = "overview" | "shops" | "analytics" | "settings" | "partner" | "support";
 
