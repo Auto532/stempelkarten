@@ -587,6 +587,7 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
   const [datenschutzDraft, setDatenschutzDraft]   = useState(shop.datenschutzText ?? "");
   const [savingLegal, setSavingLegal]             = useState(false);
   const [savedLegal, setSavedLegal]               = useState(false);
+  const [legalOpen, setLegalOpen]                 = useState(false); // Rechtstexte standardmäßig eingeklappt
 
   // Toggles
   const [togglingLeads, setTogglingLeads]           = useState(false);
@@ -835,15 +836,18 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
       {/* Design-Editor (Config-Design) */}
       {shop.customDesignEnabled && <DesignEditor shop={shop} adminSecret={adminSecret} />}
 
-      {/* Rechtliche Texte */}
+      {/* Rechtliche Texte (einklappbar) */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+        <button type="button" onClick={() => setLegalOpen(o => !o)}
+          className="w-full flex items-center gap-2 px-4 py-3 text-left">
           <FileText size={14} className={shop.impressumText ? "text-amber-400" : "text-zinc-500"} />
           <span className="text-sm font-semibold text-zinc-200">Rechtliche Texte</span>
-          {shop.impressumText && shop.datenschutzText && <span className="ml-auto text-[10px] text-green-400">✓ vollständig</span>}
-          {shop.impressumText && !shop.datenschutzText && <span className="ml-auto text-[10px] text-amber-400">! Datenschutz fehlt</span>}
-        </div>
-        <div className="p-4 space-y-3">
+          {shop.impressumText && shop.datenschutzText && <span className="text-[10px] text-green-400">✓ vollständig</span>}
+          {shop.impressumText && !shop.datenschutzText && <span className="text-[10px] text-amber-400">! Datenschutz fehlt</span>}
+          <ChevronRight size={14} className={`ml-auto text-zinc-600 transition-transform ${legalOpen ? "rotate-90" : ""}`} />
+        </button>
+        {legalOpen && (
+        <div className="p-4 pt-3 space-y-3 border-t border-zinc-800">
           {[
             { label: "Impressum", value: impressumDraft, onChange: setImpressumDraft, rows: 6, placeholder: "Angaben gemäß § 5 TMG\n\nMax Mustermann\nMusterstraße 1\n12345 Musterstadt" },
             { label: "AGB", value: agbDraft, onChange: setAgbDraft, rows: 5, placeholder: "Allgemeine Geschäftsbedingungen..." },
@@ -861,6 +865,7 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
             {savingLegal ? "Speichert..." : savedLegal ? <><Check size={15} /> Gespeichert</> : "Speichern"}
           </button>
         </div>
+        )}
       </div>
 
       {/* Gefahrenzone: Shop löschen */}
