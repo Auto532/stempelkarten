@@ -51,7 +51,7 @@ const s = StyleSheet.create({
   title: { fontSize: 12.5, fontFamily: "Helvetica-Bold", letterSpacing: 0.4 },
   subtitle: { fontSize: 8.5, color: C.gray, marginTop: 3 },
   shopName: { fontSize: 8.5, color: C.gold, fontFamily: "Helvetica-Bold" },
-  kleinBadge: { alignSelf: "flex-start", marginTop: 7, fontSize: 7.5, color: C.gold, backgroundColor: "#2c2712", borderWidth: 1, borderColor: C.goldDim, borderRadius: 5, paddingVertical: 3, paddingHorizontal: 7 },
+  kleinBadge: { alignSelf: "flex-start", marginTop: 7, fontSize: 7.5, color: C.goldDim, backgroundColor: "#f7edcf", borderWidth: 1, borderColor: C.goldDim, borderRadius: 5, paddingVertical: 3, paddingHorizontal: 7 },
   // Stat-Karten
   statRow: { flexDirection: "row", gap: 8, marginTop: 13 },
   statCard: { flex: 1, backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBd, borderRadius: 8, padding: 11 },
@@ -80,8 +80,8 @@ const s = StyleSheet.create({
   trSum: { flexDirection: "row", borderTopWidth: 1, borderTopColor: C.goldDim, paddingTop: 5, marginTop: 1 },
   td: { fontSize: 8.5, color: C.gray },
   tdName: { fontSize: 8.5, color: C.white },
-  tdGreen: { fontSize: 8.5, color: "#5fce86", textAlign: "right" },
-  tdRed: { fontSize: 8.5, color: "#d98a8a", textAlign: "right" },
+  tdGreen: { fontSize: 8.5, color: C.green, textAlign: "right" },
+  tdRed: { fontSize: 8.5, color: C.red, textAlign: "right" },
   tdGold: { fontSize: 8.5, color: C.gold, fontFamily: "Helvetica-Bold", textAlign: "right" },
   // Aussteller-Infoblock (wie footInfo im anderen PDF)
   footInfo: { flexDirection: "row", gap: 26, marginTop: 14 },
@@ -109,7 +109,7 @@ function StatCard({ icon, label, value, sub, color = C.white }: { icon: string; 
 // Spaltenbreiten Journal
 const J = { date: 46, model: 128, gross: 62, comm: 62 };
 
-export function FinanceReport({ data, logoSrc = "/logo-hell.png" }: { data: FinanceReportData; logoSrc?: string }) {
+export function FinanceReport({ data, logoSrc = "/logo-dunkel.png" }: { data: FinanceReportData; logoSrc?: string }) {
   const co = data.company;
   const klein = co?.smallBusiness !== false; // Default: Kleinunternehmer §19
   const t = data.totals;
@@ -156,14 +156,14 @@ export function FinanceReport({ data, logoSrc = "/logo-hell.png" }: { data: Fina
 
         {/* ── Kennzahlen ── */}
         <View style={s.statRow}>
-          <StatCard icon="wallet"  label="GESAMTUMSATZ"  value={euro(t.revenue)}    sub={klein ? "brutto = netto (§19)" : "Bruttoeinnahmen"} color="#5fce86" />
-          <StatCard icon="percent" label="PROVISIONEN"   value={euro(t.commission)} sub="Betriebsausgabe an Partner" color="#d98a8a" />
+          <StatCard icon="wallet"  label="GESAMTUMSATZ"  value={euro(t.revenue)}    sub={klein ? "brutto = netto (§19)" : "Bruttoeinnahmen"} color={C.green} />
+          <StatCard icon="percent" label="PROVISIONEN"   value={euro(t.commission)} sub="Betriebsausgabe an Partner" color={C.red} />
           <StatCard icon="coins"   label="ERGEBNIS"      value={euro(t.net)}        sub="Umsatz abzgl. Provisionen" color={C.gold} />
         </View>
 
         {/* ── Umsatz-Aufschlüsselung ── */}
         <View style={s.sectionHead}>
-          <View style={s.sectionIcon}><Icon name="receipt" size={11} color={C.bg} /></View>
+          <View style={s.sectionIcon}><Icon name="receipt" size={11} color={C.ink} /></View>
           <Text style={s.sectionTitle}>AUFSCHLÜSSELUNG</Text>
         </View>
         <View style={s.breakCard}>
@@ -171,7 +171,7 @@ export function FinanceReport({ data, logoSrc = "/logo-hell.png" }: { data: Fina
           <View style={s.bRow}><Text style={s.bLabel}>Einrichtungsgebühren (einmalig)</Text><Text style={s.bVal}>{euro(t.setupFees)}</Text></View>
           <View style={s.bDiv} />
           <View style={s.bRow}><Text style={s.bLabel}>Gesamtumsatz</Text><Text style={s.bVal}>{euro(t.revenue)}</Text></View>
-          <View style={s.bRow}><Text style={s.bLabel}>abzgl. Provisionen an Partner</Text><Text style={[s.bVal, { color: "#d98a8a" }]}>- {euro(t.commission)}</Text></View>
+          <View style={s.bRow}><Text style={s.bLabel}>abzgl. Provisionen an Partner</Text><Text style={[s.bVal, { color: C.red }]}>- {euro(t.commission)}</Text></View>
           <View style={s.bRowSum}><Text style={s.bSumLabel}>Ergebnis (vor Steuern)</Text><Text style={s.bSumVal}>{euro(t.net)}</Text></View>
           <Text style={s.note}>
             {t.payingContracts} zahlende Shops · {t.paymentCount} Zahlungen im Zeitraum.{"\n"}
@@ -183,7 +183,7 @@ export function FinanceReport({ data, logoSrc = "/logo-hell.png" }: { data: Fina
         {data.months.length > 0 && (
           <>
             <View style={s.sectionHead}>
-              <View style={s.sectionIcon}><Icon name="calendar" size={11} color={C.bg} /></View>
+              <View style={s.sectionIcon}><Icon name="calendar" size={11} color={C.ink} /></View>
               <Text style={s.sectionTitle}>MONATSÜBERSICHT</Text>
             </View>
             <View style={s.th}>
@@ -216,7 +216,7 @@ export function FinanceReport({ data, logoSrc = "/logo-hell.png" }: { data: Fina
         {data.payments.length > 0 && (
           <>
             <View style={s.sectionHead}>
-              <View style={s.sectionIcon}><Icon name="creditcard" size={11} color={C.bg} /></View>
+              <View style={s.sectionIcon}><Icon name="creditcard" size={11} color={C.ink} /></View>
               <Text style={s.sectionTitle}>ZAHLUNGS-JOURNAL</Text>
             </View>
             <View style={s.th}>

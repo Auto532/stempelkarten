@@ -5,16 +5,20 @@ import {
   Document, Page, View, Text, Image, Svg, Path, Circle, Rect, Line, StyleSheet,
 } from "@react-pdf/renderer";
 
-// ── Farben (Loyaltycard dunkel/gold) ──────────────────────────────────────────
+// ── Farben (Loyaltycard hell/gold — druck- und finanzamttauglich) ─────────────
+// Weißer Grund statt schwarz: professioneller und tintenschonend beim Ausdruck.
 export const C = {
-  bg:      "#0b0b0e",
-  card:    "#17171c",
-  cardBd:  "#2b2b34",
-  gold:    "#E6B54A",
-  goldDim: "#8a6f2e",
-  white:   "#F2F2F4",
-  gray:    "#8A8A96",
-  barBg:   "#26262e",
+  bg:      "#ffffff",  // Seite weiß
+  card:    "#faf8f2",  // sehr helle Karte (leichter Creme-Ton)
+  cardBd:  "#e7e1d3",  // heller goldstichiger Rand
+  gold:    "#B58A2E",  // dunkleres Gold für Kontrast auf Weiß
+  goldDim: "#9a7a34",  // gedämpftes Gold für Kleintext
+  white:   "#1b1b1f",  // Haupttextfarbe (jetzt dunkel — Feldname bleibt aus Kompatibilität)
+  gray:    "#6b6b73",  // Sekundärtext
+  barBg:   "#ece7db",  // heller Balken-Hintergrund
+  green:   "#1f8a4c",  // Positivwerte (Umsatz)
+  red:     "#c0392b",  // Negativwerte (Provisionen/Abzüge)
+  ink:     "#1b1b1f",  // dunkle Tinte für Icons auf Goldflächen
 };
 
 export type ReportData = {
@@ -186,7 +190,7 @@ function StatCard({ icon, value, l1, l2 }: { icon: string; value: string; l1: st
   );
 }
 
-export function LoyaltyReport({ data, logoSrc = "/logo-hell.png" }: { data: ReportData; logoSrc?: string }) {
+export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png" }: { data: ReportData; logoSrc?: string }) {
   return (
     <Document>
       <Page size="A4" style={s.page}>
@@ -220,7 +224,7 @@ export function LoyaltyReport({ data, logoSrc = "/logo-hell.png" }: { data: Repo
           {data.rewards.length > 0 && (
             <>
               <View style={s.sectionHead}>
-                <View style={s.sectionIcon}><Icon name="gift" size={11} color={C.bg} /></View>
+                <View style={s.sectionIcon}><Icon name="gift" size={11} color={C.ink} /></View>
                 <Text style={s.sectionTitle}>BELOHNUNGEN</Text>
               </View>
               <View style={s.th}>
@@ -240,7 +244,7 @@ export function LoyaltyReport({ data, logoSrc = "/logo-hell.png" }: { data: Repo
 
           {/* Kunden */}
           <View style={s.sectionHead}>
-            <View style={s.sectionIcon}><Icon name="users" size={11} color={C.bg} /></View>
+            <View style={s.sectionIcon}><Icon name="users" size={11} color={C.ink} /></View>
             <Text style={s.sectionTitle}>KUNDEN IM ZEITRAUM</Text>
           </View>
           <View style={s.th}>
@@ -260,7 +264,7 @@ export function LoyaltyReport({ data, logoSrc = "/logo-hell.png" }: { data: Repo
           {data.contract && (
             <>
               <View style={s.sectionHead}>
-                <View style={s.sectionIcon}><Icon name="creditcard" size={11} color={C.bg} /></View>
+                <View style={s.sectionIcon}><Icon name="creditcard" size={11} color={C.ink} /></View>
                 <Text style={s.sectionTitle}>VERTRAG & ZAHLUNG</Text>
               </View>
               <View style={s.contractCard}>
@@ -275,8 +279,8 @@ export function LoyaltyReport({ data, logoSrc = "/logo-hell.png" }: { data: Repo
                   )}
                 </View>
                 <Text style={[s.badge, data.contract.paid
-                  ? { backgroundColor: "#15351f", color: "#5fce86" }
-                  : { backgroundColor: "#3a3416", color: C.gold }]}>
+                  ? { backgroundColor: "#e4f5ea", color: C.green }
+                  : { backgroundColor: "#f7edcf", color: C.goldDim }]}>
                   {data.contract.statusLabel}
                 </Text>
               </View>
