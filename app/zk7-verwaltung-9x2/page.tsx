@@ -17,6 +17,10 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
 import { errMsg } from "@/app/lib/errMsg";
+import {
+  affiliateQuery, affiliateMutation, AFFILIATE_URL, AFFILIATE_APP_URL,
+  type AffiliateLead, type AffiliatePartner, type AffiliateDashboard,
+} from "./lib/affiliate";
 
 // ─── Global Level System (spiegelt me/page.tsx) ───────────────────────────────
 
@@ -3524,68 +3528,6 @@ function SettingsTab({ adminSecret }: { adminSecret: string }) {
 
 // ─── Partner Tab ─────────────────────────────────────────────────────────────
 
-const AFFILIATE_URL = process.env.NEXT_PUBLIC_AFFILIATE_CONVEX_URL ?? "";
-
-// ConvexError-Texte stehen im HTTP-API-Feld errorData (auch in Produktion);
-// errorMessage ist bei anderen Fehlern in Prod nur ein redigiertes "Server Error".
-function affiliateError(data: { errorData?: unknown; errorMessage?: string }): Error {
-  if (typeof data.errorData === "string") return new Error(data.errorData);
-  const msg = data.errorMessage ?? "";
-  if (!msg || /Server Error|Uncaught|\[Request ID/i.test(msg)) {
-    return new Error("Fehler bei der Partner-App. Bitte nochmal versuchen.");
-  }
-  return new Error(msg);
-}
-
-async function affiliateQuery(path: string, args: Record<string, unknown>) {
-  if (!AFFILIATE_URL) return null;
-  const res = await fetch(`${AFFILIATE_URL}/api/query`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, format: "json", args }),
-  });
-  const data = await res.json();
-  if (data.status === "error") throw affiliateError(data);
-  return data.value;
-}
-
-async function affiliateMutation(path: string, args: Record<string, unknown>) {
-  if (!AFFILIATE_URL) return null;
-  const res = await fetch(`${AFFILIATE_URL}/api/mutation`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, format: "json", args }),
-  });
-  const data = await res.json();
-  if (data.status === "error") throw affiliateError(data);
-  return data.value;
-}
-
-type AffiliateStatus = "pending" | "active" | "suspended";
-type LeadStatus = "submitted" | "under_review" | "approved" | "rejected" | "active" | "draft";
-
-interface AffiliateLead {
-  _id: string; _creationTime: number;
-  shopName: string; ownerName: string; ownerEmail: string;
-  city?: string; businessType?: string;
-  affiliateName: string; affiliateCode: string;
-  status: LeadStatus;
-}
-
-interface AffiliatePartner {
-  _id: string; name: string; email: string;
-  referralCode: string; status: AffiliateStatus;
-  _creationTime: number;
-  company?: string;
-  pendingProfile?: Record<string, any> | null;
-}
-
-interface AffiliateDashboard {
-  leads: { total: number; submitted: number; active: number; rejected: number };
-  affiliates: { total: number; pending: number; active: number };
-  commissions: { pending: number; confirmed: number; paid: number };
-}
-
 async function sha256(text: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
@@ -3744,8 +3686,6 @@ function CreatePartnerForm({ adminSecret, onCreated }: { adminSecret: string; on
     </div>
   );
 }
-
-const AFFILIATE_APP_URL = process.env.NEXT_PUBLIC_AFFILIATE_APP_URL ?? "http://localhost:3000";
 
 function InvitePartnerButton({ adminSecret }: { adminSecret: string }) {
   const [link, setLink]       = useState<string | null>(null);
