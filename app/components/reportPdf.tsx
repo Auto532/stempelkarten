@@ -188,7 +188,7 @@ const s = StyleSheet.create({
 const MARK_RATIO = 515 / 473; // Seitenverhältnis von logo-mark.png
 export function Brand({ markSrc = "/logo-mark.png", height = 40 }: { markSrc?: string; height?: number }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 18 }}>
       <Image src={markSrc} style={{ width: height * MARK_RATIO, height }} />
       <Text style={{ fontSize: height * 0.56, fontFamily: "Helvetica-Bold" }}>
         <Text style={{ color: C.white }}>Loyalty</Text>
