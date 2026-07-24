@@ -471,14 +471,19 @@ export const getShopAnalyticsByPeriodAsAdmin = query({
     requireAdmin({ secret: adminSecret });
     const shop = await ctx.db.get(shopId);
 
-    // Nur den nötigen Zeitraum laden; ohne Zeitraum die neuesten 15.000 Events
+    // Sicherheitsnetz: nie unbegrenzt laden. Auch MIT Zeitraum maximal die
+    // neuesten MAX_ANALYTICS_EVENTS Events, damit ein sehr großer Shop die
+    // Abfrage nicht sprengt (gleiche Obergrenze wie im "Alle Zeit"-Fall). Bei
+    // extrem aktiven Shops über lange Zeiträume sind die Zahlen dann eine
+    // Näherung auf Basis der jüngsten Events, was für die Übersicht ausreicht.
+    const MAX_ANALYTICS_EVENTS = 15000;
     const events = since !== undefined
       ? await ctx.db.query("stampEvents")
           .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId).gte("timestamp", since))
-          .order("desc").collect()
+          .order("desc").take(MAX_ANALYTICS_EVENTS)
       : await ctx.db.query("stampEvents")
           .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId))
-          .order("desc").take(15000);
+          .order("desc").take(MAX_ANALYTICS_EVENTS);
 
     const stamps  = events.filter(e => e.type === "stamp").length;
     const redeems = events.filter(e => e.type === "redeem").length;
@@ -673,14 +678,19 @@ export const getShopAnalyticsByPeriod = query({
 
     const shop = await ctx.db.get(shopId);
 
-    // Nur den nötigen Zeitraum laden; ohne Zeitraum die neuesten 15.000 Events
+    // Sicherheitsnetz: nie unbegrenzt laden. Auch MIT Zeitraum maximal die
+    // neuesten MAX_ANALYTICS_EVENTS Events, damit ein sehr großer Shop die
+    // Abfrage nicht sprengt (gleiche Obergrenze wie im "Alle Zeit"-Fall). Bei
+    // extrem aktiven Shops über lange Zeiträume sind die Zahlen dann eine
+    // Näherung auf Basis der jüngsten Events, was für die Übersicht ausreicht.
+    const MAX_ANALYTICS_EVENTS = 15000;
     const events = since !== undefined
       ? await ctx.db.query("stampEvents")
           .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId).gte("timestamp", since))
-          .order("desc").collect()
+          .order("desc").take(MAX_ANALYTICS_EVENTS)
       : await ctx.db.query("stampEvents")
           .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId))
-          .order("desc").take(15000);
+          .order("desc").take(MAX_ANALYTICS_EVENTS);
 
     const stamps  = events.filter(e => e.type === "stamp").length;
     const redeems = events.filter(e => e.type === "redeem").length;
