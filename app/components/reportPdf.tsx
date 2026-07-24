@@ -28,6 +28,9 @@ export type ReportData = {
   stamps: number;
   redeems: number;
   customerCount: number;
+  // Wert je Stempel in € (z.B. "1 Stempel = 10 € Einkauf"). Umsatz wird daraus
+  // aus den Stempeln gerechnet (Stempel × Stempelwert), nicht aus echten Bons.
+  stampValue?: number | null;
   rewards: { text: string; count: number; value: string | null }[];
   customers: { name: string; stamps: number; redeems: number; currentStamps: number; required: number }[];
   progress: { cur: number; req: number; remaining: number };
@@ -158,6 +161,12 @@ const s = StyleSheet.create({
   statL1: { fontSize: 6.5, color: C.gray, fontFamily: "Helvetica-Bold", marginTop: 4, letterSpacing: 0.3 },
   statL2: { fontSize: 6, color: C.goldDim, marginTop: 1 },
   underline: { width: 20, height: 2, backgroundColor: C.gold, borderRadius: 1, marginTop: 4 },
+  // Umsatz aus Stempeln
+  revCard: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.card, borderWidth: 1, borderColor: C.gold, borderRadius: 8, padding: 12, marginTop: 8 },
+  revCircle: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.4, borderColor: C.gold, alignItems: "center", justifyContent: "center" },
+  revLabel: { fontSize: 8, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 0.4 },
+  revSub: { fontSize: 7.5, color: C.gray, marginTop: 2 },
+  revVal: { fontSize: 20, fontFamily: "Helvetica-Bold", color: C.gold },
   // Section
   sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, marginBottom: 5 },
   sectionIcon: { width: 18, height: 18, borderRadius: 4, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" },
@@ -229,6 +238,10 @@ function StatCard({ icon, value, l1, l2 }: { icon: string; value: string; l1: st
 }
 
 export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/logo-mark.png" }: { data: ReportData; logoSrc?: string; markSrc?: string }) {
+  // Umsatz sauber aus den Stempeln: Stempel × Stempelwert (nicht der echte Bon).
+  const sv = data.stampValue ?? 0;
+  const hasRevenue = sv > 0;
+  const eur = (n: number) => `€${n.toLocaleString("de-DE")}`;
   return (
     <Document>
       <Page size="A4" style={s.page}>
@@ -254,6 +267,18 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/
             <StatCard icon="award" value={String(data.redeems)}       l1="BELOHNUNGEN"      l2="eingelöst" />
             <StatCard icon="users" value={String(data.customerCount)} l1="AKTIVE"           l2="Kunden" />
           </View>
+
+          {/* Umsatz aus Stempeln (nur wenn ein Stempelwert hinterlegt ist) */}
+          {hasRevenue && (
+            <View style={s.revCard}>
+              <View style={s.revCircle}><Icon name="coins" size={17} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.revLabel}>UMSATZ AUS STEMPELN</Text>
+                <Text style={s.revSub}>{data.stamps} Stempel × {eur(sv)} je Stempel</Text>
+              </View>
+              <Text style={s.revVal}>{eur(data.stamps * sv)}</Text>
+            </View>
+          )}
 
           {/* Belohnungen */}
           {data.rewards.length > 0 && (
@@ -285,14 +310,16 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/
           </View>
           <View style={s.th}>
             <Text style={[s.thTxt, { flex: 1 }]}>NAME</Text>
-            <Text style={[s.thTxt, { width: 90, textAlign: "right" }]}>STEMPEL</Text>
-            <Text style={[s.thTxt, { width: 90, textAlign: "right" }]}>EINGELÖST</Text>
+            <Text style={[s.thTxt, { width: hasRevenue ? 70 : 90, textAlign: "right" }]}>STEMPEL</Text>
+            <Text style={[s.thTxt, { width: hasRevenue ? 70 : 90, textAlign: "right" }]}>EINGELÖST</Text>
+            {hasRevenue && <Text style={[s.thTxt, { width: 70, textAlign: "right" }]}>UMSATZ</Text>}
           </View>
           {data.customers.map((c, i) => (
             <View style={s.tr} key={i}>
               <Text style={s.tdName}>{c.name}</Text>
-              <Text style={[s.td, { width: 90 }]}>{c.stamps}</Text>
-              <Text style={[s.td, { width: 90 }]}>{c.redeems > 0 ? c.redeems : "–"}</Text>
+              <Text style={[s.td, { width: hasRevenue ? 70 : 90 }]}>{c.stamps}</Text>
+              <Text style={[s.td, { width: hasRevenue ? 70 : 90 }]}>{c.redeems > 0 ? c.redeems : "–"}</Text>
+              {hasRevenue && <Text style={[s.tdGold, { width: 70 }]}>{eur(c.stamps * sv)}</Text>}
             </View>
           ))}
 

@@ -1340,7 +1340,9 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, adminSecret: st
     stamps: data.stamps,
     redeems: data.redeems,
     customerCount: data.customers.length,
-    // Neutrale Übersicht ohne Geldbeträge: nur Anzahl, keine €-Werte
+    // Umsatz wird im PDF aus den Stempeln gerechnet (Stempel × Stempelwert)
+    stampValue: data.stampValue,
+    // Belohnungen: nur Anzahl, keine €-Werte je Prämie
     rewards: data.rewardBreakdown.map((r) => ({
       text: r.rewardText,
       count: r.count,
