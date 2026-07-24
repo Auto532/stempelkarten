@@ -250,7 +250,7 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/
 
           {/* Stat-Karten */}
           <View style={s.statRow}>
-            <StatCard icon="gift"  value={String(data.stamps)}        l1="VERGEBENE PUNKTE" l2="/ Treuepunkte" />
+            <StatCard icon="gift"  value={String(data.stamps)}        l1="VERGEBENE STEMPEL" l2="im Zeitraum" />
             <StatCard icon="award" value={String(data.redeems)}       l1="BELOHNUNGEN"      l2="eingelöst" />
             <StatCard icon="users" value={String(data.customerCount)} l1="AKTIVE"           l2="Kunden" />
           </View>
@@ -285,7 +285,7 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/
           </View>
           <View style={s.th}>
             <Text style={[s.thTxt, { flex: 1 }]}>NAME</Text>
-            <Text style={[s.thTxt, { width: 90, textAlign: "right" }]}>PUNKTE</Text>
+            <Text style={[s.thTxt, { width: 90, textAlign: "right" }]}>STEMPEL</Text>
             <Text style={[s.thTxt, { width: 90, textAlign: "right" }]}>EINGELÖST</Text>
           </View>
           {data.customers.map((c, i) => (
@@ -323,14 +323,15 @@ export function LoyaltyReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/
             </>
           )}
 
-          {/* Info-Box: kurze Erklärung für den Kunden */}
+          {/* Info-Box: kurze Erklärung für den Betrieb (Betreiber-Sicht) */}
           <View style={s.infoBox} wrap={false}>
             <View style={s.infoBadge}><Icon name="gift" size={11} color={C.ink} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={s.infoTitle}>Ihre digitale Stempelkarte</Text>
+              <Text style={s.infoTitle}>Ihr Treueprogramm im Überblick</Text>
               <Text style={s.infoText}>
-                Bei jedem Besuch sammeln Sie Stempel und sichern sich Ihre Belohnungen. Diese Übersicht fasst Ihren
-                aktuellen Punktestand und Ihre eingelösten Prämien zusammen und wird laufend aktualisiert.
+                Diese Übersicht zeigt, wie aktiv Ihr Treueprogramm im gewählten Zeitraum genutzt wurde:
+                vergebene Stempel, eingelöste Belohnungen und Ihre aktiven Kunden. So sehen Sie auf einen
+                Blick, wie gut Ihre Kundenbindung läuft.
               </Text>
             </View>
           </View>

@@ -302,7 +302,7 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
 
 // ─── QRCard ───────────────────────────────────────────────────────────────────
 
-export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, textPrimary, textMuted, accentColor }: {
+export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, textPrimary, textMuted, accentColor, logoUrl }: {
   qrToken: string;
   customerName: string;
   shopName?: string;
@@ -311,6 +311,7 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
   textPrimary?: string;
   textMuted?: string;
   accentColor?: string;
+  logoUrl?: string | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bg     = cardBg     ?? "#18181b";
@@ -320,12 +321,43 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
   const accent = accentColor ?? "#fbbf24";
 
   useEffect(() => {
-    if (canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
-        width: 248, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
-      });
-    }
-  }, [qrToken]);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    // Bei Logo hohe Fehlerkorrektur (H), damit der QR trotz verdeckter Mitte scanbar bleibt
+    QRCode.toCanvas(canvas, `${window.location.origin}/stamp/${qrToken}`, {
+      width: 248, margin: 2,
+      errorCorrectionLevel: logoUrl ? "H" : "M",
+      color: { dark: "#0a0a0a", light: "#ffffff" },
+    }, () => {
+      if (!logoUrl) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const img = new Image();
+      img.onload = () => {
+        const box = canvas.width * 0.24;          // weißes Feld in der Mitte
+        const logo = box * 0.78;                  // Logo etwas kleiner als Feld
+        const bx = (canvas.width - box) / 2;
+        const by = (canvas.height - box) / 2;
+        const r = box * 0.22;
+        // Abgerundetes weißes Feld als Hintergrund
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(bx + r, by);
+        ctx.arcTo(bx + box, by, bx + box, by + box, r);
+        ctx.arcTo(bx + box, by + box, bx, by + box, r);
+        ctx.arcTo(bx, by + box, bx, by, r);
+        ctx.arcTo(bx, by, bx + box, by, r);
+        ctx.closePath();
+        ctx.fill();
+        // Logo mittig einpassen (Seitenverhältnis erhalten)
+        const scale = Math.min(logo / img.width, logo / img.height);
+        const lw = img.width * scale;
+        const lh = img.height * scale;
+        ctx.drawImage(img, (canvas.width - lw) / 2, (canvas.height - lh) / 2, lw, lh);
+      };
+      img.src = logoUrl;
+    });
+  }, [qrToken, logoUrl]);
 
   return (
     <div className="relative mx-auto w-full max-w-xs">

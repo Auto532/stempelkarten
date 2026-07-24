@@ -94,6 +94,12 @@ export const createMembershipForExistingCustomer = mutation({
   },
 });
 
+// Missbrauch-Schutz: mehrere Stempel pro Besuch sind legitim (z.B. 30 € = 3
+// Stempel), daher KEINE Zeitsperre pro Stempel. Nur bei auffällig vielen
+// Stempeln auf derselben Karte in kurzer Zeit wird geblockt.
+const STAMP_BURST_WINDOW_MS = 60_000; // 1 Minute
+const STAMP_BURST_MAX = 10;           // legit sind ~5/Besuch, ab 10 in 60s = Missbrauch
+
 export const addStamp = mutation({
   args: { membershipId: v.id("memberships"), adminToken: v.string() },
   handler: async (ctx, { membershipId, adminToken }) => {
@@ -102,6 +108,18 @@ export const addStamp = mutation({
 
     const shop = await requireShopRole(ctx, { shopId: membership.shopId, token: adminToken, role: "mitarbeiter" });
     if (shop.active === false) throw new ConvexError("Shop ist deaktiviert, Stempeln nicht möglich");
+
+    // Missbrauch-Limit: die letzten Events dieser Karte prüfen (begrenzte Abfrage)
+    const since = Date.now() - STAMP_BURST_WINDOW_MS;
+    const recentEvents = await ctx.db
+      .query("stampEvents")
+      .withIndex("by_membership", (q) => q.eq("membershipId", membershipId))
+      .order("desc")
+      .take(STAMP_BURST_MAX + 5);
+    const burstCount = recentEvents.filter((e) => e.type === "stamp" && e.timestamp >= since).length;
+    if (burstCount >= STAMP_BURST_MAX) {
+      throw new ConvexError("Zu viele Stempel in kurzer Zeit. Bitte kontaktieren Sie den Support.");
+    }
 
     const newStamps = membership.currentStamps + 1;
     const rewardReached = newStamps >= shop.stampsRequired;

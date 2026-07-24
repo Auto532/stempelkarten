@@ -26,7 +26,7 @@ function AcquisitionPicker({
   return (
     <div className="space-y-1.5">
       <p className="text-xs ml-0.5" style={{ color: c.accentDim }}>
-        Bist du schon Kunde bei {shopName}? <span style={{ color: c.accentFaint }}>(optional)</span>
+        Warst du schon vorher Kunde bei {shopName}? <span style={{ color: c.accentFaint }}>(optional)</span>
       </p>
       <div className="flex gap-2">
         {options.map(({ key, label }) => (
@@ -36,8 +36,8 @@ function AcquisitionPicker({
             onClick={() => onChange(value === key ? null : key)}
             className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
             style={value === key
-              ? { background: `${c.accent}22`, border: `1px solid ${c.accentDim}`, color: c.accent }
-              : { background: c.cardBg, border: `1px solid ${c.accentFaint}44`, color: c.accentDim }
+              ? { background: `${c.accent}22`, border: `1.5px solid ${c.accent}`, color: c.accent }
+              : { background: c.cardBg, border: `1.5px solid ${hexToRgba(c.accentDim, 0.55)}`, color: c.textBody }
             }
           >
             {label}

@@ -39,8 +39,13 @@ export default function MeShopPage() {
   const cancelPending = useMutation(api.memberships.cancelPendingRedemption);
 
   useEffect(() => {
-    if (searchParams.get("qr") === "1") setShowQR(true);
-  }, [searchParams]);
+    if (searchParams.get("qr") === "1") {
+      setShowQR(true);
+      // qr-Param wieder entfernen, sonst zeigt "Zurück" (z.B. aus Mein Bereich)
+      // erneut den großen QR statt der Stempelkarte
+      router.replace(`/me/shop/${shopSlug}`, { scroll: false });
+    }
+  }, [searchParams, router, shopSlug]);
   const [stampAnim, setStampAnim] = useState<number | null>(null);
   const [showStampOverlay, setShowStampOverlay] = useState(false);
   const prevStampsRef = useRef<number | null>(null);
@@ -363,6 +368,7 @@ export default function MeShopPage() {
                 textPrimary={theme?.colors.text}
                 textMuted={theme?.colors.accentDim}
                 accentColor={theme?.colors.accent ?? shop.accentColor}
+                logoUrl={shop.designConfig?.logoUrl}
               />
               <button
                 onClick={() => setShowQR(false)}

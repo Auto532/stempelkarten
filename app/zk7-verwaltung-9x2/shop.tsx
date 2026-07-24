@@ -1340,11 +1340,11 @@ async function exportShopPdf(shop: Doc<"shops">, period: Period, adminSecret: st
     stamps: data.stamps,
     redeems: data.redeems,
     customerCount: data.customers.length,
+    // Neutrale Übersicht ohne Geldbeträge: nur Anzahl, keine €-Werte
     rewards: data.rewardBreakdown.map((r) => ({
       text: r.rewardText,
       count: r.count,
-      value: r.valuePerRedemption != null && data.stampValue
-        ? `€${(r.count * r.valuePerRedemption).toLocaleString("de-DE")}` : null,
+      value: null,
     })),
     customers: data.customers.slice(0, 10).map((c) => ({
       name: c.customerName, stamps: c.stamps, redeems: c.redeems, currentStamps: c.currentStamps, required,
