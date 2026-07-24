@@ -340,14 +340,14 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
           <div className="absolute top-3 -right-5 w-20 h-20 rounded-full" style={{ background: hexToRgba(accent, 0.05) }} />
           {logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt="" className="absolute top-5 right-5 z-10 object-contain"
-              style={{ maxHeight: 40, maxWidth: 96, width: "auto", height: "auto" }} />
+            <img src={logoUrl} alt="" className="absolute top-4 right-5 z-10 object-contain"
+              style={{ maxHeight: 72, maxWidth: 128, width: "auto", height: "auto" }} />
           )}
           <p className="relative z-10 text-[9px] font-bold uppercase tracking-[0.25em] mb-1.5" style={{ color: hexToRgba(accent, 0.75) }}>
             Stempelkarte
           </p>
           {shopName && (
-            <h2 className="relative z-10 text-[22px] font-bold leading-tight pr-24" style={{ color: tPrim }}>{shopName}</h2>
+            <h2 className="relative z-10 text-[22px] font-bold leading-tight pr-32" style={{ color: tPrim }}>{shopName}</h2>
           )}
           <div className="relative z-10 flex items-center gap-1.5 mt-3">
             <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
