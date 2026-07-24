@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Stamp, Gift, Send, Check, MessageSquare, Trophy } from "lucide-react";
 import { hexToRgba, readableAccent, MilestonesSection } from "../../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
+import { errMsg } from "@/app/lib/errMsg";
 
 const SHOP_LEVELS = [
   { min: 0,   max: 9,        label: "Neuling"     },
@@ -91,8 +92,8 @@ export default function MeinBereichPage() {
       setSent(true);
       setMessageText("");
       setTimeout(() => setSent(false), 4000);
-    } catch {
-      setSendError("Konnte nicht gesendet werden. Bitte erneut versuchen.");
+    } catch (e: unknown) {
+      setSendError(errMsg(e, "Konnte nicht gesendet werden. Bitte erneut versuchen."));
     } finally {
       setSending(false);
     }

@@ -3,6 +3,12 @@ import { mutation, query, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAdmin, requireShopRole } from "./auth";
 
+// Spam-Schutz: Kunden sollen dem Betrieb nicht dauerhaft Nachrichten schicken
+// können. Pro Karte gilt eine Pause zwischen Nachrichten und ein Tageslimit.
+const MSG_COOLDOWN_MS = 5 * 60_000;        // 5 Min Pause zwischen zwei Nachrichten
+const MSG_DAILY_MAX = 3;                    // max. Nachrichten pro 24 h
+const MSG_DAY_MS = 24 * 60 * 60_000;
+
 export const sendMessage = mutation({
   args: {
     qrToken: v.string(),
@@ -21,6 +27,21 @@ export const sendMessage = mutation({
 
     const trimmed = text.trim();
     if (!trimmed || trimmed.length > 1000) throw new ConvexError("Ungültige Nachricht");
+
+    // Rate-Limit pro Karte (begrenzte Abfrage der letzten Nachrichten)
+    const now = Date.now();
+    const recent = await ctx.db
+      .query("messages")
+      .withIndex("by_membership", (q) => q.eq("membershipId", membershipId))
+      .order("desc")
+      .take(MSG_DAILY_MAX + 2);
+    if (recent[0] && now - recent[0].createdAt < MSG_COOLDOWN_MS) {
+      throw new ConvexError("Bitte warte ein paar Minuten, bevor du die nächste Nachricht sendest.");
+    }
+    const inDay = recent.filter((m) => now - m.createdAt < MSG_DAY_MS).length;
+    if (inDay >= MSG_DAILY_MAX) {
+      throw new ConvexError("Du hast dein Nachrichten-Limit für heute erreicht. Bitte versuche es morgen wieder.");
+    }
 
     await ctx.db.insert("messages", {
       shopId: membership.shopId,
