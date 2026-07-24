@@ -340,7 +340,7 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
           <div className="absolute top-3 -right-5 w-20 h-20 rounded-full" style={{ background: hexToRgba(accent, 0.05) }} />
           {logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt="" className="absolute top-9 right-10 z-10 object-contain"
+            <img src={logoUrl} alt="" className="absolute top-6 right-10 z-10 object-contain"
               style={{ maxHeight: 88, maxWidth: 150, width: "auto", height: "auto" }} />
           )}
           <p className="relative z-10 text-[9px] font-bold uppercase tracking-[0.25em] mb-1.5" style={{ color: hexToRgba(accent, 0.75) }}>
