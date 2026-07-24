@@ -1,8 +1,34 @@
 import { v, ConvexError } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { requireAdmin, requireShopRole, sanitizeShop } from "./auth";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+
+// Löscht alte Storage-Dateien sicher. Löscht nur IDs, die NICHT mehr in der
+// neuen Konfiguration referenziert werden (keepIds), dedupliziert, ignoriert
+// fehlende IDs und schluckt Fehler bewusst: eine nicht gelöschte Datei ist nur
+// vorübergehend Datenmüll und darf einen bereits gespeicherten Bildwechsel nie
+// rückgängig machen. Wird IMMER erst NACH erfolgreichem db.patch aufgerufen.
+async function deleteReplacedStorageIds(
+  ctx: MutationCtx,
+  oldIds: (Id<"_storage"> | undefined)[],
+  keepIds: (Id<"_storage"> | undefined)[],
+): Promise<void> {
+  const keep = keepIds.filter((x): x is Id<"_storage"> => !!x);
+  const seen: Id<"_storage">[] = [];
+  for (const id of oldIds) {
+    if (!id) continue;                       // fehlende ID ignorieren
+    if (keep.includes(id)) continue;         // noch referenziert → behalten
+    if (seen.includes(id)) continue;         // dieselbe ID nur einmal löschen
+    seen.push(id);
+    try {
+      await ctx.storage.delete(id);
+    } catch {
+      // bewusst ignorieren — Altdatei bleibt Datenmüll, Ablauf läuft weiter
+    }
+  }
+}
 
 
 export const provisionShopFromAffiliate = internalMutation({
@@ -267,8 +293,16 @@ export const adminSetDesignConfig = mutation({
   handler: async (ctx, { shopId, adminSecret, config }) => {
     requireAdmin({ secret: adminSecret });
 
+    // Bisherige Bild-IDs merken, um ersetzte/entfernte Dateien NACH dem
+    // erfolgreichen Speichern aufzuräumen.
+    const prev = await ctx.db.get(shopId);
+    const oldBgId   = prev?.designConfig?.bgImageId;
+    const oldLogoId = prev?.designConfig?.logoId;
+
     if (config === null) {
       await ctx.db.patch(shopId, { designConfig: undefined });
+      // Design komplett entfernt → beide bisherigen Blobs löschen (keine mehr referenziert)
+      await deleteReplacedStorageIds(ctx, [oldBgId, oldLogoId], []);
       return;
     }
 
@@ -281,6 +315,14 @@ export const adminSetDesignConfig = mutation({
       // des Config-Designs wird es deshalb entfernt (was du speicherst, siehst du).
       theme: undefined,
     });
+
+    // Erst NACH erfolgreichem Speichern: alte Dateien löschen, die durch neue
+    // ersetzt oder ganz entfernt wurden. Noch referenzierte IDs bleiben erhalten.
+    await deleteReplacedStorageIds(
+      ctx,
+      [oldBgId, oldLogoId],
+      [config.bgImageId, config.logoId],
+    );
   },
 });
 
@@ -307,6 +349,15 @@ export const adminDeleteShop = mutation({
       if (owner) await ctx.db.delete(owner._id);
     }
     await ctx.db.delete(shopId);
+
+    // Zugehörige Design-Bilder aus dem Storage entfernen (nur die dieses Shops).
+    // Fehlende/doppelte IDs werden im Helfer abgefangen; Löschfehler stören den
+    // bereits abgeschlossenen Shop-Löschvorgang nicht.
+    await deleteReplacedStorageIds(
+      ctx,
+      [shop.designConfig?.bgImageId, shop.designConfig?.logoId],
+      [],
+    );
 
     return {
       deletedMemberships: memberships.length,

@@ -281,6 +281,90 @@ async function removeLogoBackground(file: File): Promise<Blob> {
   }
 }
 
+// ─── Bildoptimierung (clientseitig, vor dem Upload) ───────────────────────────
+// Ziel: kleine WebP-Dateien für schnelle mobile Ladezeiten und wenig Convex-
+// Bandbreite. Serverseitig wird NICHTS umgerechnet (kein Sharp o.ä.).
+
+// Nur echte Rasterformate zulassen (kein SVG/GIF).
+const ALLOWED_UPLOAD_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+
+type OptimizeOpts = {
+  maxEdge: number;          // längste Kante, nie hochskaliert
+  qualitySteps: number[];   // WebP-Qualität, absteigend bis Zielgröße erreicht
+  targetBytes: number;      // angestrebte Maximalgröße
+};
+
+// Hintergrund: max 1280px, Ziel ≤ 300 KB, Qualität 0.82 → 0.65
+const BG_OPTIMIZE: OptimizeOpts = {
+  maxEdge: 1280,
+  qualitySteps: [0.82, 0.78, 0.74, 0.70, 0.65],
+  targetBytes: 300 * 1024,
+};
+const BG_HARD_LIMIT = 1024 * 1024; // 1 MB
+
+// Logo: max 512px, Ziel ≤ 150 KB, Qualität 0.90 → 0.75, Transparenz erhalten
+const LOGO_OPTIMIZE: OptimizeOpts = {
+  maxEdge: 512,
+  qualitySteps: [0.90, 0.85, 0.80, 0.75],
+  targetBytes: 150 * 1024,
+};
+const LOGO_HARD_LIMIT = 500 * 1024; // 500 KB
+
+function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(blob);
+  return new Promise<HTMLImageElement>((res, rej) => {
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("Bild konnte nicht gelesen werden")); };
+    img.src = url;
+  });
+}
+
+function canvasToWebp(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
+  return new Promise((res) => canvas.toBlob((b) => res(b), "image/webp", quality));
+}
+
+// Skaliert das Bild (nie größer als das Original) auf maxEdge und kodiert es als
+// WebP. Reduziert die Qualität schrittweise (feste Stufen, keine Endlosschleife),
+// bis targetBytes erreicht ist; gibt sonst das kleinste erzeugte Ergebnis zurück.
+// Der Canvas wird NICHT mit Farbe gefüllt → Transparenz (Alpha) bleibt erhalten.
+async function optimizeToWebp(source: Blob, opts: OptimizeOpts): Promise<Blob> {
+  const img = await loadImageFromBlob(source);
+  const w0 = img.naturalWidth, h0 = img.naturalHeight;
+  if (!w0 || !h0) throw new Error("Bild konnte nicht gelesen werden");
+
+  const scale = Math.min(1, opts.maxEdge / Math.max(w0, h0)); // ≤ 1 → kein Hochskalieren
+  const w = Math.max(1, Math.round(w0 * scale));
+  const h = Math.max(1, Math.round(h0 * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas nicht verfügbar");
+  ctx.clearRect(0, 0, w, h);      // transparent lassen, NICHT mit Weiß/Schwarz füllen
+  ctx.drawImage(img, 0, 0, w, h);
+
+  let best: Blob | null = null;
+  for (const q of opts.qualitySteps) {
+    const blob = await canvasToWebp(canvas, q);
+    if (!blob) continue;
+    if (!best || blob.size < best.size) best = blob;
+    if (blob.size <= opts.targetBytes) break; // Ziel erreicht → fertig
+  }
+  if (!best) throw new Error("Bild konnte nicht optimiert werden");
+  return best;
+}
+
+function formatBytes(n: number): string {
+  if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+  return `${Math.max(1, Math.round(n / 1024))} KB`;
+}
+
+function optimizeInfo(before: number, after: number): string {
+  const pct = before > 0 ? Math.max(0, Math.round((1 - after / before) * 100)) : 0;
+  return `Bild optimiert: ${formatBytes(before)} → ${formatBytes(after)} (${pct} % kleiner)`;
+}
+
 export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const generateUploadUrl = useMutation(api.shops.adminGenerateUploadUrl);
   const setDesignConfig   = useMutation(api.shops.adminSetDesignConfig);
@@ -331,6 +415,8 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
   const [err, setErr]             = useState("");
+  // Kurze Info nach erfolgreicher Optimierung (nur im Admin-Editor sichtbar)
+  const [optInfo, setOptInfo]     = useState<string | null>(null);
 
   const uploadFile = async (body: Blob, contentType: string): Promise<Id<"_storage">> => {
     const url = await generateUploadUrl({ adminSecret });
@@ -343,17 +429,35 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
   const handleUpload = (kind: "logo" | "bg") => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(kind); setErr("");
+    // Format prüfen (kein SVG/GIF)
+    if (!ALLOWED_UPLOAD_TYPES.includes(file.type)) {
+      setErr("Nicht unterstütztes Format. Erlaubt sind JPG, PNG, WebP oder AVIF.");
+      e.target.value = "";
+      return;
+    }
+    setUploading(kind); setErr(""); setOptInfo(null);
     try {
+      let optimized: Blob;
       if (kind === "logo") {
-        // Weißen/karierten Rand automatisch entfernen, dann als PNG hochladen
+        // Weißen/karierten Rand automatisch entfernen, dann als WebP optimieren
+        // (Transparenz bleibt erhalten) und erst nach dem Größen-Check hochladen.
         const processed = await removeLogoBackground(file);
-        const id = await uploadFile(processed, "image/png");
-        setLogoId(id); setLogoPreviewUrl(URL.createObjectURL(processed));
+        optimized = await optimizeToWebp(processed, LOGO_OPTIMIZE);
+        if (optimized.size > LOGO_HARD_LIMIT) {
+          throw new Error("Logo ist auch nach Optimierung zu groß (über 500 KB). Bitte ein einfacheres oder kleineres Logo verwenden.");
+        }
+        const id = await uploadFile(optimized, "image/webp");
+        setLogoId(id); setLogoPreviewUrl(URL.createObjectURL(optimized));
       } else {
-        const id = await uploadFile(file, file.type);
-        setBgImageId(id); setBgPreviewUrl(URL.createObjectURL(file)); setBgType("image");
+        optimized = await optimizeToWebp(file, BG_OPTIMIZE);
+        if (optimized.size > BG_HARD_LIMIT) {
+          throw new Error("Hintergrundbild ist auch nach Optimierung zu groß (über 1 MB). Bitte ein kleineres Bild verwenden.");
+        }
+        const id = await uploadFile(optimized, "image/webp");
+        setBgImageId(id); setBgPreviewUrl(URL.createObjectURL(optimized)); setBgType("image");
       }
+      // Nur nach Erfolg: Größenersparnis anzeigen (Original → optimiert)
+      setOptInfo(optimizeInfo(file.size, optimized.size));
     } catch (ex: unknown) {
       setErr(errMsg(ex, "Upload fehlgeschlagen"));
     } finally { setUploading(null); e.target.value = ""; }
@@ -505,7 +609,7 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
                 <span className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-700 transition-colors">
                   {uploading === "bg" ? "Lädt hoch…" : bgPreviewUrl ? "Hintergrundfoto ändern" : "Hintergrundfoto hochladen"}
                 </span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleUpload("bg")} disabled={uploading !== null} />
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="hidden" onChange={handleUpload("bg")} disabled={uploading !== null} />
               </label>
             )}
           </Section>
@@ -519,7 +623,7 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
                 <span className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-700 transition-colors">
                   {uploading === "logo" ? "Verarbeite…" : logoPreviewUrl ? "Logo ändern" : "Logo hochladen (statt Shopname)"}
                 </span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleUpload("logo")} disabled={uploading !== null} />
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="hidden" onChange={handleUpload("logo")} disabled={uploading !== null} />
               </label>
               {logoPreviewUrl && (
                 <button type="button" onClick={() => { setLogoId(undefined); setLogoPreviewUrl(undefined); }}
@@ -671,6 +775,11 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
           </Section>
           </EditorGroup>
 
+          {optInfo && !err && (
+            <p className="text-emerald-400 text-xs bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-2.5 py-1.5">
+              {optInfo}
+            </p>
+          )}
           {err && <p className="text-red-400 text-xs">{err}</p>}
           <div className="flex gap-2">
             <button type="button" onClick={handleSave} disabled={saving || uploading !== null}
