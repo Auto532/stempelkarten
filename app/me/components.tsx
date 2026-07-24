@@ -321,43 +321,12 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
   const accent = accentColor ?? "#fbbf24";
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    // Bei Logo hohe Fehlerkorrektur (H), damit der QR trotz verdeckter Mitte scanbar bleibt
-    QRCode.toCanvas(canvas, `${window.location.origin}/stamp/${qrToken}`, {
-      width: 248, margin: 2,
-      errorCorrectionLevel: logoUrl ? "H" : "M",
-      color: { dark: "#0a0a0a", light: "#ffffff" },
-    }, () => {
-      if (!logoUrl) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const img = new Image();
-      img.onload = () => {
-        const box = canvas.width * 0.24;          // weißes Feld in der Mitte
-        const logo = box * 0.78;                  // Logo etwas kleiner als Feld
-        const bx = (canvas.width - box) / 2;
-        const by = (canvas.height - box) / 2;
-        const r = box * 0.22;
-        // Abgerundetes weißes Feld als Hintergrund
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.moveTo(bx + r, by);
-        ctx.arcTo(bx + box, by, bx + box, by + box, r);
-        ctx.arcTo(bx + box, by + box, bx, by + box, r);
-        ctx.arcTo(bx, by + box, bx, by, r);
-        ctx.arcTo(bx, by, bx + box, by, r);
-        ctx.closePath();
-        ctx.fill();
-        // Logo mittig einpassen (Seitenverhältnis erhalten)
-        const scale = Math.min(logo / img.width, logo / img.height);
-        const lw = img.width * scale;
-        const lh = img.height * scale;
-        ctx.drawImage(img, (canvas.width - lw) / 2, (canvas.height - lh) / 2, lw, lh);
-      };
-      img.src = logoUrl;
-    });
-  }, [qrToken, logoUrl]);
+    if (canvasRef.current) {
+      QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
+        width: 248, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
+      });
+    }
+  }, [qrToken]);
 
   return (
     <div className="relative mx-auto w-full max-w-xs">
@@ -369,11 +338,16 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
           style={{ background: `linear-gradient(135deg, ${hexToRgba(accent, 0.28)} 0%, ${hexToRgba(accent, 0.06)} 100%)` }}>
           <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full" style={{ background: hexToRgba(accent, 0.08) }} />
           <div className="absolute top-3 -right-5 w-20 h-20 rounded-full" style={{ background: hexToRgba(accent, 0.05) }} />
+          {logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt="" className="absolute top-5 right-5 z-10 object-contain"
+              style={{ maxHeight: 40, maxWidth: 96, width: "auto", height: "auto" }} />
+          )}
           <p className="relative z-10 text-[9px] font-bold uppercase tracking-[0.25em] mb-1.5" style={{ color: hexToRgba(accent, 0.75) }}>
             Stempelkarte
           </p>
           {shopName && (
-            <h2 className="relative z-10 text-[22px] font-bold leading-tight" style={{ color: tPrim }}>{shopName}</h2>
+            <h2 className="relative z-10 text-[22px] font-bold leading-tight pr-24" style={{ color: tPrim }}>{shopName}</h2>
           )}
           <div className="relative z-10 flex items-center gap-1.5 mt-3">
             <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
