@@ -355,16 +355,6 @@ async function optimizeToWebp(source: Blob, opts: OptimizeOpts): Promise<Blob> {
   return best;
 }
 
-function formatBytes(n: number): string {
-  if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
-  return `${Math.max(1, Math.round(n / 1024))} KB`;
-}
-
-function optimizeInfo(before: number, after: number): string {
-  const pct = before > 0 ? Math.max(0, Math.round((1 - after / before) * 100)) : 0;
-  return `Bild optimiert: ${formatBytes(before)} → ${formatBytes(after)} (${pct} % kleiner)`;
-}
-
 export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const generateUploadUrl = useMutation(api.shops.adminGenerateUploadUrl);
   const setDesignConfig   = useMutation(api.shops.adminSetDesignConfig);
@@ -415,8 +405,6 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
   const [err, setErr]             = useState("");
-  // Kurze Info nach erfolgreicher Optimierung (nur im Admin-Editor sichtbar)
-  const [optInfo, setOptInfo]     = useState<string | null>(null);
 
   const uploadFile = async (body: Blob, contentType: string): Promise<Id<"_storage">> => {
     const url = await generateUploadUrl({ adminSecret });
@@ -435,7 +423,7 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
       e.target.value = "";
       return;
     }
-    setUploading(kind); setErr(""); setOptInfo(null);
+    setUploading(kind); setErr("");
     try {
       let optimized: Blob;
       if (kind === "logo") {
@@ -456,8 +444,6 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
         const id = await uploadFile(optimized, "image/webp");
         setBgImageId(id); setBgPreviewUrl(URL.createObjectURL(optimized)); setBgType("image");
       }
-      // Nur nach Erfolg: Größenersparnis anzeigen (Original → optimiert)
-      setOptInfo(optimizeInfo(file.size, optimized.size));
     } catch (ex: unknown) {
       setErr(errMsg(ex, "Upload fehlgeschlagen"));
     } finally { setUploading(null); e.target.value = ""; }
@@ -775,11 +761,6 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
           </Section>
           </EditorGroup>
 
-          {optInfo && !err && (
-            <p className="text-emerald-400 text-xs bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-2.5 py-1.5">
-              {optInfo}
-            </p>
-          )}
           {err && <p className="text-red-400 text-xs">{err}</p>}
           <div className="flex gap-2">
             <button type="button" onClick={handleSave} disabled={saving || uploading !== null}
