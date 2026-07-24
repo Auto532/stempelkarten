@@ -1,0 +1,23 @@
+name: Tests
+
+# Laeuft automatisch bei jedem Push auf master und bei Pull Requests.
+# Zeigt am Commit in GitHub einen gruenen Haken (bestanden) oder ein rotes X
+# (fehlgeschlagen) und schickt bei Fehlschlag eine Mail.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Abhaengigkeiten installieren
+        run: npm ci
+      - name: Tests ausfuehren
+        run: npm test
