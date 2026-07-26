@@ -329,7 +329,7 @@ export default function MeShopPage() {
           >
             {showBack && (
               <button
-                onClick={() => showQR ? setShowQR(false) : router.back()}
+                onClick={() => showQR ? setShowQR(false) : router.push("/me")}
                 className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors shrink-0 backdrop-blur-sm"
                 style={{ background: hexToRgba(c.accent, 0.1), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}
               >
