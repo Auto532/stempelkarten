@@ -310,8 +310,9 @@ function ShopCard({ entry, index, personalAccent, onClick }: {
                 style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.7)}, ${accent})`, boxShadow: `0 0 6px ${hexToRgba(accent, 0.4)}` }}
               />
             </div>
-            <span className="text-[11px] text-zinc-500 truncate block">
-              {nextTier ? nextTier.text : highestTier.text}
+            <span className="text-[11px] font-semibold truncate flex items-center gap-1" style={{ color: accent }}>
+              <Gift size={11} className="shrink-0" />
+              <span className="truncate">{nextTier ? nextTier.text : highestTier.text}</span>
             </span>
             <span className="text-[9px] font-medium mt-0.5 block tabular-nums" style={{ color: hexToRgba(accent, 0.35) }}>
               {membership.totalStampsEver} Stempel · LVL {safeShopLvlIdx + 1}
