@@ -315,10 +315,11 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bg     = cardBg     ?? "#18181b";
-  const border = cardBorder ?? "1px solid #27272a";
   const tPrim  = textPrimary ?? "#f4f4f5";
   const tMuted = textMuted   ?? "#71717a";
   const accent = accentColor ?? "#fbbf24";
+  // Glas nur bei Hex-Hintergrund (sonst Original behalten → kein NaN bei rgba()-Themes)
+  const glassBg = /^#[0-9a-fA-F]{6}$/.test(bg) ? hexToRgba(bg, 0.7) : bg;
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -330,45 +331,66 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
 
   return (
     <div className="relative mx-auto w-full max-w-xs">
-      <div className="rounded-3xl overflow-hidden"
-        style={{ background: bg, border, boxShadow: "0 24px 64px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.3)" }}>
+      {/* Akzent-Glow hinter der Karte → Tiefe */}
+      <div className="absolute -inset-3 rounded-[36px] pointer-events-none"
+        style={{ background: hexToRgba(accent, 0.12), filter: "blur(30px)" }} />
+
+      {/* Glas-Karte */}
+      <div className="relative rounded-[28px] overflow-hidden"
+        style={{
+          background: glassBg,
+          border: `1px solid ${hexToRgba(accent, 0.25)}`,
+          boxShadow: "0 30px 70px -16px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.14)",
+          backdropFilter: "blur(22px)",
+          WebkitBackdropFilter: "blur(22px)",
+        }}>
 
         {/* Header */}
         <div className="relative px-6 pt-7 pb-6 overflow-hidden"
-          style={{ background: `linear-gradient(135deg, ${hexToRgba(accent, 0.28)} 0%, ${hexToRgba(accent, 0.06)} 100%)` }}>
-          <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full" style={{ background: hexToRgba(accent, 0.08) }} />
-          <div className="absolute top-3 -right-5 w-20 h-20 rounded-full" style={{ background: hexToRgba(accent, 0.05) }} />
+          style={{ background: `linear-gradient(135deg, ${hexToRgba(accent, 0.32)} 0%, ${hexToRgba(accent, 0.08)} 100%)` }}>
+          {/* Gloss-Streifen (Glas-Reflex) */}
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ background: "linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.1) 50%, transparent 58%)" }} />
+          <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full" style={{ background: hexToRgba(accent, 0.1) }} />
+          <div className="absolute top-3 -right-5 w-20 h-20 rounded-full" style={{ background: hexToRgba(accent, 0.06) }} />
           {logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt="" className="absolute top-6 right-10 z-10 object-contain"
-              style={{ maxHeight: 88, maxWidth: 150, width: "auto", height: "auto" }} />
+            <img src={logoUrl} alt="" className="absolute top-6 right-6 z-10 object-contain"
+              style={{ maxHeight: 84, maxWidth: 140, width: "auto", height: "auto", filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.4))" }} />
           )}
-          <p className="relative z-10 text-[9px] font-bold uppercase tracking-[0.25em] mb-1.5" style={{ color: hexToRgba(accent, 0.75) }}>
+          <p className="relative z-10 text-[9px] font-bold uppercase tracking-[0.28em] mb-1.5" style={{ color: hexToRgba(accent, 0.8) }}>
             Stempelkarte
           </p>
           {shopName && (
-            <h2 className="relative z-10 text-[22px] font-bold leading-tight pr-40" style={{ color: tPrim }}>{shopName}</h2>
+            <h2 className="relative z-10 text-[23px] font-extrabold leading-tight tracking-tight pr-32" style={{ color: tPrim }}>{shopName}</h2>
           )}
-          <div className="relative z-10 flex items-center gap-1.5 mt-3">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
-            <p className="text-[10px] font-semibold" style={{ color: hexToRgba(accent, 0.8) }}>Bereit zum Scannen</p>
+          {/* Status-Pill, pulsierend */}
+          <div className="relative z-10 inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full"
+            style={{ background: hexToRgba(accent, 0.15), border: `1px solid ${hexToRgba(accent, 0.3)}` }}>
+            <span className="relative flex w-1.5 h-1.5">
+              <span className="animate-ping absolute inline-flex w-full h-full rounded-full opacity-75" style={{ background: accent }} />
+              <span className="relative inline-flex w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
+            </span>
+            <p className="text-[10px] font-semibold" style={{ color: hexToRgba(accent, 0.9) }}>Bereit zum Scannen</p>
           </div>
         </div>
 
-        {/* Perforated Divider */}
-        <div className="mx-5 border-t border-dashed" style={{ borderColor: hexToRgba(accent, 0.22) }} />
+        {/* Ticket-Perforation mit Notch-Kerben (Wallet-Look) */}
+        <div className="relative h-0 flex items-center">
+          <div className="w-4 h-4 rounded-full -ml-2 shrink-0" style={{ background: "#0a0806" }} />
+          <div className="flex-1 border-t border-dashed mx-1.5" style={{ borderColor: hexToRgba(accent, 0.3) }} />
+          <div className="w-4 h-4 rounded-full -mr-2 shrink-0" style={{ background: "#0a0806" }} />
+        </div>
 
-        {/* QR + Identity */}
-        <div className="px-6 pt-6 pb-7 flex flex-col items-center gap-5">
-          <div className="rounded-2xl overflow-hidden"
-            style={{ background: "#fff", boxShadow: "inset 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 3px rgba(0,0,0,0.08)" }}>
-            <div className="p-3">
-              <canvas ref={canvasRef} className="block" />
-            </div>
+        {/* QR + Inhaber */}
+        <div className="px-6 pt-7 pb-7 flex flex-col items-center gap-5">
+          <div className="relative rounded-[20px] p-3.5"
+            style={{ background: "#fff", boxShadow: `0 12px 32px -6px rgba(0,0,0,0.5), 0 0 0 1px ${hexToRgba(accent, 0.25)}, 0 0 26px ${hexToRgba(accent, 0.18)}` }}>
+            <canvas ref={canvasRef} className="block" />
           </div>
           <div className="text-center">
-            <p className="text-[9px] font-bold uppercase tracking-[0.22em] mb-0.5" style={{ color: tMuted }}>Inhaber</p>
-            <p className="text-xl font-bold" style={{ color: tPrim }}>{customerName}</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.24em] mb-1" style={{ color: tMuted }}>Inhaber</p>
+            <p className="text-xl font-extrabold tracking-tight" style={{ color: tPrim }}>{customerName}</p>
           </div>
         </div>
 
