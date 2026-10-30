@@ -461,7 +461,7 @@ function CardStack({ memberships, personalAccent, onOpen }: {
                       const left = nextTier ? nextTier.stamps - entry.membership.currentStamps : 0;
                       const active = i === top;
                       return (
-                        <motion.button key={entry.membership._id} onClick={() => setTop(i)}
+                        <motion.button key={entry.membership._id} onClick={() => onOpen(shop.slug ?? "")}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: i * 0.05, duration: 0.3 }}
