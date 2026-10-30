@@ -10,7 +10,7 @@ import { errMsg } from "@/app/lib/errMsg";
 import { affiliateQuery, affiliateMutation, AFFILIATE_APP_URL } from "./lib/affiliate";
 import {
   GrowthCard, MiniBarChart, PeriodSelector, periodToSince, periodToPrevSince, groupPayments,
-  GLOBAL_LEVELS, globalLevelIdx, useLimit, ShowMore,
+  GLOBAL_LEVELS, globalLevelIdx, useLimit, ShowMore, useScrollLock,
   type EarningsSummary, type PaymentRow, type Period,
 } from "./shared";
 
@@ -306,6 +306,7 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
   const [view, setView]         = useState<"month" | "year" | "list">("month");
   const [exporting, setExporting] = useState(false);
   const company = useQuery(api.company.getCompanyProfile, { adminSecret });
+  useScrollLock();
 
   useEffect(() => {
     affiliateQuery("admin:getEarningsDetail", { adminSecret })
@@ -323,13 +324,13 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
   const groups = payments ? groupPayments(payments, view === "year" ? "year" : "month") : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 sm:p-4" onClick={onClose}>
+    <div className="adm-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-        className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl"
+        className="adm-sheet w-full sm:max-w-lg max-h-[90vh] overflow-y-auto border rounded-t-2xl sm:rounded-2xl"
         onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="sticky top-0 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-4 py-3 flex items-center gap-2 z-10">
+        <div className="adm-sheet-head sticky top-0 border-b border-zinc-800 px-4 py-3 flex items-center gap-2 z-10">
           <TrendingUp size={16} className="text-green-400" />
           <h2 className="font-semibold text-zinc-100">Finanzen</h2>
           <button type="button" onClick={handlePdf} disabled={!payments || exporting}

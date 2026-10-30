@@ -7,6 +7,18 @@ import { affiliateQuery } from "./lib/affiliate";
 
 export type AdminTab = "overview" | "shops" | "analytics" | "settings" | "partner" | "support";
 
+// Hintergrund-Scrollen sperren, solange ein Fenster (Modal) offen ist
+export function useScrollLock() {
+  useEffect(() => {
+    const html = document.documentElement;
+    const prevBody = document.body.style.overflow;
+    const prevHtml = html.style.overflow;
+    document.body.style.overflow = "hidden";
+    html.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prevBody; html.style.overflow = prevHtml; };
+  }, []);
+}
+
 // ─── Listen nie endlos: erst N Einträge, dann "Mehr anzeigen" ────────────────
 
 export function useLimit(initial = 10, step = initial) {

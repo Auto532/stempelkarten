@@ -11,7 +11,7 @@ import {
   affiliateQuery, affiliateMutation, AFFILIATE_URL, AFFILIATE_APP_URL,
   type AffiliateLead, type AffiliatePartner, type AffiliateDashboard,
 } from "./lib/affiliate";
-import { useLimit, ShowMore, MoreCard } from "./shared";
+import { useLimit, ShowMore, MoreCard, useScrollLock } from "./shared";
 
 // ─── Partner Tab ─────────────────────────────────────────────────────────────
 
@@ -336,6 +336,7 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
   const [err, setErr]         = useState("");
   const [pdfBusy, setPdfBusy] = useState(false);
   const company = useQuery(api.company.getCompanyProfile, { adminSecret });
+  useScrollLock();
 
   const handleStatement = async () => {
     setPdfBusy(true); setErr("");
@@ -374,10 +375,10 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
   const pending = data?.pendingProfile as Record<string, any> | null | undefined;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 sm:p-4" onClick={onClose}>
-      <div className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl"
+    <div className="adm-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+      <div className="adm-sheet w-full sm:max-w-lg max-h-[90vh] overflow-y-auto border rounded-t-2xl sm:rounded-2xl"
         onClick={e => e.stopPropagation()}>
-        <div className="sticky top-0 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-4 py-3 flex items-center justify-between z-10">
+        <div className="adm-sheet-head sticky top-0 border-b border-zinc-800 px-4 py-3 flex items-center justify-between z-10">
           <p className="text-sm font-semibold text-zinc-100">Partner-Details</p>
           <div className="flex items-center gap-2">
             {a && (data?.commissions?.count ?? 0) > 0 && (
