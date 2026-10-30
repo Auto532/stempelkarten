@@ -1,7 +1,9 @@
 import { v, ConvexError } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
 import { requireShopRole, requireAdmin } from "./auth";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 
 // Fortlaufende Kunden-Nummer pro Shop (#1, #2, …). Basis ist das Maximum der
 // vergebenen Nummern (nicht die Anzahl), damit Nummern gelöschter Kunden nie
@@ -10,6 +12,15 @@ export async function nextMemberNumber(
   ctx: { db: { query: (t: "memberships") => any } },
   shopId: Id<"shops">,
 ): Promise<number> {
+  // Nummern steigen mit dem Beitritt → die höchste steckt in den neuesten
+  // Mitgliedschaften. Nur wenn dort Altbestand ohne Nummer liegt, alles zählen.
+  const recent = await ctx.db.query("memberships")
+    .withIndex("by_shop", (q: any) => q.eq("shopId", shopId))
+    .order("desc")
+    .take(25);
+  if (recent.every((m: any) => m.memberNumber !== undefined)) {
+    return recent.reduce((max: number, m: any) => Math.max(max, m.memberNumber), 0) + 1;
+  }
   const mems = await ctx.db.query("memberships")
     .withIndex("by_shop", (q: any) => q.eq("shopId", shopId))
     .collect();
@@ -331,31 +342,46 @@ export const adminConfirmPendingRedemption = mutation({
   },
 });
 
+// Einlösung → Anzeige-Zeile (Kundenname auflösen)
+async function redemptionRow(ctx: QueryCtx, event: Doc<"stampEvents">) {
+  const membership = await ctx.db.get(event.membershipId);
+  if (!membership) return null;
+  const customer = await ctx.db.get(membership.customerId);
+  if (!customer) return null;
+  return {
+    _id: event._id,
+    customerName: customer.name,
+    rewardText: event.rewardText ?? null,
+    timestamp: event.timestamp,
+  };
+}
+
+// Alt-Variante (Liste mit Limit), nie mehr als 200 Einträge
 export const getRedemptionsForShop = query({
   args: { shopId: v.id("shops"), adminToken: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminToken, limit }) => {
     await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
-    const q = ctx.db
+    const events = await ctx.db
       .query("stampEvents")
-      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
-      .filter((q) => q.eq(q.field("type"), "redeem"))
-      .order("desc");
-    const events = limit !== undefined ? await q.take(limit) : await q.collect();
-
-    const results = await Promise.all(
-      events.map(async (event) => {
-        const membership = await ctx.db.get(event.membershipId);
-        if (!membership) return null;
-        const customer = await ctx.db.get(membership.customerId);
-        if (!customer) return null;
-        return {
-          _id: event._id,
-          customerName: customer.name,
-          rewardText: event.rewardText ?? null,
-          timestamp: event.timestamp,
-        };
-      })
-    );
+      .withIndex("by_shop_and_type_and_timestamp", (q) => q.eq("shopId", shopId).eq("type", "redeem"))
+      .order("desc")
+      .take(Math.min(limit ?? 200, 200));
+    const results = await Promise.all(events.map((e) => redemptionRow(ctx, e)));
     return results.filter((r): r is NonNullable<typeof r> => r !== null);
+  },
+});
+
+// Seitenweise Einlösungen (neueste zuerst) für "Mehr laden"
+export const getRedemptionsForShopPaged = query({
+  args: { shopId: v.id("shops"), adminToken: v.string(), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { shopId, adminToken, paginationOpts }) => {
+    await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
+    const result = await ctx.db
+      .query("stampEvents")
+      .withIndex("by_shop_and_type_and_timestamp", (q) => q.eq("shopId", shopId).eq("type", "redeem"))
+      .order("desc")
+      .paginate(paginationOpts);
+    const rows = await Promise.all(result.page.map((e) => redemptionRow(ctx, e)));
+    return { ...result, page: rows.filter((r): r is NonNullable<typeof r> => r !== null) };
   },
 });

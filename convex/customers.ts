@@ -2,13 +2,14 @@ import { v, ConvexError } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { normalizeEmail } from "./lib/phone";
 import { nextMemberNumber } from "./memberships";
+import { sanitizeShop } from "./auth";
 
 export const findCustomerByEmail = query({
   args: { email: v.string(), adminToken: v.string() },
   handler: async (ctx, { email, adminToken }) => {
     const shop = await ctx.db
       .query("shops")
-      .filter(q => q.eq(q.field("adminLoginToken"), adminToken))
+      .withIndex("by_adminLoginToken", q => q.eq("adminLoginToken", adminToken))
       .first();
     if (!shop) return null;
 
@@ -62,13 +63,15 @@ export const getMembershipsForCustomer = query({
       memberships.map(async (m) => {
         const shop = await ctx.db.get(m.shopId);
         if (!shop) return null;
-        const { adminLoginToken: _omit, ...publicShop } = shop;
-        const earlier = await ctx.db
+        // sanitizeShop entfernt BEIDE Login-Tokens (Inhaber + Mitarbeiter),
+        // sonst könnte jeder Kunde den Mitarbeiter-Token auslesen.
+        const publicShop = sanitizeShop(shop);
+        // Kartennummer = fortlaufende Kunden-Nummer des Shops (gespeichert),
+        // statt bei jedem Aufruf alle früheren Mitgliedschaften zu zählen.
+        const cardNumber = m.memberNumber ?? (await ctx.db
           .query("memberships")
-          .withIndex("by_shop", (q) => q.eq("shopId", m.shopId))
-          .filter((q) => q.lt(q.field("_creationTime"), m._creationTime))
-          .collect();
-        const cardNumber = earlier.length + 1;
+          .withIndex("by_shop", (q) => q.eq("shopId", m.shopId).lt("_creationTime", m._creationTime))
+          .take(10000)).length + 1;
         return { membership: m, shop: publicShop, cardNumber };
       })
     );

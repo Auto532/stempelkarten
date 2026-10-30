@@ -131,7 +131,9 @@ export default defineSchema({
     .index("by_membership", ["membershipId"])
     .index("by_shop", ["shopId"])
     .index("by_timestamp", ["timestamp"])
-    .index("by_shop_and_timestamp", ["shopId", "timestamp"]),
+    .index("by_shop_and_timestamp", ["shopId", "timestamp"])
+    // Einlösungen eines Shops direkt (ohne alle Stempel-Events zu durchsuchen)
+    .index("by_shop_and_type_and_timestamp", ["shopId", "type", "timestamp"]),
 
   messages: defineTable({
     shopId: v.id("shops"),

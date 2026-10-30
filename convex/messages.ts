@@ -134,7 +134,7 @@ export const getMessagesForShop = query({
       .query("messages")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
       .order("desc")
-      .collect();
+      .take(200);
     return await Promise.all(
       msgs.map(async (m) => {
         const customer = await ctx.db.get(m.customerId);

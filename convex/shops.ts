@@ -1,9 +1,10 @@
 import { v, ConvexError } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
 import { requireAdmin, requireShopRole, sanitizeShop } from "./auth";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 
 // Löscht alte Storage-Dateien sicher. Löscht nur IDs, die NICHT mehr in der
 // neuen Konfiguration referenziert werden (keepIds), dedupliziert, ignoriert
@@ -450,11 +451,11 @@ export const listCustomersForShopAsAdmin = query({
   args: { shopId: v.id("shops"), adminSecret: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminSecret, limit }) => {
     requireAdmin({ secret: adminSecret });
-    const q = ctx.db
+    const memberships = await ctx.db
       .query("memberships")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
-      .order("desc");
-    const memberships = limit !== undefined ? await q.take(limit) : await q.collect();
+      .order("desc")
+      .take(Math.min(limit ?? 500, 500));
     const results = await Promise.all(
       memberships.map(async (m) => {
         const customer = await ctx.db.get(m.customerId);
@@ -584,7 +585,7 @@ export const getGlobalAnalyticsByPeriod = query({
     // damit die Query auch bei sehr vielen Stempeln nicht ins Leselimit läuft.
     const earliest = prevSince ?? since;
     const allEvents = earliest !== undefined
-      ? await ctx.db.query("stampEvents").withIndex("by_timestamp", q => q.gte("timestamp", earliest)).collect()
+      ? await ctx.db.query("stampEvents").withIndex("by_timestamp", q => q.gte("timestamp", earliest)).order("desc").take(15000)
       : await ctx.db.query("stampEvents").withIndex("by_timestamp").order("desc").take(15000);
 
     // Namen/Zuordnung über Maps statt einzelner DB-Zugriffe pro Event
@@ -750,46 +751,116 @@ export const getAppUsageStats = query({
     requireAdmin({ secret: adminSecret });
     const customers = await ctx.db.query("customers").collect();
     const memberships = await ctx.db.query("memberships").collect();
+    // Einmal gruppieren statt pro Kunde alle Mitgliedschaften zu filtern (war n²)
+    const byCustomer = new Map<string, { shopCount: number; totalStamps: number }>();
+    for (const m of memberships) {
+      const k = m.customerId.toString();
+      const cur = byCustomer.get(k) ?? { shopCount: 0, totalStamps: 0 };
+      cur.shopCount++;
+      cur.totalStamps += m.totalStampsEver;
+      byCustomer.set(k, cur);
+    }
     return customers
-      .map(c => {
-        const mems = memberships.filter(m => m.customerId.toString() === c._id.toString());
-        return {
-          name: c.name,
-          shopCount: mems.length,
-          totalStamps: mems.reduce((s, m) => s + m.totalStampsEver, 0),
-        };
-      })
-      .sort((a, b) => b.shopCount - a.shopCount || b.totalStamps - a.totalStamps);
+      .map(c => ({ name: c.name, ...(byCustomer.get(c._id.toString()) ?? { shopCount: 0, totalStamps: 0 }) }))
+      .sort((a, b) => b.shopCount - a.shopCount || b.totalStamps - a.totalStamps)
+      // Liste begrenzen: die App zeigt ohnehin nur die Spitze
+      .slice(0, 200);
   },
 });
 
 // ─── Inhaber-Queries ──────────────────────────────────────────────────────────
 
+// Kunde für Betrieb/Mitarbeiter aufbereiten: E-Mail nur für den Inhaber und
+// nur, wenn Leads freigeschaltet sind; nie den qrToken mitschicken.
+async function customerRow(ctx: QueryCtx, m: Doc<"memberships">, showEmail: boolean) {
+  const customer = await ctx.db.get(m.customerId);
+  if (!customer) return null;
+  return {
+    membership: m,
+    customer: { _id: customer._id, name: customer.name, email: showEmail ? customer.email : "" },
+  };
+}
+
+// Höchstens so viele Mitgliedschaften werden für Statistik/Suche gelesen
+const SHOP_SCAN_CAP = 5000;
+
+// Alt-Variante (Liste mit Limit), nie mehr als 200 Kunden
 export const listCustomersForShop = query({
   args: { shopId: v.id("shops"), adminToken: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminToken, limit }) => {
-    await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
-    const shop = await ctx.db.get(shopId);
-    if (!shop) throw new ConvexError("Shop nicht gefunden");
-    const isMitarbeiter = adminToken === shop.mitarbeiterToken;
-
-    const q = ctx.db
+    const shop = await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
+    const showEmail = adminToken === shop.adminLoginToken && !!shop.showLeads;
+    const memberships = await ctx.db
       .query("memberships")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
-      .order("desc");
-    const memberships = limit !== undefined ? await q.take(limit) : await q.collect();
-
-    const results = await Promise.all(
-      memberships.map(async (m) => {
-        const customer = await ctx.db.get(m.customerId);
-        if (!customer) return null;
-        return {
-          membership: m,
-          customer: isMitarbeiter ? { ...customer, email: "" } : customer,
-        };
-      })
-    );
+      .order("desc")
+      .take(Math.min(limit ?? 200, 200));
+    const results = await Promise.all(memberships.map((m) => customerRow(ctx, m, showEmail)));
     return results.filter((r): r is NonNullable<typeof r> => r !== null);
+  },
+});
+
+// Seitenweise Kundenliste (neueste zuerst) für "Mehr laden"
+export const listCustomersForShopPaged = query({
+  args: { shopId: v.id("shops"), adminToken: v.string(), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { shopId, adminToken, paginationOpts }) => {
+    const shop = await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
+    const showEmail = adminToken === shop.adminLoginToken && !!shop.showLeads;
+    const result = await ctx.db
+      .query("memberships")
+      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
+      .order("desc")
+      .paginate(paginationOpts);
+    const rows = await Promise.all(result.page.map((m) => customerRow(ctx, m, showEmail)));
+    return { ...result, page: rows.filter((r): r is NonNullable<typeof r> => r !== null) };
+  },
+});
+
+// Kundensuche (Name, #Nummer, E-Mail falls freigeschaltet), max. 30 Treffer
+export const searchCustomersForShop = query({
+  args: { shopId: v.id("shops"), adminToken: v.string(), search: v.string() },
+  handler: async (ctx, { shopId, adminToken, search }) => {
+    const shop = await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
+    const showEmail = adminToken === shop.adminLoginToken && !!shop.showLeads;
+    const q = search.trim().toLowerCase().replace(/^#/, "");
+    if (!q) return [];
+    const hits: NonNullable<Awaited<ReturnType<typeof customerRow>>>[] = [];
+    let scanned = 0;
+    for await (const m of ctx.db.query("memberships").withIndex("by_shop", (ix) => ix.eq("shopId", shopId)).order("desc")) {
+      if (++scanned > SHOP_SCAN_CAP || hits.length >= 30) break;
+      if (m.memberNumber !== undefined && String(m.memberNumber) === q) {
+        const row = await customerRow(ctx, m, showEmail);
+        if (row) hits.push(row);
+        continue;
+      }
+      const customer = await ctx.db.get(m.customerId);
+      if (!customer) continue;
+      if (customer.name.toLowerCase().includes(q) || (showEmail && customer.email.toLowerCase().includes(q))) {
+        hits.push({ membership: m, customer: { _id: customer._id, name: customer.name, email: showEmail ? customer.email : "" } });
+      }
+    }
+    return hits;
+  },
+});
+
+// Kennzahlen eines Shops (echte Gesamtwerte statt Summe der geladenen Liste)
+export const getShopStats = query({
+  args: { shopId: v.id("shops"), adminToken: v.string() },
+  handler: async (ctx, { shopId, adminToken }) => {
+    const shop = await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
+    const tiers = shop.bonusProgramEnabled && shop.rewardTiers?.some((t) => t.enabled)
+      ? shop.rewardTiers.filter((t) => t.enabled).map((t) => t.stamps)
+      : [shop.stampsRequired];
+    const lowestTier = Math.min(shop.stampsRequired, ...tiers);
+    let customers = 0, stamps = 0, rewards = 0, ready = 0;
+    for await (const m of ctx.db.query("memberships").withIndex("by_shop", (q) => q.eq("shopId", shopId))) {
+      if (customers >= SHOP_SCAN_CAP) break;
+      customers++;
+      stamps += m.totalStampsEver;
+      rewards += m.rewardsRedeemed;
+      if (m.currentStamps >= lowestTier) ready++;
+    }
+    return { customers, stamps, rewards, ready, capped: customers >= SHOP_SCAN_CAP };
   },
 });
 
