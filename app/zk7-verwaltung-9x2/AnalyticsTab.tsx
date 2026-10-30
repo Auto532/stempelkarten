@@ -514,7 +514,9 @@ export function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
     since: periodToSince(period),
     prevSince: periodToPrevSince(period),
   });
-  const appStats = useQuery(api.shops.getAppUsageStats, { adminSecret });
+  // Teuer (lädt alle Kunden + Karten) → erst beim Aufklappen abfragen
+  const [showApp, setShowApp] = useState(false);
+  const appStats = useQuery(api.shops.getAppUsageStats, showApp ? { adminSecret } : "skip");
   const shopLimit = useLimit(10);
   const appLimit = useLimit(10);
   const multiShopUsers = appStats?.filter(c => c.shopCount >= 2) ?? [];
@@ -637,15 +639,21 @@ export function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
           )}
 
           {/* App Details: Kunden mit 2+ Shops */}
-          {multiShopUsers.length > 0 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+          {/* App Details: Kunden mit 2+ Shops (lädt erst beim Aufklappen) */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <button onClick={() => setShowApp(v => !v)}
+                className={`w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors ${showApp ? "border-b border-zinc-800" : ""}`}>
                 <LayoutGrid size={14} className="text-amber-400" />
                 <span className="text-sm font-medium text-zinc-200">App Details</span>
                 <span className="ml-auto text-[10px] text-zinc-500">
-                  {multiShopUsers.length} freigeschaltet
+                  {showApp ? (appStats ? `${multiShopUsers.length} freigeschaltet` : "lädt…") : "Kunden mit 2+ Shops"}
                 </span>
-              </div>
+                <ChevronRight size={14} className={`text-zinc-600 transition-transform ${showApp ? "rotate-90" : ""}`} />
+              </button>
+              {showApp && appStats && multiShopUsers.length === 0 && (
+                <p className="px-4 py-5 text-center text-sm text-zinc-600">Noch kein Kunde in mehreren Shops.</p>
+              )}
+              {showApp && (
               <div className="divide-y divide-zinc-800/50">
                 {multiShopUsers.slice(0, appLimit.limit).map((c, i) => {
                   const lvlIdx = globalLevelIdx(c.shopCount);
@@ -671,9 +679,9 @@ export function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
                   );
                 })}
               </div>
-              <ShowMore shown={appLimit.limit} total={multiShopUsers.length} onMore={appLimit.more} />
-            </div>
-          )}
+              )}
+              {showApp && <ShowMore shown={appLimit.limit} total={multiShopUsers.length} onMore={appLimit.more} />}
+          </div>
         </>
       )}
     </motion.div>

@@ -466,72 +466,86 @@ export const listCustomersForShopAsAdmin = query({
   },
 });
 
+// ── Analytics: alles in EINEM Durchlauf über die Events, Datenbank-Zugriffe nur
+// für die angezeigten Top-Kunden (vorher: pro Kunde alle Events erneut gefiltert
+// und jeden Kunden einzeln geladen).
+
+// Sicherheitsnetz: nie unbegrenzt laden. Auch MIT Zeitraum maximal die neuesten
+// MAX_ANALYTICS_EVENTS Events; bei extrem aktiven Shops sind die Zahlen dann
+// eine Näherung auf Basis der jüngsten Events, was für die Übersicht reicht.
+const MAX_ANALYTICS_EVENTS = 15000;
+// Kundenliste der Shop-Analytics: die aktivsten N (UI zeigt seitenweise, PDF Top 10)
+const ANALYTICS_TOP_CUSTOMERS = 100;
+
+async function computeShopAnalytics(ctx: QueryCtx, shopId: Id<"shops">, since: number | undefined) {
+  const shop = await ctx.db.get(shopId);
+  const events = await ctx.db.query("stampEvents")
+    .withIndex("by_shop_and_timestamp", (q) =>
+      since !== undefined ? q.eq("shopId", shopId).gte("timestamp", since) : q.eq("shopId", shopId))
+    .order("desc")
+    .take(MAX_ANALYTICS_EVENTS);
+
+  let stamps = 0, redeems = 0;
+  const rewardMap = new Map<string, number>();
+  const byMembership = new Map<string, { id: Id<"memberships">; stamps: number; redeems: number; lastEvent: number }>();
+  for (const e of events) {
+    const key = e.membershipId.toString();
+    // Events kommen neueste zuerst → der erste Treffer ist die letzte Aktivität
+    const row = byMembership.get(key) ?? { id: e.membershipId, stamps: 0, redeems: 0, lastEvent: e.timestamp };
+    if (e.type === "stamp") { stamps++; row.stamps++; }
+    else {
+      redeems++; row.redeems++;
+      const text = e.rewardText ?? shop?.rewardText ?? "";
+      if (text) rewardMap.set(text, (rewardMap.get(text) ?? 0) + 1);
+    }
+    byMembership.set(key, row);
+  }
+
+  const allTiers = [
+    ...(shop ? [{ stamps: shop.stampsRequired, text: shop.rewardText }] : []),
+    ...(shop?.rewardTiers?.filter(t => t.enabled) ?? []),
+  ];
+  const rewardBreakdown = Array.from(rewardMap.entries()).map(([text, count]) => {
+    const tier = allTiers.find(t => t.text === text);
+    const tierStamps = tier?.stamps ?? shop?.stampsRequired ?? 0;
+    const valuePerRedemption = shop?.stampValue != null ? tierStamps * shop.stampValue : null;
+    return { rewardText: text, count, valuePerRedemption };
+  }).sort((a, b) => b.count - a.count);
+
+  const top = Array.from(byMembership.values())
+    .sort((a, b) => b.stamps - a.stamps || b.redeems - a.redeems)
+    .slice(0, ANALYTICS_TOP_CUSTOMERS);
+  const customerRows = await Promise.all(top.map(async (r) => {
+    const membership = await ctx.db.get(r.id);
+    if (!membership) return null;
+    const customer = await ctx.db.get(membership.customerId);
+    if (!customer) return null;
+    return {
+      customerName: customer.name,
+      stamps: r.stamps,
+      redeems: r.redeems,
+      currentStamps: membership.currentStamps,
+      totalStampsEver: membership.totalStampsEver,
+      lastEvent: r.lastEvent,
+      membershipId: membership._id,
+    };
+  }));
+
+  return {
+    stamps,
+    redeems,
+    stampValue: shop?.stampValue ?? null,
+    rewardBreakdown,
+    customers: customerRows.filter((r): r is NonNullable<typeof r> => r !== null),
+    activeCustomers: byMembership.size,
+  };
+}
+
 export const getShopAnalyticsByPeriodAsAdmin = query({
   args: { shopId: v.id("shops"), adminSecret: v.string(), since: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminSecret, since }) => {
     requireAdmin({ secret: adminSecret });
-    const shop = await ctx.db.get(shopId);
-
-    // Sicherheitsnetz: nie unbegrenzt laden. Auch MIT Zeitraum maximal die
-    // neuesten MAX_ANALYTICS_EVENTS Events, damit ein sehr großer Shop die
-    // Abfrage nicht sprengt (gleiche Obergrenze wie im "Alle Zeit"-Fall). Bei
-    // extrem aktiven Shops über lange Zeiträume sind die Zahlen dann eine
-    // Näherung auf Basis der jüngsten Events, was für die Übersicht ausreicht.
-    const MAX_ANALYTICS_EVENTS = 15000;
-    const events = since !== undefined
-      ? await ctx.db.query("stampEvents")
-          .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId).gte("timestamp", since))
-          .order("desc").take(MAX_ANALYTICS_EVENTS)
-      : await ctx.db.query("stampEvents")
-          .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId))
-          .order("desc").take(MAX_ANALYTICS_EVENTS);
-
-    const stamps  = events.filter(e => e.type === "stamp").length;
-    const redeems = events.filter(e => e.type === "redeem").length;
-
-    const redeemEvents = events.filter(e => e.type === "redeem");
-    const rewardMap = new Map<string, number>();
-    for (const e of redeemEvents) {
-      const text = e.rewardText ?? shop?.rewardText ?? "";
-      if (text) rewardMap.set(text, (rewardMap.get(text) ?? 0) + 1);
-    }
-    const allTiers = [
-      ...(shop ? [{ stamps: shop.stampsRequired, text: shop.rewardText }] : []),
-      ...(shop?.rewardTiers?.filter(t => t.enabled) ?? []),
-    ];
-    const rewardBreakdown = Array.from(rewardMap.entries()).map(([text, count]) => {
-      const tier = allTiers.find(t => t.text === text);
-      const tierStamps = tier?.stamps ?? shop?.stampsRequired ?? 0;
-      const valuePerRedemption = shop?.stampValue != null ? tierStamps * shop.stampValue : null;
-      return { rewardText: text, count, valuePerRedemption };
-    }).sort((a, b) => b.count - a.count);
-
-    const membershipIds = Array.from(new Set(events.map(e => e.membershipId.toString())));
-    const customerRows = await Promise.all(
-      membershipIds.map(async (mid) => {
-        const mevents = events.filter(e => e.membershipId.toString() === mid);
-        const membership = await ctx.db.get(mevents[0].membershipId);
-        if (!membership) return null;
-        const customer = await ctx.db.get(membership.customerId);
-        if (!customer) return null;
-        return {
-          customerName: customer.name,
-          stamps: mevents.filter(e => e.type === "stamp").length,
-          redeems: mevents.filter(e => e.type === "redeem").length,
-          currentStamps: membership.currentStamps,
-          totalStampsEver: membership.totalStampsEver,
-          lastEvent: mevents[0].timestamp,
-          membershipId: membership._id,
-        };
-      })
-    );
-    return {
-      stamps,
-      redeems,
-      stampValue: shop?.stampValue ?? null,
-      rewardBreakdown,
-      customers: customerRows.filter(Boolean).sort((a, b) => b!.stamps - a!.stamps) as NonNullable<typeof customerRows[0]>[],
-    };
+    return computeShopAnalytics(ctx, shopId, since);
   },
 });
 
@@ -554,16 +568,21 @@ export const getGlobalStats = query({
   handler: async (ctx, { adminSecret }) => {
     requireAdmin({ secret: adminSecret });
     const shops = await ctx.db.query("shops").collect();
-    const customers = await ctx.db.query("customers").collect();
-    const memberships = await ctx.db.query("memberships").collect();
-    const totalStamps = memberships.reduce((s, m) => s + m.totalStampsEver, 0);
-    const totalRewards = memberships.reduce((s, m) => s + m.rewardsRedeemed, 0);
-    // Kunden pro Shop aus den bereits geladenen Mitgliedschaften zählen
-    // (statt einer Extra-Abfrage pro Shop)
+    // Ein Durchlauf über die Mitgliedschaften (gestreamt statt alles im
+    // Speicher); die Kunden-Tabelle wird nicht mehr extra komplett geladen:
+    // Kunden = verschiedene Kunden mit mindestens einer Karte.
+    let totalStamps = 0, totalRewards = 0;
+    const customerIds = new Set<string>();
     const countByShop = new Map<string, number>();
-    for (const m of memberships) countByShop.set(m.shopId.toString(), (countByShop.get(m.shopId.toString()) ?? 0) + 1);
+    for await (const m of ctx.db.query("memberships")) {
+      totalStamps += m.totalStampsEver;
+      totalRewards += m.rewardsRedeemed;
+      customerIds.add(m.customerId.toString());
+      const k = m.shopId.toString();
+      countByShop.set(k, (countByShop.get(k) ?? 0) + 1);
+    }
     const shopsWithCounts = shops.map((shop) => ({ ...sanitizeShop(shop), customerCount: countByShop.get(shop._id.toString()) ?? 0 }));
-    return { totalShops: shops.length, totalCustomers: customers.length, totalStamps, totalRewards, shops: shopsWithCounts };
+    return { totalShops: shops.length, totalCustomers: customerIds.size, totalStamps, totalRewards, shops: shopsWithCounts };
   },
 });
 
@@ -575,93 +594,89 @@ export const getGlobalAnalyticsByPeriod = query({
   },
   handler: async (ctx, { adminSecret, since, prevSince }) => {
     requireAdmin({ secret: adminSecret });
-    const shops     = await ctx.db.query("shops").collect();
-    const customers = await ctx.db.query("customers").collect();
-    const allMemberships = await ctx.db.query("memberships").collect();
+    const shops = await ctx.db.query("shops").collect();
+    const shopById = new Map(shops.map(s => [s._id.toString(), s]));
 
-    // Nur die wirklich benötigten Events laden: ab dem frühesten gebrauchten
-    // Zeitpunkt (prevSince für den Wachstumsvergleich). Ohne Zeitraum ("Alle")
-    // als Sicherheitsnetz die neuesten 15.000 Events statt der ganzen Historie,
-    // damit die Query auch bei sehr vielen Stempeln nicht ins Leselimit läuft.
+    // Nur die gebrauchten Events (ab prevSince für den Vergleich), gedeckelt
     const earliest = prevSince ?? since;
-    const allEvents = earliest !== undefined
-      ? await ctx.db.query("stampEvents").withIndex("by_timestamp", q => q.gte("timestamp", earliest)).order("desc").take(15000)
-      : await ctx.db.query("stampEvents").withIndex("by_timestamp").order("desc").take(15000);
+    const allEvents = await ctx.db.query("stampEvents")
+      .withIndex("by_timestamp", q => earliest !== undefined ? q.gte("timestamp", earliest) : q)
+      .order("desc")
+      .take(MAX_ANALYTICS_EVENTS);
 
-    // Namen/Zuordnung über Maps statt einzelner DB-Zugriffe pro Event
-    const memById  = new Map(allMemberships.map(m => [m._id.toString(), m]));
-    const custById = new Map(customers.map(c => [c._id.toString(), c]));
-
-    // Current period
-    const events = since !== undefined ? allEvents.filter(e => e.timestamp >= since) : allEvents;
-    const stamps  = events.filter(e => e.type === "stamp").length;
-    const redeems = events.filter(e => e.type === "redeem").length;
-    const activeShopIds = new Set(events.map(e => e.shopId.toString()));
-
-    // Previous period (for growth %)
-    const prevUntil = since;
-    const prevEvents = (prevSince !== undefined && prevUntil !== undefined)
-      ? allEvents.filter(e => e.timestamp >= prevSince && e.timestamp < prevUntil)
-      : [];
-    const prevStamps  = prevEvents.filter(e => e.type === "stamp").length;
-    const prevRedeems = prevEvents.filter(e => e.type === "redeem").length;
-
-    // New customers in period
-    const newMemberships = since !== undefined
-      ? allMemberships.filter(m => m._creationTime >= since)
-      : allMemberships;
-    const newCustomerIds = new Set(newMemberships.map(m => m.customerId.toString()));
-
-    // Daily breakdown (last 60 days max)
+    // EIN Durchlauf: Zeitraum, Vorzeitraum, Tage, pro Shop, pro Karte
     const DAY_MS = 24 * 60 * 60 * 1000;
+    let stamps = 0, redeems = 0, prevStamps = 0, prevRedeems = 0;
     const dayMap = new Map<number, { stamps: number; redeems: number }>();
-    for (const e of events) {
+    const perShop = new Map<string, { stamps: number; redeems: number; members: Set<string> }>();
+    const stampsByMembership = new Map<string, { id: Id<"memberships">; stamps: number }>();
+    for (const e of allEvents) {
+      const inPeriod = since === undefined || e.timestamp >= since;
+      if (!inPeriod) {
+        if (prevSince !== undefined && e.timestamp >= prevSince) {
+          if (e.type === "stamp") prevStamps++; else prevRedeems++;
+        }
+        continue;
+      }
+      const isStamp = e.type === "stamp";
+      if (isStamp) stamps++; else redeems++;
+
       const day = Math.floor(e.timestamp / DAY_MS) * DAY_MS;
-      const cur = dayMap.get(day) ?? { stamps: 0, redeems: 0 };
-      if (e.type === "stamp")  cur.stamps++;
-      else                     cur.redeems++;
-      dayMap.set(day, cur);
+      const d = dayMap.get(day) ?? { stamps: 0, redeems: 0 };
+      if (isStamp) d.stamps++; else d.redeems++;
+      dayMap.set(day, d);
+
+      const sk = e.shopId.toString();
+      const s = perShop.get(sk) ?? { stamps: 0, redeems: 0, members: new Set<string>() };
+      if (isStamp) s.stamps++; else s.redeems++;
+      // eine Mitgliedschaft = ein Kunde in diesem Shop
+      s.members.add(e.membershipId.toString());
+      perShop.set(sk, s);
+
+      if (isStamp) {
+        const mk = e.membershipId.toString();
+        const m = stampsByMembership.get(mk) ?? { id: e.membershipId, stamps: 0 };
+        m.stamps++;
+        stampsByMembership.set(mk, m);
+      }
     }
+
     const dailyBreakdown = Array.from(dayMap.entries())
       .map(([dayStart, v]) => ({ dayStart, ...v }))
       .sort((a, b) => a.dayStart - b.dayStart)
       .slice(-60);
 
-    // Top customers (by stamps in period)
-    const membershipStampMap = new Map<string, number>();
-    events.filter(e => e.type === "stamp").forEach(e => {
-      const k = e.membershipId.toString();
-      membershipStampMap.set(k, (membershipStampMap.get(k) ?? 0) + 1);
-    });
-    const top10ids = Array.from(membershipStampMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
-    const topCustomers = top10ids.map(([mid, s]) => {
-      const membership = memById.get(mid);
-      if (!membership) return null;
-      const customer = custById.get(membership.customerId.toString());
-      if (!customer) return null;
-      const shop = shops.find(sh => sh._id === membership.shopId);
-      return { name: customer.name, stamps: s, shopName: shop?.name ?? "" };
-    }).filter(Boolean) as { name: string; stamps: number; shopName: string }[];
+    // Neue Kunden im Zeitraum über den eingebauten Erstellzeit-Index
+    // (statt alle Mitgliedschaften zu laden)
+    const newCustomerIds = new Set<string>();
+    const memQuery = ctx.db.query("memberships")
+      .withIndex("by_creation_time", q => since !== undefined ? q.gte("_creationTime", since) : q);
+    let scanned = 0;
+    for await (const m of memQuery) {
+      if (++scanned > 50000) break;
+      newCustomerIds.add(m.customerId.toString());
+    }
 
-    // Per-shop breakdown (Zuordnung über die Map, keine Einzel-Zugriffe)
+    // Top 10 Kunden: nur diese 10 aus der Datenbank laden
+    const top10 = Array.from(stampsByMembership.values()).sort((a, b) => b.stamps - a.stamps).slice(0, 10);
+    const topCustomers = (await Promise.all(top10.map(async (t) => {
+      const membership = await ctx.db.get(t.id);
+      if (!membership) return null;
+      const customer = await ctx.db.get(membership.customerId);
+      if (!customer) return null;
+      return { name: customer.name, stamps: t.stamps, shopName: shopById.get(membership.shopId.toString())?.name ?? "" };
+    }))).filter((c): c is NonNullable<typeof c> => c !== null);
+
     const shopsData = shops.map((shop) => {
-      const shopEvents = events.filter(e => e.shopId === shop._id);
-      const shopStamps  = shopEvents.filter(e => e.type === "stamp").length;
-      const shopRedeems = shopEvents.filter(e => e.type === "redeem").length;
-      const activeMemberIds = new Set(
-        shopEvents.map(e => memById.get(e.membershipId.toString())?.customerId.toString()).filter(Boolean)
-      );
-      return { _id: shop._id, name: shop.name, slug: shop.slug, stamps: shopStamps, redeems: shopRedeems, activeCustomers: activeMemberIds.size };
+      const s = perShop.get(shop._id.toString());
+      return { _id: shop._id, name: shop.name, slug: shop.slug, stamps: s?.stamps ?? 0, redeems: s?.redeems ?? 0, activeCustomers: s?.members.size ?? 0 };
     });
 
     return {
       totalShops: shops.length,
-      totalCustomers: customers.length,
       stamps,
       redeems,
-      activeShops: activeShopIds.size,
+      activeShops: perShop.size,
       newCustomers: newCustomerIds.size,
       prevStamps,
       prevRedeems,
@@ -676,72 +691,7 @@ export const getShopAnalyticsByPeriod = query({
   args: { shopId: v.id("shops"), adminToken: v.string(), since: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminToken, since }) => {
     await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
-
-    const shop = await ctx.db.get(shopId);
-
-    // Sicherheitsnetz: nie unbegrenzt laden. Auch MIT Zeitraum maximal die
-    // neuesten MAX_ANALYTICS_EVENTS Events, damit ein sehr großer Shop die
-    // Abfrage nicht sprengt (gleiche Obergrenze wie im "Alle Zeit"-Fall). Bei
-    // extrem aktiven Shops über lange Zeiträume sind die Zahlen dann eine
-    // Näherung auf Basis der jüngsten Events, was für die Übersicht ausreicht.
-    const MAX_ANALYTICS_EVENTS = 15000;
-    const events = since !== undefined
-      ? await ctx.db.query("stampEvents")
-          .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId).gte("timestamp", since))
-          .order("desc").take(MAX_ANALYTICS_EVENTS)
-      : await ctx.db.query("stampEvents")
-          .withIndex("by_shop_and_timestamp", (q) => q.eq("shopId", shopId))
-          .order("desc").take(MAX_ANALYTICS_EVENTS);
-
-    const stamps  = events.filter(e => e.type === "stamp").length;
-    const redeems = events.filter(e => e.type === "redeem").length;
-
-    // Reward breakdown
-    const redeemEvents = events.filter(e => e.type === "redeem");
-    const rewardMap = new Map<string, number>();
-    for (const e of redeemEvents) {
-      const text = e.rewardText ?? shop?.rewardText ?? "";
-      if (text) rewardMap.set(text, (rewardMap.get(text) ?? 0) + 1);
-    }
-    const allTiers = [
-      ...(shop ? [{ stamps: shop.stampsRequired, text: shop.rewardText }] : []),
-      ...(shop?.rewardTiers?.filter(t => t.enabled) ?? []),
-    ];
-    const rewardBreakdown = Array.from(rewardMap.entries()).map(([text, count]) => {
-      const tier = allTiers.find(t => t.text === text);
-      const tierStamps = tier?.stamps ?? shop?.stampsRequired ?? 0;
-      const valuePerRedemption = shop?.stampValue != null ? tierStamps * shop.stampValue : null;
-      return { rewardText: text, count, valuePerRedemption };
-    }).sort((a, b) => b.count - a.count);
-
-    // Group by membership → customer
-    const membershipIds = Array.from(new Set(events.map(e => e.membershipId.toString())));
-    const customerRows = await Promise.all(
-      membershipIds.map(async (mid) => {
-        const mevents = events.filter(e => e.membershipId.toString() === mid);
-        const membership = await ctx.db.get(mevents[0].membershipId);
-        if (!membership) return null;
-        const customer = await ctx.db.get(membership.customerId);
-        if (!customer) return null;
-        return {
-          customerName: customer.name,
-          stamps: mevents.filter(e => e.type === "stamp").length,
-          redeems: mevents.filter(e => e.type === "redeem").length,
-          currentStamps: membership.currentStamps,
-          totalStampsEver: membership.totalStampsEver,
-          lastEvent: mevents[0].timestamp,
-          membershipId: membership._id,
-        };
-      })
-    );
-
-    return {
-      stamps,
-      redeems,
-      stampValue: shop?.stampValue ?? null,
-      rewardBreakdown,
-      customers: customerRows.filter(Boolean).sort((a, b) => b!.stamps - a!.stamps) as NonNullable<typeof customerRows[0]>[],
-    };
+    return computeShopAnalytics(ctx, shopId, since);
   },
 });
 

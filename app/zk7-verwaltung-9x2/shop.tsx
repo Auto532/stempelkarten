@@ -508,6 +508,8 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
   const shopActive = shop.active !== false; // fehlend = aktiv
   const [togglingActive, setTogglingActive] = useState(false);
   const [deleting, setDeleting]             = useState(false);
+  const [dangerOpen, setDangerOpen]         = useState(false);
+  const [confirmName, setConfirmName]       = useState("");
 
   const handleToggleActive = async () => {
     setTogglingActive(true);
@@ -836,14 +838,32 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
         )}
       </div>
 
-      {/* Gefahrenzone: Shop löschen */}
-      <div className="bg-zinc-900 border border-red-900/40 rounded-2xl p-4 space-y-2">
-        <p className="text-sm font-semibold text-red-400">Gefahrenzone</p>
-        <p className="text-[11px] text-zinc-500">Löscht diesen Shop samt aller Kundenkarten, Stempel und Nachrichten. Nicht umkehrbar.</p>
-        <button onClick={handleDeleteShop} disabled={deleting}
-          className="w-full py-2.5 rounded-xl text-sm font-semibold bg-red-900/30 border border-red-900/50 text-red-400 hover:bg-red-900/40 transition-colors disabled:opacity-50">
-          {deleting ? "Löscht..." : "Shop komplett löschen"}
+      {/* Gefahrenzone: eingeklappt, Löschen erst nach Eintippen des Shopnamens */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <button onClick={() => { setDangerOpen(o => !o); setConfirmName(""); }}
+          className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors">
+          <span className="text-sm font-medium text-zinc-400">Gefahrenzone</span>
+          <span className="text-[11px] text-zinc-600">Shop löschen</span>
+          <ChevronRight size={14} className={`ml-auto text-zinc-600 transition-transform ${dangerOpen ? "rotate-90" : ""}`} />
         </button>
+        <AnimatePresence initial={false}>
+          {dangerOpen && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="px-4 pb-4 pt-1 space-y-2.5 border-t border-zinc-800">
+                <p className="text-[11px] text-zinc-500 pt-2">
+                  Löscht diesen Shop samt aller Kundenkarten, Stempel und Nachrichten. Nicht umkehrbar.
+                </p>
+                <input value={confirmName} onChange={e => setConfirmName(e.target.value)}
+                  placeholder={`Zum Bestätigen „${shop.name}" eintippen`}
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-red-900/60" />
+                <button onClick={handleDeleteShop} disabled={deleting || confirmName.trim() !== shop.name.trim()}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold bg-red-950/40 border border-red-900/50 text-red-400 hover:bg-red-900/40 transition-colors disabled:opacity-40">
+                  {deleting ? "Löscht..." : "Shop endgültig löschen"}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
@@ -1030,7 +1050,7 @@ export function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops"
             className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-100 transition-colors">
             <ArrowLeft size={18} />
           </button>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center text-zinc-900 font-bold shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-200 font-semibold shrink-0">
             {shop.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
@@ -1043,9 +1063,9 @@ export function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops"
           <div className="inline-flex gap-1 p-1 rounded-2xl bg-zinc-900 border border-zinc-800">
             {SUB_TABS.map(({ id, label, icon: Icon }) => (
               <button key={id} onClick={() => setSubView(id)}
-                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${subView === id ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-100"}`}>
-                {subView === id && <motion.div layoutId="shop-tab-desktop" className="absolute inset-0 rounded-xl bg-amber-400" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
-                <Icon size={15} className="relative" />
+                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${subView === id ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-200"}`}>
+                {subView === id && <motion.div layoutId="shop-tab-desktop" className="absolute inset-0 rounded-xl nav-active" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
+                <Icon size={15} className={`relative ${subView === id ? "text-amber-400" : ""}`} />
                 <span className="relative">{label}</span>
               </button>
             ))}
@@ -1069,10 +1089,10 @@ export function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops"
         <div className="flex p-1.5">
           {SUB_TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setSubView(id)}
-              className={`relative flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[20px] transition-colors ${subView === id ? "text-zinc-900" : "text-zinc-500"}`}>
-              {subView === id && <motion.div layoutId="shop-dock-active" className="absolute inset-0 rounded-[20px] bg-amber-400" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
-              <Icon size={19} className="relative" />
-              <span className="relative text-[9.5px] font-semibold">{label}</span>
+              className={`relative flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[20px] transition-colors ${subView === id ? "text-zinc-100" : "text-zinc-500"}`}>
+              {subView === id && <motion.div layoutId="shop-dock-active" className="absolute inset-0 rounded-[20px] nav-active" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
+              <Icon size={19} className={`relative ${subView === id ? "text-amber-400" : ""}`} />
+              <span className="relative text-[9.5px] font-medium">{label}</span>
             </button>
           ))}
         </div>

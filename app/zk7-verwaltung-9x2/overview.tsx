@@ -50,17 +50,17 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
   // Shops mit offener Zahlung zählen nicht in die Statistik, sie stehen
   // unter "Braucht Aufmerksamkeit".
   const kpis = [
-    { icon: Store, label: "Shops aktiv",  value: globalStats.totalShops - openPayments.length, tint: "251,191,36" },
-    { icon: Users, label: "Kunden",       value: globalStats.totalCustomers, tint: "96,165,250" },
-    { icon: Stamp, label: "Stempel",      value: globalStats.totalStamps,    tint: "74,222,128" },
-    { icon: Award, label: "Belohnungen",  value: globalStats.totalRewards,   tint: "192,132,252" },
+    { icon: Store, label: "Shops aktiv",  value: globalStats.totalShops - openPayments.length },
+    { icon: Users, label: "Kunden",       value: globalStats.totalCustomers },
+    { icon: Stamp, label: "Stempel",      value: globalStats.totalStamps },
+    { icon: Award, label: "Belohnungen",  value: globalStats.totalRewards },
   ];
 
   const attention = [
-    supportOpenCount > 0 && { icon: LifeBuoy, tone: "text-red-300", bg: "bg-red-500/10", label: `${supportOpenCount} Support-Anfrage${supportOpenCount > 1 ? "n" : ""} offen`, sub: "Antworten im Support-Tab", onClick: () => onNavigate("support") },
-    openPayments.length > 0 && { icon: Clock, tone: "text-yellow-300", bg: "bg-yellow-500/10", label: `${openPayments.length} Zahlung${openPayments.length > 1 ? "en" : ""} offen`, sub: `gesamt €${openSum}`, onClick: () => onNavigate("shops") },
-    inactiveShops.length > 0 && { icon: PowerOff, tone: "text-zinc-300", bg: "bg-zinc-500/10", label: `${inactiveShops.length} Shop${inactiveShops.length > 1 ? "s" : ""} deaktiviert`, sub: inactiveShops.slice(0, 2).map(s => s.name).join(", ") + (inactiveShops.length > 2 ? " …" : ""), onClick: () => onNavigate("shops") },
-  ].filter(Boolean) as { icon: LucideIcon; tone: string; bg: string; label: string; sub: string; onClick: () => void }[];
+    supportOpenCount > 0 && { icon: LifeBuoy, label: `${supportOpenCount} Support-Anfrage${supportOpenCount > 1 ? "n" : ""} offen`, sub: "Antworten im Support-Tab", onClick: () => onNavigate("support") },
+    openPayments.length > 0 && { icon: Clock, label: `${openPayments.length} Zahlung${openPayments.length > 1 ? "en" : ""} offen`, sub: `gesamt €${openSum}`, onClick: () => onNavigate("shops") },
+    inactiveShops.length > 0 && { icon: PowerOff, label: `${inactiveShops.length} Shop${inactiveShops.length > 1 ? "s" : ""} deaktiviert`, sub: inactiveShops.slice(0, 2).map(s => s.name).join(", ") + (inactiveShops.length > 2 ? " …" : ""), onClick: () => onNavigate("shops") },
+  ].filter(Boolean) as { icon: LucideIcon; label: string; sub: string; onClick: () => void }[];
 
   const newestShops = [...globalStats.shops].sort((a, b) => b._creationTime - a._creationTime);
 
@@ -70,25 +70,24 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-xs text-zinc-500">{new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</p>
-          <h2 className="text-2xl font-bold text-zinc-100 tracking-tight">{greeting()} 👋</h2>
+          <h2 className="text-2xl font-semibold text-zinc-100 tracking-tight">{greeting()}</h2>
         </div>
         <button onClick={() => onNavigate("shops", { createShop: true })}
-          className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 text-zinc-900 text-sm font-semibold shadow-[0_10px_25px_-10px_rgba(251,191,36,0.7)] hover:brightness-105 transition">
+          className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 text-zinc-900 text-sm font-semibold hover:brightness-105 transition">
           <Plus size={15} /> Neuer Shop
         </button>
       </div>
 
       {/* Kennzahlen */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {kpis.map(({ icon: Icon, label, value, tint }, i) => (
+        {kpis.map(({ icon: Icon, label, value }, i) => (
           <motion.div key={label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-            className="relative overflow-hidden bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-            <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl" style={{ background: `rgba(${tint},0.18)` }} />
-            <div className="relative w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: `rgba(${tint},0.14)` }}>
-              <Icon size={17} style={{ color: `rgb(${tint})` }} />
+            className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Icon size={14} className="text-amber-400" />
+              <p className="text-xs text-zinc-500">{label}</p>
             </div>
-            <p className="relative text-3xl font-bold text-zinc-100 tabular tracking-tight">{value.toLocaleString("de-DE")}</p>
-            <p className="relative text-xs text-zinc-500 mt-0.5">{label}</p>
+            <p className="text-3xl font-semibold text-zinc-100 tabular tracking-tight">{value.toLocaleString("de-DE")}</p>
           </motion.div>
         ))}
       </div>
@@ -130,19 +129,19 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
       {/* Braucht Aufmerksamkeit */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
-          <Bell size={14} className="text-amber-400" />
-          <span className="text-sm font-semibold text-zinc-200">Braucht Aufmerksamkeit</span>
+          <Bell size={14} className="text-zinc-500" />
+          <span className="text-sm font-medium text-zinc-200">Braucht Aufmerksamkeit</span>
         </div>
         {attention.length === 0 ? (
           <div className="px-4 py-5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center"><Check size={17} className="text-green-400" /></div>
+            <div className="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center"><Check size={16} className="text-amber-400" /></div>
             <p className="text-sm text-zinc-400">Alles erledigt. Keine offenen Anfragen oder Zahlungen.</p>
           </div>
         ) : (
           <div className="divide-y divide-zinc-800/50">
             {attention.map(a => (
               <button key={a.label} onClick={a.onClick} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors">
-                <div className={`w-9 h-9 rounded-xl ${a.bg} flex items-center justify-center shrink-0`}><a.icon size={17} className={a.tone} /></div>
+                <div className="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0"><a.icon size={16} className="text-amber-400" /></div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-zinc-200">{a.label}</p>
                   <p className="text-[11px] text-zinc-500 truncate">{a.sub}</p>
@@ -169,7 +168,7 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
             {newestShops.slice(0, recent.limit).map(shop => (
               <button key={shop._id} onClick={() => onSelectShop(shop._id)}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center shrink-0 text-xs font-bold text-amber-300">
+                <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 text-xs font-semibold text-zinc-300">
                   {shop.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">

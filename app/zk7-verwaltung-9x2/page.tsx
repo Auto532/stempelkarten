@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, Store, TrendingUp, Users, MessageSquare, Settings, Shield, LogOut, type LucideIcon } from "lucide-react";
+import { LayoutGrid, Store, TrendingUp, Users, MessageSquare, Settings, LogOut, type LucideIcon } from "lucide-react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { errMsg } from "@/app/lib/errMsg";
 import { affiliateQuery } from "./lib/affiliate";
@@ -116,21 +116,16 @@ export default function SuperAdminPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-xs rounded-[28px] border border-zinc-800 bg-zinc-900 p-7 space-y-5">
           <div className="text-center">
-            <div className="relative w-16 h-16 mx-auto mb-4">
-              <div className="absolute inset-0 rounded-2xl bg-amber-400/30 blur-xl" />
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center shadow-lg">
-                <Shield size={28} className="text-zinc-900" />
-              </div>
-            </div>
-            <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">Admin</h1>
-            <p className="text-zinc-500 text-sm mt-1">LoyaltyCard · intern</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-hell.png" alt="LoyaltyCard" className="mx-auto w-60 h-auto -my-8" />
+            <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 mt-1">Admin · intern</p>
           </div>
           <input type="password" inputMode="numeric" value={pin} onChange={e => { setPin(e.target.value); setPinError(null); }}
             placeholder="PIN" onKeyDown={e => { if (e.key === "Enter") handleLogin(); }} autoFocus
             className={`w-full px-4 py-3.5 bg-zinc-950/60 border rounded-2xl text-zinc-100 placeholder-zinc-600 focus:outline-none text-center tracking-[0.4em] text-xl transition-colors ${pinError ? "border-red-500/60" : "border-zinc-800 focus:border-amber-400/50"}`} />
           {pinError && <p className="text-red-400 text-sm text-center -mt-2">{pinError}</p>}
           <button onClick={handleLogin} disabled={checking || !pin}
-            className="w-full py-3.5 bg-gradient-to-r from-amber-300 to-amber-400 hover:brightness-105 disabled:opacity-50 text-zinc-900 font-semibold rounded-2xl transition shadow-[0_10px_30px_-10px_rgba(251,191,36,0.6)]">
+            className="w-full py-3.5 bg-amber-400 hover:brightness-105 disabled:opacity-40 text-zinc-900 font-semibold rounded-2xl transition">
             {checking ? "Prüfe…" : "Einloggen"}
           </button>
         </motion.div>
@@ -154,14 +149,10 @@ export default function SuperAdminPage() {
     <div className="adm min-h-screen">
       {/* ── Seitenleiste (PC) ── */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-zinc-800 bg-zinc-900 px-4 py-6 z-20">
-        <div className="flex items-center gap-3 px-2 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center">
-            <Shield size={17} className="text-zinc-900" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-zinc-100 leading-tight">LoyaltyCard</p>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Admin</p>
-          </div>
+        <div className="px-1 mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-hell.png" alt="LoyaltyCard" className="w-40 h-auto -my-5 -ml-3" />
+          <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-600 pl-1">Admin</p>
         </div>
         <nav className="space-y-1 flex-1">
           {TABS.map(({ id, title, icon: Icon }) => {
@@ -169,12 +160,12 @@ export default function SuperAdminPage() {
             const badge = badgeFor(id);
             return (
               <button key={id} onClick={() => goTo(id)}
-                className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${active ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-100 hover:bg-white/5"}`}>
-                {active && <motion.div layoutId="side-active" className="absolute inset-0 rounded-xl bg-amber-400" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
-                <Icon size={17} className="relative" />
+                className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${active ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]"}`}>
+                {active && <motion.div layoutId="side-active" className="absolute inset-0 rounded-xl nav-active" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+                <Icon size={17} className={`relative ${active ? "text-amber-400" : ""}`} />
                 <span className="relative flex-1 text-left">{title}</span>
                 {badge > 0 && (
-                  <span className={`relative text-[10px] font-bold px-1.5 py-0.5 rounded-full ${active ? "bg-zinc-900/20 text-zinc-900" : "bg-red-500 text-white"}`}>{badge}</span>
+                  <span className="relative text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">{badge}</span>
                 )}
               </button>
             );
@@ -190,11 +181,13 @@ export default function SuperAdminPage() {
         {/* ── Kopfzeile ── */}
         <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/40 backdrop-blur-xl"
           style={{ paddingTop: "env(safe-area-inset-top)" }}>
-          <div className="mx-auto max-w-4xl px-5 py-3.5 flex items-center gap-3">
+          <div className="mx-auto max-w-4xl px-5 py-3 flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-mark-hell.png" alt="" className="lg:hidden w-8 h-auto shrink-0" />
             <AnimatePresence mode="wait">
               <motion.div key={activeTab} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500 lg:hidden">LoyaltyCard Admin</p>
-                <h1 className="text-lg font-bold text-zinc-100 tracking-tight leading-tight">{current.title}</h1>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-600 lg:hidden">Admin</p>
+                <h1 className="text-lg font-semibold text-zinc-100 tracking-tight leading-tight">{current.title}</h1>
               </motion.div>
             </AnimatePresence>
             <button onClick={handleLogout} aria-label="Abmelden"
@@ -226,17 +219,15 @@ export default function SuperAdminPage() {
             const badge = badgeFor(id);
             return (
               <button key={id} onClick={() => goTo(id)}
-                className={`relative flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[20px] transition-colors ${active ? "text-zinc-900" : "text-zinc-500"}`}>
-                {active && <motion.div layoutId="dock-active" className="absolute inset-0 rounded-[20px] bg-amber-400" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
+                className={`relative flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[20px] transition-colors ${active ? "text-zinc-100" : "text-zinc-500"}`}>
+                {active && <motion.div layoutId="dock-active" className="absolute inset-0 rounded-[20px] nav-active" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
                 <span className="relative">
-                  <Icon size={19} />
+                  <Icon size={19} className={active ? "text-amber-400" : ""} />
                   {badge > 0 && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-1 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-zinc-900">
-                      {badge > 9 ? "9+" : badge}
-                    </span>
+                    <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-zinc-900" />
                   )}
                 </span>
-                <span className="relative text-[9.5px] font-semibold">{label}</span>
+                <span className="relative text-[9.5px] font-medium">{label}</span>
               </button>
             );
           })}

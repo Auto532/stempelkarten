@@ -140,7 +140,7 @@ export function MiniBarChart({ data }: { data: { dayStart: number; stamps: numbe
         return (
           <rect key={i}
             x={i * (barW + gap)} y={H - h} width={barW} height={h}
-            rx={1} fill="#fbbf24" opacity={0.75}
+            rx={1} fill="#d4b26a" opacity={0.7}
           />
         );
       })}
