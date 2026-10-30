@@ -6,7 +6,7 @@ import { Award, Bell, Check, ChevronRight, Clock, LifeBuoy, Plus, PowerOff, Sear
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { PayBadge, usePayStatus, useLimit, ShowMore, MiniBarChart, growthBadge, periodToSince, periodToPrevSince, type AdminTab } from "./shared";
+import { PayBadge, usePayStatus, useLimit, ShowMore, type AdminTab } from "./shared";
 import { ShopListItem, CreateShopForm } from "./shop";
 import { PayLaterCard } from "./AnalyticsTab";
 
@@ -24,9 +24,6 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
   onSelectShop: (id: Id<"shops">) => void;
 }) {
   const globalStats = useQuery(api.shops.getGlobalStats, adminSecret ? { adminSecret } : "skip");
-  // Aktivität der letzten 30 Tage (inkl. Vergleich zum Vormonat)
-  const activity = useQuery(api.shops.getGlobalAnalyticsByPeriod, adminSecret
-    ? { adminSecret, since: periodToSince("30d"), prevSince: periodToPrevSince("30d") } : "skip");
   const payStatus = usePayStatus(adminSecret);
   const openPayments = Object.values(payStatus).filter(s => !s.paid);
   const recent = useLimit(5);
@@ -45,7 +42,6 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
 
   const inactiveShops = globalStats.shops.filter(s => s.active === false);
   const openSum = openPayments.reduce((s, p) => s + p.amountDue, 0);
-  const stampGrowth = activity ? growthBadge(activity.stamps, activity.prevStamps) : null;
 
   // Shops mit offener Zahlung zählen nicht in die Statistik, sie stehen
   // unter "Braucht Aufmerksamkeit".
@@ -90,40 +86,6 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
             <p className="text-3xl font-semibold text-zinc-100 tabular tracking-tight">{value.toLocaleString("de-DE")}</p>
           </motion.div>
         ))}
-      </div>
-
-      {/* Aktivität 30 Tage */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div>
-            <p className="text-xs text-zinc-500">Stempel · letzte 30 Tage</p>
-            <p className="text-2xl font-bold text-zinc-100 tabular">{activity ? activity.stamps.toLocaleString("de-DE") : "–"}</p>
-          </div>
-          {stampGrowth && stampGrowth.up !== null && (
-            <span className={`text-[11px] font-bold px-2 py-1 rounded-lg ${stampGrowth.up ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
-              {stampGrowth.label} zum Vormonat
-            </span>
-          )}
-        </div>
-        {activity ? (
-          activity.dailyBreakdown.length > 0
-            ? <MiniBarChart data={activity.dailyBreakdown} />
-            : <p className="text-xs text-zinc-600 py-4 text-center">Noch keine Aktivität im Zeitraum.</p>
-        ) : <div className="h-12 rounded-lg bg-zinc-800 animate-pulse" />}
-        {activity && (
-          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-zinc-800">
-            {[
-              { label: "Neue Kunden", value: activity.newCustomers },
-              { label: "Einlösungen", value: activity.redeems },
-              { label: "Aktive Shops", value: activity.activeShops },
-            ].map(s => (
-              <div key={s.label}>
-                <p className="text-base font-bold text-zinc-100 tabular">{s.value}</p>
-                <p className="text-[10px] text-zinc-500">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Braucht Aufmerksamkeit */}

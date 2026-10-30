@@ -509,182 +509,68 @@ async function exportFinancePdf(
 }
 
 export function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
-  const [period, setPeriod] = useState<Period>("all");
-  const data = useQuery(api.shops.getGlobalAnalyticsByPeriod, {
-    adminSecret,
-    since: periodToSince(period),
-    prevSince: periodToPrevSince(period),
-  });
   // Teuer (lädt alle Kunden + Karten) → erst beim Aufklappen abfragen
   const [showApp, setShowApp] = useState(false);
   const appStats = useQuery(api.shops.getAppUsageStats, showApp ? { adminSecret } : "skip");
-  const shopLimit = useLimit(10);
   const appLimit = useLimit(10);
   const multiShopUsers = appStats?.filter(c => c.shopCount >= 2) ?? [];
 
   return (
     <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
 
-      {/* Sektion 1: Finanzen (Zahlungen, Provisionen) */}
+      {/* Finanzen (Zahlungen, Provisionen) */}
       <div className="flex items-center gap-2 pt-1">
         <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Finanzen</p>
         <div className="flex-1 h-px bg-zinc-800" />
       </div>
       <EarningsCard adminSecret={adminSecret} />
 
-      {/* Sektion 2: Nutzung (Stempel-Aktivität, unabhängig von den Finanzen) */}
+      {/* App Details: Kunden mit 2+ Shops (lädt erst beim Aufklappen) */}
       <div className="flex items-center gap-2 pt-3">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Nutzung & Aktivität</p>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Kunden</p>
         <div className="flex-1 h-px bg-zinc-800" />
       </div>
-      <p className="text-[11px] text-zinc-600 -mt-2">
-        Stempel und Kunden im gewählten Zeitraum. Hat nichts mit den Finanzen oben zu tun.
-      </p>
-
-      <PeriodSelector value={period} onChange={setPeriod} />
-
-      {data === undefined ? (
-        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
-          className="text-zinc-500 text-sm text-center py-10">Laden...</motion.div>
-      ) : (
-        <>
-          {/* Gesamt-Stats mit Wachstum */}
-          <div className="grid grid-cols-2 gap-3">
-            <GrowthCard label="Stempel"      value={data.stamps}         prev={data.prevStamps}  color="text-amber-400"  period={period} />
-            <GrowthCard label="Einlösungen"  value={data.redeems}        prev={data.prevRedeems} color="text-purple-400" period={period} />
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-              <p className="text-3xl font-bold text-green-400">{data.activeShops}</p>
-              <p className="text-xs text-zinc-500 mt-1">Shops mit Stempeln</p>
-              <p className="text-[10px] text-zinc-600 mt-0.5">im Zeitraum, nicht Vertragsstatus</p>
-            </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-              <div className="flex items-start justify-between gap-1">
-                <p className="text-3xl font-bold text-blue-400">{data.newCustomers}</p>
-                {period !== "all" && (
-                  <span className="text-[10px] text-zinc-600 mt-1.5">Neu</span>
-                )}
-              </div>
-              <p className="text-xs text-zinc-500 mt-1">Neue Kunden</p>
-            </div>
-          </div>
-
-          {/* Tages-Chart */}
-          {data.dailyBreakdown.length > 1 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-              <p className="text-xs font-semibold text-zinc-400 mb-3">Stempel pro Tag</p>
-              <MiniBarChart data={data.dailyBreakdown} />
-              <div className="flex justify-between mt-1.5">
-                <span className="text-[10px] text-zinc-600">
-                  {new Date(data.dailyBreakdown[0].dayStart).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
-                </span>
-                <span className="text-[10px] text-zinc-600">
-                  {new Date(data.dailyBreakdown[data.dailyBreakdown.length - 1].dayStart).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Top Kunden */}
-          {data.topCustomers.length > 0 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
-                <Trophy size={14} className="text-amber-400" />
-                <span className="text-sm font-medium text-zinc-200">Top Kunden</span>
-              </div>
-              <div className="divide-y divide-zinc-800/50">
-                {data.topCustomers.map((c, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="text-[11px] font-bold w-4 shrink-0"
-                      style={{ color: i === 0 ? "#fbbf24" : i === 1 ? "#94a3b8" : i === 2 ? "#b45309" : "#52525b" }}>
-                      {i + 1}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <button onClick={() => setShowApp(v => !v)}
+          className={`w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors ${showApp ? "border-b border-zinc-800" : ""}`}>
+          <LayoutGrid size={14} className="text-amber-400" />
+          <span className="text-sm font-medium text-zinc-200">App Details</span>
+          <span className="ml-auto text-[10px] text-zinc-500">
+            {showApp ? (appStats ? `${multiShopUsers.length} freigeschaltet` : "lädt…") : "Kunden mit 2+ Shops"}
+          </span>
+          <ChevronRight size={14} className={`text-zinc-600 transition-transform ${showApp ? "rotate-90" : ""}`} />
+        </button>
+        {showApp && appStats && multiShopUsers.length === 0 && (
+          <p className="px-4 py-5 text-center text-sm text-zinc-600">Noch kein Kunde in mehreren Shops.</p>
+        )}
+        {showApp && (
+          <div className="divide-y divide-zinc-800/50">
+            {multiShopUsers.slice(0, appLimit.limit).map((c, i) => {
+              const lvlIdx = globalLevelIdx(c.shopCount);
+              return (
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-bold shrink-0">
+                    {c.name[0]?.toUpperCase() ?? "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-200 truncate">{c.name}</p>
+                    <p className="text-[11px] text-zinc-500">
+                      {c.shopCount} {c.shopCount === 1 ? "Laden" : "Läden"} · {c.totalStamps} Stempel
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-800 text-amber-400">
+                      LVL {lvlIdx + 1}
                     </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-zinc-200 truncate">{c.name}</p>
-                      <p className="text-[10px] text-zinc-600 truncate">{c.shopName}</p>
-                    </div>
-                    <p className="text-sm font-bold text-amber-400 shrink-0">{c.stamps}</p>
+                    <p className="text-[9px] text-zinc-600 mt-0.5">{GLOBAL_LEVELS[lvlIdx].label}</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Pro-Shop-Ranking */}
-          {data.shops.some(s => s.stamps > 0) && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
-                <TrendingUp size={14} className="text-zinc-400" />
-                <span className="text-sm font-medium text-zinc-200">Shops im Zeitraum</span>
-              </div>
-              <div className="divide-y divide-zinc-800/50">
-                {data.shops.slice(0, shopLimit.limit).map((shop, i) => (
-                  <div key={shop._id} className="flex items-center gap-3 px-4 py-3">
-                    <span className="text-[11px] font-bold text-zinc-600 w-4 shrink-0">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-zinc-200 font-medium truncate">{shop.name}</p>
-                      <p className="text-[11px] text-zinc-500">{shop.activeCustomers} Kunden · {shop.redeems}× eingelöst</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-amber-400">{shop.stamps}</p>
-                      <p className="text-[10px] text-zinc-600">Stempel</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <ShowMore shown={shopLimit.limit} total={data.shops.length} onMore={shopLimit.more} />
-            </div>
-          )}
-
-          {!data.stamps && !data.redeems && (
-            <p className="text-center text-zinc-600 text-sm py-4">Keine Aktivität im gewählten Zeitraum.</p>
-          )}
-
-          {/* App Details: Kunden mit 2+ Shops */}
-          {/* App Details: Kunden mit 2+ Shops (lädt erst beim Aufklappen) */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-              <button onClick={() => setShowApp(v => !v)}
-                className={`w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors ${showApp ? "border-b border-zinc-800" : ""}`}>
-                <LayoutGrid size={14} className="text-amber-400" />
-                <span className="text-sm font-medium text-zinc-200">App Details</span>
-                <span className="ml-auto text-[10px] text-zinc-500">
-                  {showApp ? (appStats ? `${multiShopUsers.length} freigeschaltet` : "lädt…") : "Kunden mit 2+ Shops"}
-                </span>
-                <ChevronRight size={14} className={`text-zinc-600 transition-transform ${showApp ? "rotate-90" : ""}`} />
-              </button>
-              {showApp && appStats && multiShopUsers.length === 0 && (
-                <p className="px-4 py-5 text-center text-sm text-zinc-600">Noch kein Kunde in mehreren Shops.</p>
-              )}
-              {showApp && (
-              <div className="divide-y divide-zinc-800/50">
-                {multiShopUsers.slice(0, appLimit.limit).map((c, i) => {
-                  const lvlIdx = globalLevelIdx(c.shopCount);
-                  return (
-                    <div key={i} className="flex items-center gap-3 px-4 py-3">
-                      <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-bold shrink-0">
-                        {c.name[0]?.toUpperCase() ?? "?"}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-zinc-200 truncate">{c.name}</p>
-                        <p className="text-[11px] text-zinc-500">
-                          {c.shopCount} {c.shopCount === 1 ? "Laden" : "Läden"} · {c.totalStamps} Stempel
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded"
-                          style={{ background: "#fbbf2420", color: "#fbbf24" }}>
-                          LVL {lvlIdx + 1}
-                        </span>
-                        <p className="text-[9px] text-zinc-600 mt-0.5">{GLOBAL_LEVELS[lvlIdx].label}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              )}
-              {showApp && <ShowMore shown={appLimit.limit} total={multiShopUsers.length} onMore={appLimit.more} />}
+                </div>
+              );
+            })}
           </div>
-        </>
-      )}
+        )}
+        {showApp && <ShowMore shown={appLimit.limit} total={multiShopUsers.length} onMore={appLimit.more} />}
+      </div>
     </motion.div>
   );
 }
