@@ -357,6 +357,7 @@ function CardStack({ memberships, personalAccent, onOpen }: {
   onOpen: (slug: string) => void;
 }) {
   const [top, setTop] = useState(0);
+  const [quickOpen, setQuickOpen] = useState(false);
   const n = memberships.length;
   // Reihenfolge ab der aktuellen Topkarte (rotiert beim Blättern)
   const ordered = Array.from({ length: n }, (_, k) => memberships[(top + k) % n]);
@@ -422,45 +423,72 @@ function CardStack({ memberships, personalAccent, onOpen }: {
           </div>
           <p className="text-center text-[10px] text-zinc-600 mt-2">← wischen zum Blättern →</p>
 
-          {/* Schnellzugriff — alle Karten als kompakte Liste */}
+          {/* Schnellzugriff — eingeklappt, öffnet sich auf Tipp */}
           <div className="mt-6">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 mb-2.5">Schnellzugriff</p>
-            <div className="space-y-1.5">
-              {memberships.map((entry, i) => {
-                const shop = entry.shop;
-                if (!shop) return null;
-                const Icon = getStampIcon(shop.stampIcon);
-                const tiers = shop.bonusProgramEnabled
-                  ? getActiveTiers(shop)
-                  : [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true as const }];
-                const lowest = tiers[0];
-                const ready = entry.membership.currentStamps >= lowest.stamps;
-                const nextTier = tiers.find(t => entry.membership.currentStamps < t.stamps);
-                const left = nextTier ? nextTier.stamps - entry.membership.currentStamps : 0;
-                const active = i === top;
-                return (
-                  <button key={entry.membership._id} onClick={() => setTop(i)}
-                    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all"
-                    style={{
-                      background: active ? hexToRgba(personalAccent, 0.14) : "#1e1e22",
-                      border: `1px solid ${active ? hexToRgba(personalAccent, 0.4) : "rgba(255,255,255,0.1)"}`,
-                    }}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: hexToRgba(personalAccent, 0.15), border: `1px solid ${hexToRgba(personalAccent, 0.3)}` }}>
-                      <Icon size={15} style={{ color: personalAccent }} />
-                    </div>
-                    <span className="text-[13px] font-medium text-zinc-200 truncate flex-1 text-left">{shop.name}</span>
-                    {ready ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded shrink-0"
-                        style={{ color: personalAccent, background: hexToRgba(personalAccent, 0.12) }}>BEREIT</span>
-                    ) : (
-                      <span className="text-[11px] font-semibold tabular-nums shrink-0"
-                        style={{ color: hexToRgba(personalAccent, 0.6) }}>noch {left}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            <button onClick={() => setQuickOpen(o => !o)}
+              className="w-full flex items-center justify-between py-1">
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">Schnellzugriff</p>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full tabular-nums"
+                  style={{ background: hexToRgba(personalAccent, 0.15), color: personalAccent }}>{n}</span>
+              </div>
+              <motion.div animate={{ rotate: quickOpen ? 90 : 0 }} transition={{ duration: 0.25 }}
+                className="w-6 h-6 rounded-lg flex items-center justify-center"
+                style={{ background: hexToRgba(personalAccent, 0.1), border: `1px solid ${hexToRgba(personalAccent, 0.2)}` }}>
+                <ChevronRight size={13} style={{ color: personalAccent }} />
+              </motion.div>
+            </button>
+            <AnimatePresence initial={false}>
+              {quickOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-1.5 pt-2.5">
+                    {memberships.map((entry, i) => {
+                      const shop = entry.shop;
+                      if (!shop) return null;
+                      const Icon = getStampIcon(shop.stampIcon);
+                      const tiers = shop.bonusProgramEnabled
+                        ? getActiveTiers(shop)
+                        : [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true as const }];
+                      const lowest = tiers[0];
+                      const ready = entry.membership.currentStamps >= lowest.stamps;
+                      const nextTier = tiers.find(t => entry.membership.currentStamps < t.stamps);
+                      const left = nextTier ? nextTier.stamps - entry.membership.currentStamps : 0;
+                      const active = i === top;
+                      return (
+                        <motion.button key={entry.membership._id} onClick={() => setTop(i)}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.05, duration: 0.3 }}
+                          className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl transition-colors"
+                          style={{
+                            background: active ? hexToRgba(personalAccent, 0.14) : "#1e1e22",
+                            border: `1px solid ${active ? hexToRgba(personalAccent, 0.4) : "rgba(255,255,255,0.1)"}`,
+                          }}>
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ background: hexToRgba(personalAccent, 0.15), border: `1px solid ${hexToRgba(personalAccent, 0.3)}` }}>
+                            <Icon size={15} style={{ color: personalAccent }} />
+                          </div>
+                          <span className="text-[13px] font-medium text-zinc-200 truncate flex-1 text-left">{shop.name}</span>
+                          {ready ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded shrink-0"
+                              style={{ color: personalAccent, background: hexToRgba(personalAccent, 0.12) }}>BEREIT</span>
+                          ) : (
+                            <span className="text-[11px] font-semibold tabular-nums shrink-0"
+                              style={{ color: hexToRgba(personalAccent, 0.6) }}>noch {left}</span>
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </>
       )}
