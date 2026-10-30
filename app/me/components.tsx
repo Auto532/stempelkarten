@@ -382,7 +382,7 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
         {/* QR + Inhaber */}
         <div className="px-6 pt-7 pb-7 flex flex-col items-center gap-5">
           <div className="relative rounded-[20px] p-3.5"
-            style={{ background: "#fff", boxShadow: `0 12px 32px -6px rgba(0,0,0,0.5), 0 0 0 1px ${hexToRgba(accent, 0.25)}, 0 0 26px ${hexToRgba(accent, 0.18)}` }}>
+            style={{ background: "#fff", boxShadow: `0 0 0 1px ${hexToRgba(accent, 0.25)}, 0 0 26px ${hexToRgba(accent, 0.18)}` }}>
             <canvas ref={canvasRef} className="block" />
           </div>
           <div className="text-center">
