@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
@@ -19,6 +19,7 @@ import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import QRCode from "qrcode";
 import { errMsg } from "@/app/lib/errMsg";
+import { LoadMore, ListSkeleton, PAGE_SIZE } from "../ListHelpers";
 
 const Scanner = dynamic(
   () => import("@yudiel/react-qr-scanner").then(m => m.Scanner),
@@ -58,9 +59,9 @@ export default function BetriebDashboard() {
   const [authorized, setAuthorized] = useState(false);
   const [adminToken, setAdminToken] = useState("");
   const [view, setView] = useState<View>("home");
-  const [showAllCustomers, setShowAllCustomers] = useState(false);
-  const [showAllRedemptions, setShowAllRedemptions] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [visibleMessages, setVisibleMessages] = useState(PAGE_SIZE);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [openRedemptionId, setOpenRedemptionId] = useState<string | null>(null);
 
@@ -94,13 +95,25 @@ export default function BetriebDashboard() {
 
   const updateSettings     = useMutation(api.shops.updateSettings);
   const updateMilestones   = useMutation(api.shops.updateMilestones);
-  const customers = useQuery(
-    api.shops.listCustomersForShop,
-    shop && adminToken ? { shopId: shop._id, adminToken, limit: showAllCustomers ? undefined : 20 } : "skip"
+  // Rolle serverseitig prüfen (localStorage allein ist manipulierbar):
+  // Mitarbeiter-Token → Scanner, ungültiger Token → Startseite
+  const login = useQuery(api.shops.resolveLoginToken, adminToken ? { token: adminToken } : "skip");
+  // Kennzahlen kommen vom Server (echte Gesamtwerte, nicht nur die geladene Seite)
+  const stats = useQuery(api.shops.getShopStats, shop && adminToken ? { shopId: shop._id, adminToken } : "skip");
+  // Listen nur laden, wenn die Ansicht offen ist, und immer seitenweise
+  const customerPages = usePaginatedQuery(
+    api.shops.listCustomersForShopPaged,
+    view === "kunden" && shop && adminToken ? { shopId: shop._id, adminToken } : "skip",
+    { initialNumItems: PAGE_SIZE }
   );
-  const redemptions = useQuery(
-    api.memberships.getRedemptionsForShop,
-    shop?.bonusProgramEnabled && shop && adminToken ? { shopId: shop._id, adminToken, limit: showAllRedemptions ? undefined : 20 } : "skip"
+  const searchResults = useQuery(
+    api.shops.searchCustomersForShop,
+    view === "kunden" && shop && adminToken && debouncedSearch ? { shopId: shop._id, adminToken, search: debouncedSearch } : "skip"
+  );
+  const redemptionPages = usePaginatedQuery(
+    api.memberships.getRedemptionsForShopPaged,
+    view === "einloesungen" && shop?.bonusProgramEnabled && adminToken ? { shopId: shop._id, adminToken } : "skip",
+    { initialNumItems: PAGE_SIZE }
   );
   // Endkunden-Nachrichten: nur Inhaber (Mitarbeiter landen eh auf /scan,
   // und die Query akzeptiert nur den Inhaber-Token)
@@ -120,6 +133,18 @@ export default function BetriebDashboard() {
     setAdminToken(token);
     setAuthorized(true);
   }, [router, shopSlug]);
+
+  useEffect(() => {
+    if (login === undefined) return;
+    if (login === null || login.shopSlug !== shopSlug) { router.replace("/"); return; }
+    if (login.role !== "inhaber") router.replace(`/betrieb/${shopSlug}/scan`);
+  }, [login, router, shopSlug]);
+
+  // Suche erst nach kurzer Tipp-Pause an den Server schicken
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   useEffect(() => {
     if (shop) {
@@ -152,7 +177,7 @@ export default function BetriebDashboard() {
     }
   }, [view, shop, adminToken, unreadMessages, markMessagesRead]);
 
-  if (!authorized || shop === undefined) {
+  if (!authorized || shop === undefined || login?.role !== "inhaber") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-zinc-500 text-sm">Laden...</motion.div>
@@ -173,20 +198,17 @@ export default function BetriebDashboard() {
   const div  = c.divider;
   const btn  = c.gradient;
 
-  const totalStamps  = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
-  const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
+  const totalCustomers = stats?.customers ?? "–";
+  const totalStamps  = stats?.stamps ?? "–";
+  const totalRewards = stats?.rewards ?? "–";
+  const readyCount   = stats?.ready ?? 0;
   const activeTiers: Tier[] = shop.bonusProgramEnabled && shop.rewardTiers?.some(t => t.enabled)
     ? shop.rewardTiers!.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps)
     : [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true }];
   const lowestTierStamps = activeTiers[0].stamps;
-  const readyCount = customers?.filter(({ membership }) => membership.currentStamps >= lowestTierStamps).length ?? 0;
-  const filteredCustomers = customers?.filter(({ customer, membership }) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return customer?.name.toLowerCase().includes(q)
-      || (shop.showLeads && customer?.email.toLowerCase().includes(q))
-      || (membership.memberNumber != null && `#${membership.memberNumber}`.includes(q));
-  }) ?? [];
+  // Mit Suchbegriff: Server-Treffer, sonst die seitenweise geladene Liste
+  const searching = !!debouncedSearch;
+  const customerList = searching ? searchResults : (customerPages.status === "LoadingFirstPage" ? undefined : customerPages.results);
 
   const baseDirty = stampsRequired !== shop.stampsRequired || rewardText !== shop.rewardText || stampValue !== (shop.stampValue ?? "");
   const tiersDirty = JSON.stringify(tiers) !== JSON.stringify(
@@ -311,7 +333,7 @@ export default function BetriebDashboard() {
         {/* Stats */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-3 gap-3 mb-5">
           {[
-            { label: "Kunden", value: customers?.length ?? "–", icon: Users },
+            { label: "Kunden", value: totalCustomers, icon: Users },
             { label: "Stempel", value: totalStamps, icon: Stamp },
             { label: "Belohnungen", value: totalRewards, icon: Award },
           ].map(({ label, value, icon: Icon }) => (
@@ -332,7 +354,7 @@ export default function BetriebDashboard() {
               label: "Kunden",
               sub: readyCount > 0
                 ? `${readyCount} bereit`
-                : `${customers?.length ?? "–"} gesamt`,
+                : `${totalCustomers} gesamt`,
               badge: readyCount > 0 ? readyCount : null,
             },
             {
@@ -346,7 +368,7 @@ export default function BetriebDashboard() {
               id: "einloesungen" as View,
               icon: Gift,
               label: "Einlösungen",
-              sub: redemptions ? `${redemptions.length} vergeben` : "Treue Bonus",
+              sub: stats ? `${stats.rewards} vergeben` : "Treue Bonus",
               badge: null,
             }] : []),
             {
@@ -622,7 +644,9 @@ export default function BetriebDashboard() {
 
           {/* Summary row */}
           <div className="flex items-center gap-4 px-5 py-2.5" style={{ borderBottom: `1px solid ${div}` }}>
-            <span className="text-xs" style={{ color: tm }}>{customers?.length ?? "–"} Kunden</span>
+            <span className="text-xs" style={{ color: tm }}>
+              {searching ? `${customerList?.length ?? "–"} Treffer` : `${totalCustomers} Kunden`}
+            </span>
             {readyCount > 0 && (
               <span className="text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1"
                 style={{ background: `${ic}18`, border: `1px solid ${ic}44`, color: ic }}>
@@ -641,12 +665,12 @@ export default function BetriebDashboard() {
 
           {/* List */}
           <div>
-            {customers === undefined && <p className="px-5 py-8 text-center text-sm" style={{ color: tm }}>Laden...</p>}
-            {customers?.length === 0 && <p className="px-5 py-8 text-center text-sm" style={{ color: tm }}>Noch keine Kunden</p>}
-            {customers !== undefined && filteredCustomers.length === 0 && search && (
-              <p className="px-5 py-8 text-center text-sm" style={{ color: tm }}>Keine Treffer für „{search}"</p>
+            {customerList === undefined && <ListSkeleton color={tm} />}
+            {!searching && customerList?.length === 0 && <p className="px-5 py-8 text-center text-sm" style={{ color: tm }}>Noch keine Kunden</p>}
+            {searching && customerList?.length === 0 && (
+              <p className="px-5 py-8 text-center text-sm" style={{ color: tm }}>Keine Treffer für „{debouncedSearch}"</p>
             )}
-            {filteredCustomers.map(({ customer, membership }, i) => {
+            {(customerList ?? []).map(({ customer, membership }, i) => {
               if (!customer) return null;
               const isSelected = selectedCustomerId === customer._id;
               const isReady = membership.currentStamps >= lowestTierStamps;
@@ -705,11 +729,8 @@ export default function BetriebDashboard() {
               );
             })}
           </div>
-          {customers && customers.length >= 20 && (
-            <button onClick={() => setShowAllCustomers(v => !v)}
-              className="w-full py-3 text-xs" style={{ color: tm, borderTop: `1px solid ${div}` }}>
-              {showAllCustomers ? "Weniger anzeigen" : "Alle anzeigen"}
-            </button>
+          {!searching && (
+            <LoadMore status={customerPages.status} onMore={() => customerPages.loadMore(PAGE_SIZE)} color={tm} divColor={div} />
           )}
         </div>
       </div>
@@ -726,9 +747,9 @@ export default function BetriebDashboard() {
         <SubHeader title="Treue Bonus" />
 
         <div className="rounded-2xl overflow-hidden" style={card}>
-          {redemptions === undefined && <p className="px-5 py-8 text-center text-sm" style={{ color: tm }}>Laden…</p>}
-          {redemptions?.length === 0 && <p className="px-5 py-8 text-center text-sm" style={{ color: tm }}>Noch keine Einlösungen</p>}
-          {redemptions?.map((r) => {
+          {redemptionPages.status === "LoadingFirstPage" && <ListSkeleton color={tm} />}
+          {redemptionPages.status !== "LoadingFirstPage" && redemptionPages.results.length === 0 && <p className="px-5 py-8 text-center text-sm" style={{ color: tm }}>Noch keine Einlösungen</p>}
+          {redemptionPages.results.map((r) => {
             const isOpen = openRedemptionId === r._id;
             return (
               <div key={r._id} style={{ borderBottom: `1px solid ${div}` }}>
@@ -770,12 +791,7 @@ export default function BetriebDashboard() {
               </div>
             );
           })}
-          {redemptions && redemptions.length >= 20 && (
-            <button onClick={() => setShowAllRedemptions(v => !v)}
-              className="w-full py-3 text-xs" style={{ color: tm, borderTop: `1px solid ${div}` }}>
-              {showAllRedemptions ? "Weniger anzeigen" : "Alle anzeigen"}
-            </button>
-          )}
+          <LoadMore status={redemptionPages.status} onMore={() => redemptionPages.loadMore(PAGE_SIZE)} color={tm} divColor={div} />
         </div>
       </div>
     );
@@ -791,7 +807,7 @@ export default function BetriebDashboard() {
         <SubHeader title="Nachrichten" />
 
         <div className="rounded-2xl overflow-hidden" style={card}>
-          {messages === undefined && <p className="px-5 py-8 text-center text-sm" style={{ color: tm }}>Laden…</p>}
+          {messages === undefined && <ListSkeleton color={tm} />}
           {messages?.length === 0 && (
             <div className="px-5 py-10 text-center">
               <MessageSquare size={22} className="mx-auto mb-2" style={{ color: tm }} />
@@ -799,7 +815,7 @@ export default function BetriebDashboard() {
               <p className="text-[11px] mt-1" style={{ color: tm }}>Kunden können dir aus ihrem Bereich Feedback und Wünsche schicken.</p>
             </div>
           )}
-          {messages?.map(m => (
+          {messages?.slice(0, visibleMessages).map(m => (
             <div key={m._id} className="px-4 py-3.5" style={{ borderBottom: `1px solid ${div}` }}>
               <div className="flex items-center gap-2 mb-1">
                 <p className="text-sm font-semibold flex-1 truncate" style={{ color: tx }}>{m.customerName}</p>
@@ -813,6 +829,9 @@ export default function BetriebDashboard() {
               <p className="text-sm whitespace-pre-wrap" style={{ color: tb }}>{m.text}</p>
             </div>
           ))}
+          {messages && messages.length > visibleMessages && (
+            <LoadMore status="CanLoadMore" onMore={() => setVisibleMessages(n => n + PAGE_SIZE)} color={tm} divColor={div} />
+          )}
         </div>
       </div>
     );

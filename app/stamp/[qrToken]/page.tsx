@@ -455,7 +455,10 @@ export default function StampPage() {
         </div>
         <div className="min-w-0">
           <p className="font-bold" style={{ color: c.text }}>{customer.name}</p>
-          <p className="text-xs truncate" style={{ color: c.accentDim }}>{customer.email}</p>
+          {/* E-Mail nur für den Inhaber mit freigeschalteten Leads */}
+          {adminRole === "inhaber" && shop.showLeads && (
+            <p className="text-xs truncate" style={{ color: c.accentDim }}>{customer.email}</p>
+          )}
         </div>
       </motion.div>
 

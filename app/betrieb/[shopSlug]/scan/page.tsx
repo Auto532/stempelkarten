@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
@@ -19,6 +19,7 @@ import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import { QRImage } from "@/app/components/QRImage";
 import QRCode from "qrcode";
 import { errMsg } from "@/app/lib/errMsg";
+import { LoadMore, ListSkeleton, PAGE_SIZE } from "../../ListHelpers";
 
 const Scanner = dynamic(
   () => import("@yudiel/react-qr-scanner").then((m) => m.Scanner),
@@ -165,7 +166,6 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
           </div>
           <div>
             <h2 className="font-bold text-zinc-100">{customer.name}</h2>
-            <p className="text-zinc-500 text-xs">{customer.email}</p>
           </div>
         </div>
         <p className="text-zinc-500 text-sm bg-zinc-800 rounded-xl px-4 py-3">
@@ -221,7 +221,6 @@ function CustomerCard({ shopId, shop, qrToken, adminToken, onDone }: {
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="font-bold" style={{ color: c.text }}>{customer.name}</h2>
-          <p className="text-xs" style={{ color: c.accentDim }}>{customer.email}</p>
         </div>
         {rewardReady && (
           <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
@@ -316,15 +315,18 @@ export default function ScanPage() {
   const [adminToken, setAdminToken] = useState("");
   const [view, setView] = useState<"dashboard" | "scanning">("dashboard");
   const [scannedToken, setScannedToken] = useState<string | null>(null);
-  const customers = useQuery(
-    api.shops.listCustomersForShop,
+  // Kennzahlen direkt vom Server (statt alle Kunden zu laden und zu zählen)
+  const stats = useQuery(
+    api.shops.getShopStats,
     shop && adminToken ? { shopId: shop._id, adminToken } : "skip"
   );
-  const redemptions = useQuery(
-    api.memberships.getRedemptionsForShop,
-    shop?.bonusProgramEnabled && shop && adminToken ? { shopId: shop._id, adminToken, limit: 20 } : "skip"
-  );
   const [showGifts, setShowGifts] = useState(false);
+  // Einlösungen erst laden, wenn der Bereich aufgeklappt ist, dann seitenweise
+  const redemptionPages = usePaginatedQuery(
+    api.memberships.getRedemptionsForShopPaged,
+    showGifts && shop?.bonusProgramEnabled && adminToken ? { shopId: shop._id, adminToken } : "skip",
+    { initialNumItems: PAGE_SIZE }
+  );
   const [openRedemptionId, setOpenRedemptionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -344,8 +346,6 @@ export default function ScanPage() {
 
   const theme = getShopTheme(shop);
   const c = theme?.colors ?? DEFAULT_COLORS;
-  const totalStamps = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
-  const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
   const activeTiers = shop.bonusProgramEnabled && shop.rewardTiers && shop.rewardTiers.some(t => t.enabled)
     ? shop.rewardTiers.filter(t => t.enabled).sort((a, b) => a.stamps - b.stamps)
     : [{ stamps: shop.stampsRequired, text: shop.rewardText, enabled: true }];
@@ -433,9 +433,9 @@ export default function ScanPage() {
       {/* Stats */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="grid grid-cols-3 gap-3">
         {[
-          { label: "Kunden", value: customers?.length ?? "–", icon: Users },
-          { label: "Stempel", value: totalStamps, icon: Stamp },
-          { label: "Belohnungen", value: totalRewards, icon: Award },
+          { label: "Kunden", value: stats?.customers ?? "–", icon: Users },
+          { label: "Stempel", value: stats?.stamps ?? "–", icon: Stamp },
+          { label: "Belohnungen", value: stats?.rewards ?? "–", icon: Award },
         ].map(({ label, value, icon: Icon }) => (
           <div key={label} className="rounded-2xl p-4 text-center" style={c.card}>
             <Icon size={18} className="mx-auto mb-2" style={{ color: c.accent }} />
@@ -528,8 +528,8 @@ export default function ScanPage() {
               className="w-full flex items-center gap-2 px-5 py-4 transition-colors text-left">
               <Gift size={15} style={{ color: c.accent }} className="shrink-0" />
               <span className="font-medium text-sm flex-1" style={{ color: c.text }}>Treue Bonus (Einlösungen)</span>
-              {redemptions && redemptions.length > 0 && (
-                <span className="text-xs mr-1" style={{ color: c.accentDim }}>{redemptions.length}</span>
+              {stats && stats.rewards > 0 && (
+                <span className="text-xs mr-1" style={{ color: c.accentDim }}>{stats.rewards}</span>
               )}
               <ChevronRight size={13} style={{ color: c.accentDim }} className={`transition-transform ${showGifts ? "rotate-90" : ""}`} />
             </button>
@@ -537,9 +537,9 @@ export default function ScanPage() {
               {showGifts && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                   <div className="max-h-[320px] overflow-y-auto" style={{ borderTop: `1px solid ${c.divider}` }}>
-                    {redemptions === undefined && <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Laden…</div>}
-                    {redemptions?.length === 0 && <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Noch keine Einlösungen</div>}
-                    {redemptions?.map((r) => {
+                    {redemptionPages.status === "LoadingFirstPage" && <ListSkeleton color={c.accentDim} rows={3} />}
+                    {redemptionPages.status !== "LoadingFirstPage" && redemptionPages.results.length === 0 && <div className="px-5 py-6 text-center text-sm" style={{ color: c.accentDim }}>Noch keine Einlösungen</div>}
+                    {redemptionPages.results.map((r) => {
                       const isOpen = openRedemptionId === r._id;
                       return (
                         <div key={r._id} style={{ borderBottom: `1px solid ${c.divider}` }}>
@@ -582,6 +582,7 @@ export default function ScanPage() {
                         </div>
                       );
                     })}
+                    <LoadMore status={redemptionPages.status} onMore={() => redemptionPages.loadMore(PAGE_SIZE)} color={c.accentDim} divColor={c.divider} />
                   </div>
                 </motion.div>
               )}
