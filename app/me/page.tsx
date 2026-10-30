@@ -56,23 +56,24 @@ const LEVELS = [
   { min: 200, max: Infinity, label: "Legende"     },
 ];
 
+// Allgemeines Level im /me-Bereich: zählt ALLE gesammelten Stempel (shop-übergreifend)
 const GLOBAL_LEVELS = [
-  { min: 1,  max: 1,         label: "Neuling"    },
-  { min: 2,  max: 2,         label: "Entdecker"  },
-  { min: 3,  max: 4,         label: "Stammgast"  },
-  { min: 5,  max: 7,         label: "Loyaler"    },
-  { min: 8,  max: 12,        label: "VIP"        },
-  { min: 13, max: Infinity,  label: "Legende"    },
+  { min: 0,   max: 19,       label: "Neuling"    },
+  { min: 20,  max: 49,       label: "Entdecker"  },
+  { min: 50,  max: 99,       label: "Stammgast"  },
+  { min: 100, max: 199,      label: "Loyaler"    },
+  { min: 200, max: 399,      label: "VIP"        },
+  { min: 400, max: Infinity, label: "Legende"    },
 ];
 
 function LevelCard({ shopCount, totalStamps, accent }: { shopCount: number; totalStamps: number; accent: string }) {
-  const count = Math.max(shopCount, 1);
-  const idx = GLOBAL_LEVELS.findIndex(l => count <= l.max);
+  const count = Math.max(shopCount, 1); // nur für die "X Läden"-Anzeige
+  const idx = GLOBAL_LEVELS.findIndex(l => totalStamps <= l.max);
   const safeIdx = idx === -1 ? GLOBAL_LEVELS.length - 1 : idx;
   const level = GLOBAL_LEVELS[safeIdx];
   const nextLevel = GLOBAL_LEVELS[safeIdx + 1] ?? null;
   const progress = nextLevel
-    ? (count - level.min) / (nextLevel.min - level.min)
+    ? (totalStamps - level.min) / (nextLevel.min - level.min)
     : 1;
 
   const R = 24;
@@ -124,7 +125,7 @@ function LevelCard({ shopCount, totalStamps, accent }: { shopCount: number; tota
         </div>
         {nextLevel && (
           <p className="text-[11px] mt-1.5 font-medium text-zinc-500 tabular-nums">
-            Noch <span style={{ color: hexToRgba(accent, 0.9) }}>{nextLevel.min - count}</span> bis Level {safeIdx + 2}
+            Noch <span style={{ color: hexToRgba(accent, 0.9) }}>{nextLevel.min - totalStamps}</span> Stempel bis Level {safeIdx + 2}
           </p>
         )}
       </div>
