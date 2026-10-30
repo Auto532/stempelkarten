@@ -324,7 +324,7 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
   useEffect(() => {
     if (canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
-        width: 248, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
+        width: 212, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
       });
     }
   }, [qrToken]);
@@ -352,14 +352,14 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
           <div className="absolute top-3 -right-5 w-20 h-20 rounded-full" style={{ background: hexToRgba(accent, 0.06) }} />
           {logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt="" className="absolute top-6 right-6 z-10 object-contain"
-              style={{ maxHeight: 84, maxWidth: 140, width: "auto", height: "auto", filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.4))" }} />
+            <img src={logoUrl} alt="" className="absolute top-5 right-5 z-10 object-contain"
+              style={{ maxHeight: 112, maxWidth: 150, width: "auto", height: "auto", filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.4))" }} />
           )}
           <p className="relative z-10 text-[9px] font-bold uppercase tracking-[0.28em] mb-1.5" style={{ color: hexToRgba(accent, 0.8) }}>
             Stempelkarte
           </p>
           {shopName && (
-            <h2 className="relative z-10 text-[23px] font-extrabold leading-tight tracking-tight pr-32" style={{ color: tPrim }}>{shopName}</h2>
+            <h2 className="relative z-10 text-[23px] font-extrabold leading-tight tracking-tight pr-40" style={{ color: tPrim }}>{shopName}</h2>
           )}
           {/* Status-Pill, pulsierend */}
           <div className="relative z-10 inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full"
