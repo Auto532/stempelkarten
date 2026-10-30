@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useSpring, useTransform, useMotionTemplate, useReducedMotion } from "framer-motion";
 import {
   Gift, Stamp, Scissors, Coffee, Pizza, Dumbbell, Flower2,
   ShoppingBag, Car, Utensils, BookOpen, Flame, Star, Bike, Shirt,
@@ -302,7 +302,7 @@ export function StampOverlay({ onDone }: { onDone: () => void }) {
 
 // ─── QRCard ───────────────────────────────────────────────────────────────────
 
-export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, textPrimary, textMuted, accentColor, logoUrl }: {
+export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, textPrimary, textMuted, accentColor, currentStamps, stampsRequired, cardNumber }: {
   qrToken: string;
   customerName: string;
   shopName?: string;
@@ -311,92 +311,181 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
   textPrimary?: string;
   textMuted?: string;
   accentColor?: string;
-  logoUrl?: string | null;
+  currentStamps?: number;
+  stampsRequired?: number;
+  cardNumber?: string | number | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bg     = cardBg     ?? "#18181b";
   const tPrim  = textPrimary ?? "#f4f4f5";
   const tMuted = textMuted   ?? "#71717a";
   const accent = accentColor ?? "#fbbf24";
-  // Glas nur bei Hex-Hintergrund (sonst Original behalten → kein NaN bei rgba()-Themes)
-  const glassBg = /^#[0-9a-fA-F]{6}$/.test(bg) ? hexToRgba(bg, 0.7) : bg;
+  // Wallet-Pass: fast deckend (nur bei Hex-Hintergrund, sonst Original → kein NaN bei rgba()-Themes)
+  const isHex = /^#[0-9a-fA-F]{6}$/.test(bg);
+  const passBg = isHex ? hexToRgba(bg, 0.9) : bg;
+
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, `${window.location.origin}/stamp/${qrToken}`, {
-        width: 212, margin: 2, color: { dark: "#0a0a0a", light: "#ffffff" },
+        width: 200, margin: 1, color: { dark: "#0a0a0a", light: "#ffffff" },
       });
     }
   }, [qrToken]);
 
+  // Live-Uhr mit Sekunden → Kassierer sieht: echte Karte, kein Screenshot
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // 3D-Tilt + Lichtreflex folgt Finger/Maus
+  const px = useMotionValue(0.5);
+  const py = useMotionValue(0.5);
+  const rotateX = useSpring(useTransform(py, [0, 1], [8, -8]), { stiffness: 150, damping: 18 });
+  const rotateY = useSpring(useTransform(px, [0, 1], [-10, 10]), { stiffness: 150, damping: 18 });
+  const glareX = useTransform(px, (v) => `${v * 100}%`);
+  const glareY = useTransform(py, (v) => `${v * 100}%`);
+  const glare = useMotionTemplate`radial-gradient(circle at ${glareX} ${glareY}, rgba(255,255,255,0.06), transparent 55%)`;
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (reduceMotion) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    px.set((e.clientX - r.left) / r.width);
+    py.set((e.clientY - r.top) / r.height);
+  }
+  function onPointerLeave() { px.set(0.5); py.set(0.5); }
+
+  const initial = shopName?.trim().charAt(0).toUpperCase();
+  const hasStamps = typeof currentStamps === "number" && typeof stampsRequired === "number" && stampsRequired > 0;
+  const shownStamps = hasStamps ? Math.min(currentStamps!, stampsRequired!) : 0;
+  const cardNo = cardNumber != null && cardNumber !== "" ? String(cardNumber).padStart(4, "0") : null;
+
+  // Wallet-Feld: kleines Label oben, Wert darunter
+  const Field = ({ label, value, align = "left" }: { label: string; value: React.ReactNode; align?: "left" | "right" }) => (
+    <div className={align === "right" ? "text-right" : ""}>
+      <p className="text-[9px] font-bold uppercase tracking-[0.16em] mb-0.5" style={{ color: hexToRgba(accent, 0.85) }}>{label}</p>
+      <div className="text-[15px] font-semibold leading-tight truncate" style={{ color: tPrim }}>{value}</div>
+    </div>
+  );
+
   return (
-    <div className="relative mx-auto w-full max-w-xs">
-      {/* Akzent-Glow hinter der Karte → Tiefe */}
-      <div className="absolute -inset-3 rounded-[36px] pointer-events-none"
+    <div className="relative mx-auto w-full max-w-xs pt-4" style={{ perspective: 1000 }}
+      onPointerMove={onPointerMove} onPointerLeave={onPointerLeave}>
+      {/* Dezenter Akzent-Glow hinter der Karte → Tiefe */}
+      <div className="absolute -inset-3 top-1 rounded-[36px] pointer-events-none"
         style={{ background: hexToRgba(accent, 0.12), filter: "blur(30px)" }} />
 
-      {/* Glas-Karte */}
-      <div className="relative rounded-[28px] overflow-hidden"
+      {/* Wallet-Stapel: zwei Karten lugen oben hervor */}
+      <div className="absolute left-6 right-6 top-0 h-16 rounded-[18px]"
+        style={{ background: hexToRgba(accent, 0.18), border: `1px solid ${hexToRgba(accent, 0.15)}` }} />
+      <div className="absolute left-3 right-3 top-2 h-16 rounded-[20px]"
+        style={{ background: isHex ? hexToRgba(bg, 0.95) : bg, border: `1px solid ${hexToRgba(accent, 0.22)}`, boxShadow: "0 -4px 12px rgba(0,0,0,0.3)" }} />
+
+      {/* Pass */}
+      <motion.div className="relative rounded-[22px] overflow-hidden"
+        initial={reduceMotion ? false : { y: 24, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 220, damping: 24 }}
         style={{
-          background: glassBg,
+          rotateX, rotateY, transformStyle: "preserve-3d",
+          background: passBg,
           border: `1px solid ${hexToRgba(accent, 0.25)}`,
           boxShadow: "0 30px 70px -16px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.14)",
           backdropFilter: "blur(22px)",
           WebkitBackdropFilter: "blur(22px)",
         }}>
 
-        {/* Header */}
-        <div className="relative px-6 pt-7 pb-6 overflow-hidden"
-          style={{ background: `linear-gradient(135deg, ${hexToRgba(accent, 0.32)} 0%, ${hexToRgba(accent, 0.08)} 100%)` }}>
-          <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full" style={{ background: hexToRgba(accent, 0.1) }} />
-          <div className="absolute top-3 -right-5 w-20 h-20 rounded-full" style={{ background: hexToRgba(accent, 0.06) }} />
-          {logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt="" className="absolute top-5 right-5 z-10 object-contain"
-              style={{ maxHeight: 112, maxWidth: 150, width: "auto", height: "auto", filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.4))" }} />
+        {/* Lichtreflex */}
+        <motion.div className="absolute inset-0 pointer-events-none z-10" style={{ background: glare }} />
+
+        {/* Kopfzeile: Logo + Name | Header-Feld */}
+        <div className="relative z-10 flex items-center justify-between gap-3 px-5 pt-4 pb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {initial && (
+              <div className="w-8 h-8 shrink-0 rounded-[10px] flex items-center justify-center text-sm font-black"
+                style={{
+                  color: tPrim,
+                  background: `linear-gradient(135deg, ${hexToRgba(accent, 0.5)}, ${hexToRgba(accent, 0.15)})`,
+                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25)`,
+                }}>
+                {initial}
+              </div>
+            )}
+            {shopName && <p className="text-[15px] font-bold tracking-tight truncate" style={{ color: tPrim }}>{shopName}</p>}
+          </div>
+          {cardNo && <Field label="Karte" value={<span className="tabular-nums">#{cardNo}</span>} align="right" />}
+        </div>
+
+        {/* Strip: Primärfeld Stempel + Punkte */}
+        <div className="relative z-10 mx-3 rounded-[16px] px-4 py-4 overflow-hidden"
+          style={{ background: `linear-gradient(135deg, ${hexToRgba(accent, 0.38)} 0%, ${hexToRgba(accent, 0.1)} 100%)` }}>
+          <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full" style={{ background: hexToRgba(accent, 0.12) }} />
+          {hasStamps ? (
+            <>
+              <p className="relative text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: hexToRgba(accent, 0.95) }}>Stempel</p>
+              <p className="relative text-[34px] font-black leading-none tracking-tight mt-1 tabular-nums" style={{ color: tPrim }}>
+                {shownStamps}<span className="text-lg font-bold" style={{ color: tMuted }}> / {stampsRequired}</span>
+              </p>
+              <div className="relative flex flex-wrap gap-1.5 mt-3">
+                {Array.from({ length: stampsRequired! }).map((_, i) => (
+                  <motion.span key={i} className="w-2.5 h-2.5 rounded-full"
+                    initial={reduceMotion ? false : { scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.15 + i * 0.03, type: "spring", stiffness: 400, damping: 18 }}
+                    style={i < shownStamps
+                      ? { background: accent }
+                      : { background: "rgba(255,255,255,0.08)", border: `1px solid ${hexToRgba(accent, 0.3)}` }} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="relative text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: hexToRgba(accent, 0.95) }}>Stempelkarte</p>
+              <p className="relative text-2xl font-black leading-tight tracking-tight mt-1" style={{ color: tPrim }}>{shopName ?? "Treuekarte"}</p>
+            </>
           )}
-          <p className="relative z-10 text-[9px] font-bold uppercase tracking-[0.28em] mb-1.5" style={{ color: hexToRgba(accent, 0.8) }}>
-            Stempelkarte
-          </p>
-          {shopName && (
-            <h2 className="relative z-10 text-[23px] font-extrabold leading-tight tracking-tight pr-40" style={{ color: tPrim }}>{shopName}</h2>
-          )}
-          {/* Status-Pill, pulsierend */}
-          <div className="relative z-10 inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full"
-            style={{ background: hexToRgba(accent, 0.15), border: `1px solid ${hexToRgba(accent, 0.3)}` }}>
+        </div>
+
+        {/* Sekundärfelder */}
+        <div className="relative z-10 grid grid-cols-[1fr_auto] gap-3 px-5 pt-4">
+          <Field label="Inhaber" value={customerName} />
+          <Field label="Live" value={<span className="tabular-nums">{now ? now.toLocaleTimeString("de-DE") : "--:--:--"}</span>} align="right" />
+        </div>
+
+        {/* Barcode-Bereich */}
+        <div className="relative z-10 px-5 pt-5 pb-5 flex flex-col items-center">
+          <motion.div className="relative rounded-[14px] p-2.5 overflow-hidden"
+            initial={reduceMotion ? false : { opacity: 0, scale: 0.92, filter: "blur(8px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            style={{ background: "#fff", boxShadow: `0 0 0 1px ${hexToRgba(accent, 0.25)}, 0 0 26px ${hexToRgba(accent, 0.18)}` }}>
+            <canvas ref={canvasRef} className="block" />
+            {/* Scan-Linie */}
+            {!reduceMotion && (
+              <motion.div className="absolute left-2.5 right-2.5 h-[2px] pointer-events-none"
+                style={{
+                  top: 10,
+                  background: `linear-gradient(90deg, transparent, ${hexToRgba(accent, 0.6)}, transparent)`,
+                }}
+                animate={{ y: [0, 198, 0] }}
+                transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} />
+            )}
+          </motion.div>
+          {/* Status unterm Code (wie Wallet-Alttext) */}
+          <div className="flex items-center gap-1.5 mt-3">
             <span className="relative flex w-1.5 h-1.5">
               <span className="animate-ping absolute inline-flex w-full h-full rounded-full opacity-75" style={{ background: accent }} />
               <span className="relative inline-flex w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
             </span>
-            <p className="text-[10px] font-semibold" style={{ color: hexToRgba(accent, 0.9) }}>Bereit zum Scannen</p>
+            <p className="text-[10px] font-semibold" style={{ color: tMuted }}>Bereit zum Scannen · im Laden vorzeigen</p>
           </div>
         </div>
 
-        {/* Ticket-Perforation mit Notch-Kerben (Wallet-Look) */}
-        <div className="relative h-0 flex items-center">
-          <div className="w-4 h-4 rounded-full -ml-2 shrink-0" style={{ background: "#0a0806" }} />
-          <div className="flex-1 border-t border-dashed mx-1.5" style={{ borderColor: hexToRgba(accent, 0.3) }} />
-          <div className="w-4 h-4 rounded-full -mr-2 shrink-0" style={{ background: "#0a0806" }} />
-        </div>
-
-        {/* QR + Inhaber */}
-        <div className="px-6 pt-7 pb-7 flex flex-col items-center gap-5">
-          <div className="relative rounded-[20px] p-3.5"
-            style={{ background: "#fff", boxShadow: `0 0 0 1px ${hexToRgba(accent, 0.25)}, 0 0 26px ${hexToRgba(accent, 0.18)}` }}>
-            <canvas ref={canvasRef} className="block" />
-          </div>
-          <div className="text-center">
-            <p className="text-[9px] font-bold uppercase tracking-[0.24em] mb-1" style={{ color: tMuted }}>Inhaber</p>
-            <p className="text-xl font-extrabold tracking-tight" style={{ color: tPrim }}>{customerName}</p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 pb-5 border-t text-center" style={{ borderColor: hexToRgba(accent, 0.12) }}>
-          <p className="text-[10px] font-medium pt-4" style={{ color: tMuted }}>Im Laden vorzeigen · Stempel sammeln</p>
-        </div>
-
-      </div>
+      </motion.div>
     </div>
   );
 }

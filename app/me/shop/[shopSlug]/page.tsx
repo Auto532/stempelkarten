@@ -368,7 +368,9 @@ export default function MeShopPage() {
                 textPrimary={theme?.colors.text}
                 textMuted={theme?.colors.accentDim}
                 accentColor={theme?.colors.accent ?? shop.accentColor}
-                logoUrl={shop.designConfig?.logoUrl}
+                currentStamps={membership.currentStamps}
+                stampsRequired={shop.stampsRequired}
+                cardNumber={cardNumber}
               />
               <button
                 onClick={() => setShowQR(false)}
