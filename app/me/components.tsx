@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { motion, useMotionValue, useSpring, useTransform, useMotionTemplate, useReducedMotion } from "framer-motion";
 import {
@@ -799,6 +799,34 @@ export function MilestonesSection({
   );
 }
 
+// ─── Tinten-Stempel (Standard- + Config-Karte) ────────────────────────────────
+
+// SVG-Filter für raue Tinten-Kanten der Stempel; Einsatz per filter: url(#id)
+export function InkFilter({ id }: { id: string }) {
+  return (
+    <svg width="0" height="0" className="absolute" aria-hidden>
+      <filter id={id}>
+        <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" seed="3" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" result="rough" />
+        <feComponentTransfer in="noise" result="speckle">
+          <feFuncA type="discrete" tableValues="1 1 1 0.8 1 1 0.88 1" />
+        </feComponentTransfer>
+        <feComposite in="rough" in2="speckle" operator="in" />
+      </filter>
+    </svg>
+  );
+}
+
+// Eindeutige Filter-ID pro Karte (useId liefert ":r1:", das in url() nicht geht)
+export function useInkId() {
+  return `ink-${useId().replace(/:/g, "")}`;
+}
+
+// Deterministische "Handstempel"-Schiefe pro Feld (immer gleich, wirkt aber zufällig)
+export function stampJitter(i: number) {
+  return { rotate: ((i * 37) % 19) - 9, x: ((i * 13) % 5) - 2, y: ((i * 29) % 5) - 2 };
+}
+
 // ─── LoyaltyCard ─────────────────────────────────────────────────────────────
 
 export function LoyaltyCard({
@@ -830,7 +858,8 @@ export function LoyaltyCard({
   const maxStamps = activeTiers[activeTiers.length - 1].stamps;
   const tierThresholds = new Set(activeTiers.map(t => t.stamps));
   const cols = maxStamps <= 6 ? 3 : maxStamps <= 8 ? 4 : maxStamps <= 10 ? 5 : 4;
-  const iconSize = cols <= 3 ? 20 : cols <= 4 ? 17 : 13;
+  const iconSize = cols <= 3 ? 26 : cols <= 4 ? 23 : 21;
+  const inkId = useInkId();
 
   return (
     <motion.div
@@ -877,56 +906,56 @@ export function LoyaltyCard({
 
       {/* Stempel-Raster */}
       <div className="px-6 pt-5 pb-6">
+        <InkFilter id={inkId} />
         <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
           {Array.from({ length: maxStamps }).map((_, i) => {
             const filled    = i < currentStamps;
             const isNew     = animateIndex === i;
             const isTierEnd = tierThresholds.has(i + 1);
+            const j = stampJitter(i);
             return (
-              <motion.div
-                key={i}
-                className="aspect-square rounded-full flex items-center justify-center relative"
-                style={{
-                  backgroundColor: filled
-                    ? isTierEnd ? hexToRgba(accent, 0.22) : hexToRgba(accent, 0.12)
-                    : isTierEnd ? hexToRgba(accent, 0.06) : "#161616",
-                  border: filled
-                    ? isTierEnd ? `2px solid ${hexToRgba(accent, 0.8)}` : `1px solid ${hexToRgba(accent, 0.4)}`
-                    : isTierEnd ? `2px dashed ${hexToRgba(accent, 0.45)}` : `1px solid ${hexToRgba(accent, 0.25)}`,
-                  boxShadow: filled && isTierEnd
-                    ? `0 0 10px ${hexToRgba(accent, 0.3)}`
-                    : filled
-                      ? `0 2px 8px ${hexToRgba(accent, 0.15)}`
-                      : "inset 0 4px 8px rgba(0,0,0,0.6)",
-                }}
-                animate={isNew ? { scale: [1, 1.35, 0.94, 1.06, 1] } : {}}
-                transition={{ duration: 0.45, ease: "easeOut" }}
-              >
-                {filled ? (
+              <div key={i} className="aspect-square relative flex items-center justify-center">
+                {/* Vorgedrucktes, leeres Feld */}
+                <div className="absolute inset-0 rounded-full flex items-center justify-center"
+                  style={{
+                    border: isTierEnd ? `1.5px dashed ${hexToRgba(accent, 0.55)}` : `1.5px dashed ${hexToRgba(accent, 0.25)}`,
+                    background: isTierEnd ? hexToRgba(accent, 0.06) : "transparent",
+                  }}>
+                  {!filled && (isTierEnd
+                    ? <Gift size={iconSize - 4} strokeWidth={1.6} style={{ color: hexToRgba(accent, 0.6) }} />
+                    : <span className="select-none font-serif italic text-sm" style={{ color: "#4a4a4a" }}>{i + 1}</span>
+                  )}
+                </div>
+
+                {/* Tinten-Abdruck (Doppelring + großes Symbol, handgestempelt schief) */}
+                {filled && (
                   <motion.div
-                    initial={isNew ? { scale: 0, rotate: -20 } : { scale: 1 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: "spring", stiffness: 320, delay: isNew ? 0.06 : 0 }}
-                    className="flex flex-col items-center justify-center gap-0"
+                    className="absolute inset-[-3px] rounded-full flex items-center justify-center"
+                    style={{
+                      border: `2.5px solid ${accent}`,
+                      boxShadow: `inset 0 0 0 3px transparent, inset 0 0 0 4.5px ${hexToRgba(accent, 0.55)}`,
+                      background: hexToRgba(accent, 0.14),
+                      filter: `url(#${inkId})`,
+                    }}
+                    initial={isNew ? { scale: 2.4, opacity: 0, rotate: j.rotate - 25, x: j.x, y: j.y } : false}
+                    animate={{ scale: 1, opacity: 0.95, rotate: j.rotate, x: j.x, y: j.y }}
+                    transition={isNew ? { duration: 0.22, ease: [0.55, 0, 1, 0.45] } : { duration: 0 }}
                   >
-                    <StampIconComponent size={isTierEnd ? iconSize - 1 : iconSize} strokeWidth={1.6} style={{ color: accent }} />
-                    {isTierEnd && (
-                      <Gift size={7} style={{ color: accent, marginTop: 1, opacity: 0.9 }} />
-                    )}
+                    {isTierEnd
+                      ? <Gift size={iconSize} strokeWidth={2.2} style={{ color: accent }} />
+                      : <StampIconComponent size={iconSize} strokeWidth={2.2} style={{ color: accent }} />}
                   </motion.div>
-                ) : isTierEnd ? (
-                  <div className="flex flex-col items-center justify-center gap-0.5">
-                    <Gift size={iconSize - 2} strokeWidth={1.5} style={{ color: hexToRgba(accent, 0.55) }} />
-                    <span className="select-none leading-none text-[8px] font-bold" style={{ color: hexToRgba(accent, 0.4) }}>
-                      {i + 1}
-                    </span>
-                  </div>
-                ) : (
-                  <span className="select-none leading-none text-sm font-medium" style={{ color: "#404040" }}>
-                    {i + 1}
-                  </span>
                 )}
-              </motion.div>
+
+                {/* Tinten-Ring beim Aufschlag */}
+                {isNew && (
+                  <motion.div className="absolute inset-0 rounded-full pointer-events-none"
+                    style={{ border: `2px solid ${hexToRgba(accent, 0.5)}` }}
+                    initial={{ scale: 1, opacity: 0 }}
+                    animate={{ scale: [1, 1.6], opacity: [0.8, 0] }}
+                    transition={{ duration: 0.45, delay: 0.22, ease: "easeOut" }} />
+                )}
+              </div>
             );
           })}
         </div>

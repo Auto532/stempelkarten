@@ -5,10 +5,9 @@
 // Farb-/Bild-Konfiguration — kein Code und kein Deploy pro Shop nötig.
 // Logik (Tiers inkl. Basis-Stufe, maxStamps, Slots) gespiegelt aus beatesGrill.
 
-import { useId } from "react";
 import { motion } from "framer-motion";
 import { QrCode, Gift, Award } from "lucide-react";
-import { getStampIcon } from "@/app/me/components";
+import { getStampIcon, InkFilter, stampJitter, useInkId } from "@/app/me/components";
 import {
   makePhotoBackground, DEFAULT_COLORS,
   type ThemeConfig, type ThemeColors,
@@ -171,26 +170,6 @@ function evenCols(n: number): number {
   return best;
 }
 
-// SVG-Filter für raue Tinten-Kanten der Stempel; Einsatz per filter: url(#id)
-function InkFilter({ id }: { id: string }) {
-  return (
-    <svg width="0" height="0" className="absolute" aria-hidden>
-      <filter id={id}>
-        <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" seed="3" result="noise" />
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" result="rough" />
-        <feComponentTransfer in="noise" result="speckle">
-          <feFuncA type="discrete" tableValues="1 1 1 0.8 1 1 0.88 1" />
-        </feComponentTransfer>
-        <feComposite in="rough" in2="speckle" operator="in" />
-      </filter>
-    </svg>
-  );
-}
-
-// Deterministische "Handstempel"-Schiefe pro Feld (immer gleich, wirkt aber zufällig)
-function stampJitter(i: number) {
-  return { rotate: ((i * 37) % 19) - 9, x: ((i * 13) % 5) - 2, y: ((i * 29) % 5) - 2 };
-}
 function makeCard(cfg: ShopDesignConfig) {
   const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
   const corner = normalizeDecor(cfg.decor);
@@ -275,7 +254,7 @@ function makeCard(cfg: ShopDesignConfig) {
   }
 
   return function ConfigLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
-    const inkId = `ink-${useId().replace(/:/g, "")}`;
+    const inkId = useInkId();
     const activeTiers = rewardTiers?.some(t => t.enabled)
       ? [{ stamps: stampsRequired, text: "", enabled: true }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
       : [];
