@@ -5,6 +5,7 @@
 // Farb-/Bild-Konfiguration — kein Code und kein Deploy pro Shop nötig.
 // Logik (Tiers inkl. Basis-Stufe, maxStamps, Slots) gespiegelt aus beatesGrill.
 
+import { useId } from "react";
 import { motion } from "framer-motion";
 import { QrCode, Gift, Award } from "lucide-react";
 import { getStampIcon } from "@/app/me/components";
@@ -170,6 +171,26 @@ function evenCols(n: number): number {
   return best;
 }
 
+// SVG-Filter für raue Tinten-Kanten der Stempel; Einsatz per filter: url(#id)
+function InkFilter({ id }: { id: string }) {
+  return (
+    <svg width="0" height="0" className="absolute" aria-hidden>
+      <filter id={id}>
+        <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" seed="3" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" result="rough" />
+        <feComponentTransfer in="noise" result="speckle">
+          <feFuncA type="discrete" tableValues="1 1 1 0.8 1 1 0.88 1" />
+        </feComponentTransfer>
+        <feComposite in="rough" in2="speckle" operator="in" />
+      </filter>
+    </svg>
+  );
+}
+
+// Deterministische "Handstempel"-Schiefe pro Feld (immer gleich, wirkt aber zufällig)
+function stampJitter(i: number) {
+  return { rotate: ((i * 37) % 19) - 9, x: ((i * 13) % 5) - 2, y: ((i * 29) % 5) - 2 };
+}
 function makeCard(cfg: ShopDesignConfig) {
   const A = cfg.accent, T = cfg.text, TB = cfg.textBody, C = cfg.cardBg;
   const corner = normalizeDecor(cfg.decor);
@@ -180,9 +201,81 @@ function makeCard(cfg: ShopDesignConfig) {
   // Linie mit höherer Deckkraft, damit die leeren Stempel deutlicher wirken.
   const BC = cfg.stampBorderColor ?? A;
   const bold = cfg.stampBorderStyle === "bold";
-  const bw = bold ? "2px" : "1px";
+
+  // Leeres, vorgedrucktes Feld in der gewählten Form (Nummer bzw. Geschenk)
+  function EmptyField({ isTier, n }: { isTier: boolean; n: number }) {
+    const content = isTier
+      ? <Gift size={17} strokeWidth={1.6} style={{ color: alpha(A, "A0") }} />
+      : <span className="font-serif italic text-sm select-none" style={{ color: alpha(TB, "80") }}>{n}</span>;
+    const line = alpha(BC, isTier ? (bold ? "C0" : "90") : (bold ? "90" : "55"));
+    const lw = bold ? 2 : 1.5;
+    const tint = isTier ? alpha(A, "10") : "transparent";
+
+    if (CLIP_SHAPES[shape]) {
+      const clip = CLIP_SHAPES[shape];
+      return (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0" style={{ clipPath: clip, background: line }} />
+          <div className="absolute" style={{ inset: lw, clipPath: clip, background: C }} />
+          <div className="absolute" style={{ inset: lw, clipPath: clip, background: tint }} />
+          <div className="relative">{content}</div>
+        </div>
+      );
+    }
+    if (shape === "diamond") {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-[15%]" style={{ transform: "rotate(45deg)", borderRadius: 6, border: `${lw}px dashed ${line}`, background: tint }} />
+          <div className="relative">{content}</div>
+        </div>
+      );
+    }
+    return (
+      <div className="absolute inset-0 flex items-center justify-center"
+        style={{ borderRadius: shape === "square" ? 12 : 9999, border: `${lw}px dashed ${line}`, background: tint }}>
+        {content}
+      </div>
+    );
+  }
+
+  // Gesammelter Stempel als Tinten-Abdruck (Doppelring + großes Symbol)
+  function InkStamp({ isTier }: { isTier: boolean }) {
+    const content = isTier
+      ? <Gift size={22} strokeWidth={2.2} style={{ color: A }} />
+      : <Icon size={22} strokeWidth={2.2} style={{ color: A }} />;
+    const ring = bold ? 3 : 2.5;
+    const innerRing = `inset 0 0 0 3px transparent, inset 0 0 0 4.5px ${alpha(BC, "90")}`;
+
+    if (CLIP_SHAPES[shape]) {
+      const clip = CLIP_SHAPES[shape];
+      return (
+        <>
+          <div className="absolute inset-0" style={{ clipPath: clip, background: BC }} />
+          <div className="absolute" style={{ inset: ring, clipPath: clip, background: C }} />
+          <div className="absolute" style={{ inset: ring, clipPath: clip, background: alpha(A, "2A") }} />
+          <div className="relative">{content}</div>
+        </>
+      );
+    }
+    if (shape === "diamond") {
+      return (
+        <>
+          <div className="absolute inset-[13%]" style={{ transform: "rotate(45deg)", borderRadius: 6, border: `${ring}px solid ${BC}`, boxShadow: innerRing, background: alpha(A, "24") }} />
+          <div className="relative">{content}</div>
+        </>
+      );
+    }
+    return (
+      <>
+        <div className="absolute inset-0"
+          style={{ borderRadius: shape === "square" ? 12 : 9999, border: `${ring}px solid ${BC}`, boxShadow: innerRing, background: alpha(A, "24") }} />
+        <div className="relative">{content}</div>
+      </>
+    );
+  }
 
   return function ConfigLoyaltyCard({ shopName, stampsRequired, currentStamps, animateIndex, onShowQR, hideQR, rewardTiers, stampValue, cardNumber, milestoneBadge }: ThemeCardProps) {
+    const inkId = `ink-${useId().replace(/:/g, "")}`;
     const activeTiers = rewardTiers?.some(t => t.enabled)
       ? [{ stamps: stampsRequired, text: "", enabled: true }, ...rewardTiers.filter(t => t.enabled)].sort((a, b) => a.stamps - b.stamps)
       : [];
@@ -243,61 +336,33 @@ function makeCard(cfg: ShopDesignConfig) {
               </button>
             )}
           </div>
-          <div className="grid gap-2 mb-4 w-max" style={{ gridTemplateColumns: `repeat(${cols}, max-content)` }}>
+          <InkFilter id={inkId} />
+          <div className="grid gap-2.5 mb-5" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, maxWidth: cols * 58 }}>
             {Array.from({ length: maxStamps }).map((_, i) => {
               const filled = i < currentStamps;
-              const isAnimating = i === animateIndex;
+              const isNew = i === animateIndex;
               const isTier = activeTiers.some(t => t.stamps === i + 1);
-              const inner = filled
-                ? <Icon size={13} style={{ color: C }} />
-                : isTier ? <Gift size={11} style={{ color: alpha(A, "70") }} /> : null;
-
-              if (CLIP_SHAPES[shape]) {
-                const clip = CLIP_SHAPES[shape];
-                return (
-                  <motion.div key={i}
-                    animate={isAnimating ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                    className="relative w-8 h-8 flex items-center justify-center">
-                    <div className="absolute inset-0"
-                      style={{ clipPath: clip, background: filled ? A : isTier ? alpha(BC, bold ? "80" : "55") : alpha(BC, bold ? "60" : "30") }} />
-                    {!filled && <div className="absolute" style={{ inset: bold ? "2.5px" : "1.5px", clipPath: clip, background: C }} />}
-                    <div className="relative">{inner}</div>
-                  </motion.div>
-                );
-              }
-              if (shape === "diamond") {
-                return (
-                  <motion.div key={i}
-                    animate={isAnimating ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                    className="relative w-8 h-8 flex items-center justify-center">
-                    <div className="absolute inset-[3px]"
-                      style={{
-                        transform: "rotate(45deg)", borderRadius: 6,
-                        ...(filled
-                          ? { background: A, border: `${bw} solid ${alpha(BC, "60")}` }
-                          : isTier ? { border: `${bw} solid ${alpha(BC, bold ? "70" : "40")}`, background: C }
-                          : { border: `${bw} solid ${alpha(BC, bold ? "55" : "26")}`, background: alpha(C, "88") }),
-                      }} />
-                    <div className="relative">{inner}</div>
-                  </motion.div>
-                );
-              }
+              const j = stampJitter(i);
               return (
-                <motion.div key={i}
-                  animate={isAnimating ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-8 h-8 flex items-center justify-center"
-                  style={{
-                    borderRadius: shape === "square" ? 9 : 9999,
-                    ...(filled
-                      ? { background: A, border: `${bw} solid ${alpha(BC, "60")}` }
-                      : isTier ? { border: `${bw} solid ${alpha(BC, bold ? "70" : "40")}`, background: C }
-                      : { border: `${bw} solid ${alpha(BC, bold ? "55" : "22")}`, background: alpha(C, "88") }),
-                  }}>
-                  {inner}
-                </motion.div>
+                <div key={i} className="relative aspect-square flex items-center justify-center">
+                  <EmptyField isTier={isTier} n={i + 1} />
+                  {filled && (
+                    <motion.div className="absolute inset-[-3px] flex items-center justify-center"
+                      style={{ filter: `url(#${inkId})` }}
+                      initial={isNew ? { scale: 2.4, opacity: 0, rotate: j.rotate - 25, x: j.x, y: j.y } : false}
+                      animate={{ scale: 1, opacity: 0.95, rotate: j.rotate, x: j.x, y: j.y }}
+                      transition={isNew ? { duration: 0.22, ease: [0.55, 0, 1, 0.45] } : { duration: 0 }}>
+                      <InkStamp isTier={isTier} />
+                    </motion.div>
+                  )}
+                  {isNew && (
+                    <motion.div className="absolute inset-0 rounded-full pointer-events-none"
+                      style={{ border: `2px solid ${alpha(A, "80")}` }}
+                      initial={{ scale: 1, opacity: 0 }}
+                      animate={{ scale: [1, 1.6], opacity: [0.8, 0] }}
+                      transition={{ duration: 0.45, delay: 0.22, ease: "easeOut" }} />
+                  )}
+                </div>
               );
             })}
           </div>
