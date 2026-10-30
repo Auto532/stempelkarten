@@ -68,19 +68,29 @@ export function DefaultBackground() {
   );
 }
 
-export function makePhotoBackground(url: string): ComponentType {
+export function makePhotoBackground(url: string, baseColor = "#0b0a09"): ComponentType {
   return function PhotoBackground() {
     useEffect(() => {
       const b = document.body;
+      // Grundfarbe sofort setzen → kein Flash, während das Bild lädt.
+      b.style.backgroundColor = baseColor;
+      // Bild vorab anstoßen, damit es früh im Netzwerk liegt.
+      const pre = document.createElement("link");
+      pre.rel = "preload";
+      pre.as = "image";
+      pre.href = url;
+      document.head.appendChild(pre);
       b.style.backgroundImage = `url('${url}')`;
       b.style.backgroundSize = "cover";
       b.style.backgroundPosition = "center center";
       b.style.backgroundAttachment = "scroll";
       return () => {
+        b.style.backgroundColor = "";
         b.style.backgroundImage = "";
         b.style.backgroundSize = "";
         b.style.backgroundPosition = "";
         b.style.backgroundAttachment = "";
+        pre.remove();
       };
     }, []);
     return null;
@@ -179,7 +189,7 @@ const THEMES: Record<string, ThemeConfig> = {
       badge:   { background: "#d9770618", border: "1px solid #d97706", color: "#b45309" },
       subCard: { background: "#fffbeb88", borderRadius: "0.75rem", padding: "0.75rem" },
     },
-    Background: makePhotoBackground('/Hintergrund_meisterbaeckerei.png'),
+    Background: makePhotoBackground('/Hintergrund_meisterbaeckerei.webp', '#402611'),
     Card:       BakeryLoyaltyCard,
     Banner:     BakeryRewardBanner,
     Milestones: BakeryMilestonesSection,
@@ -225,7 +235,7 @@ const THEMES: Record<string, ThemeConfig> = {
       badge:   { background: "rgba(228,222,208,.12)", border: "1px solid rgba(228,222,208,.3)", color: "#f4efe4" },
       subCard: { background: "#18181888", borderRadius: "0.75rem", padding: "0.75rem" },
     },
-    Background: makePhotoBackground('/Hintergrund_barbershop.png'),
+    Background: makePhotoBackground('/Hintergrund_barbershop.webp', '#130b05'),
     Card:       BarberLoyaltyCard,
     Banner:     BarberRewardBanner,
     Milestones: BarberMilestonesSection,

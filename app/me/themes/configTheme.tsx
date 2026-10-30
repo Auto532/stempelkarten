@@ -83,7 +83,7 @@ function buildColors(cfg: ShopDesignConfig): ThemeColors {
 }
 
 function makeBackground(cfg: ShopDesignConfig) {
-  if (cfg.bgType === "image" && cfg.bgImageUrl) return makePhotoBackground(cfg.bgImageUrl);
+  if (cfg.bgType === "image" && cfg.bgImageUrl) return makePhotoBackground(cfg.bgImageUrl, cfg.bgColor ?? cfg.cardBg ?? "#0b0a09");
   const bg = cfg.bgType === "gradient"
     ? `linear-gradient(180deg, ${cfg.bgColor ?? "#09090b"} 0%, ${cfg.bgColor2 ?? cfg.bgColor ?? "#09090b"} 100%)`
     : (cfg.bgColor ?? "#09090b");
