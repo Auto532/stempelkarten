@@ -844,23 +844,52 @@ export const searchCustomersForShop = query({
 });
 
 // Kennzahlen eines Shops (echte Gesamtwerte statt Summe der geladenen Liste)
+async function computeShopStats(ctx: QueryCtx, shop: Doc<"shops">) {
+  const tiers = shop.bonusProgramEnabled && shop.rewardTiers?.some((t) => t.enabled)
+    ? shop.rewardTiers.filter((t) => t.enabled).map((t) => t.stamps)
+    : [shop.stampsRequired];
+  const lowestTier = Math.min(shop.stampsRequired, ...tiers);
+  let customers = 0, stamps = 0, rewards = 0, ready = 0;
+  for await (const m of ctx.db.query("memberships").withIndex("by_shop", (q) => q.eq("shopId", shop._id))) {
+    if (customers >= SHOP_SCAN_CAP) break;
+    customers++;
+    stamps += m.totalStampsEver;
+    rewards += m.rewardsRedeemed;
+    if (m.currentStamps >= lowestTier) ready++;
+  }
+  return { customers, stamps, rewards, ready, capped: customers >= SHOP_SCAN_CAP };
+}
+
 export const getShopStats = query({
   args: { shopId: v.id("shops"), adminToken: v.string() },
   handler: async (ctx, { shopId, adminToken }) => {
     const shop = await requireShopRole(ctx, { shopId, token: adminToken, role: "mitarbeiter" });
-    const tiers = shop.bonusProgramEnabled && shop.rewardTiers?.some((t) => t.enabled)
-      ? shop.rewardTiers.filter((t) => t.enabled).map((t) => t.stamps)
-      : [shop.stampsRequired];
-    const lowestTier = Math.min(shop.stampsRequired, ...tiers);
-    let customers = 0, stamps = 0, rewards = 0, ready = 0;
-    for await (const m of ctx.db.query("memberships").withIndex("by_shop", (q) => q.eq("shopId", shopId))) {
-      if (customers >= SHOP_SCAN_CAP) break;
-      customers++;
-      stamps += m.totalStampsEver;
-      rewards += m.rewardsRedeemed;
-      if (m.currentStamps >= lowestTier) ready++;
-    }
-    return { customers, stamps, rewards, ready, capped: customers >= SHOP_SCAN_CAP };
+    return computeShopStats(ctx, shop);
+  },
+});
+
+export const getShopStatsAsAdmin = query({
+  args: { shopId: v.id("shops"), adminSecret: v.string() },
+  handler: async (ctx, { shopId, adminSecret }) => {
+    requireAdmin({ secret: adminSecret });
+    const shop = await ctx.db.get(shopId);
+    if (!shop) throw new ConvexError("Shop nicht gefunden");
+    return computeShopStats(ctx, shop);
+  },
+});
+
+// Admin: seitenweise Kundenliste eines Shops (mit E-Mail)
+export const listCustomersForShopAsAdminPaged = query({
+  args: { shopId: v.id("shops"), adminSecret: v.string(), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { shopId, adminSecret, paginationOpts }) => {
+    requireAdmin({ secret: adminSecret });
+    const result = await ctx.db
+      .query("memberships")
+      .withIndex("by_shop", (q) => q.eq("shopId", shopId))
+      .order("desc")
+      .paginate(paginationOpts);
+    const rows = await Promise.all(result.page.map((m) => customerRow(ctx, m, true)));
+    return { ...result, page: rows.filter((r): r is NonNullable<typeof r> => r !== null) };
   },
 });
 
