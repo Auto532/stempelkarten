@@ -348,9 +348,6 @@ export function QRCard({ qrToken, customerName, shopName, cardBg, cardBorder, te
         {/* Header */}
         <div className="relative px-6 pt-7 pb-6 overflow-hidden"
           style={{ background: `linear-gradient(135deg, ${hexToRgba(accent, 0.32)} 0%, ${hexToRgba(accent, 0.08)} 100%)` }}>
-          {/* Gloss-Streifen (Glas-Reflex) */}
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.1) 50%, transparent 58%)" }} />
           <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full" style={{ background: hexToRgba(accent, 0.1) }} />
           <div className="absolute top-3 -right-5 w-20 h-20 rounded-full" style={{ background: hexToRgba(accent, 0.06) }} />
           {logoUrl && (
