@@ -10,7 +10,7 @@ import { errMsg } from "@/app/lib/errMsg";
 import { affiliateQuery, affiliateMutation, AFFILIATE_APP_URL } from "./lib/affiliate";
 import {
   GrowthCard, MiniBarChart, PeriodSelector, periodToSince, periodToPrevSince, groupPayments,
-  GLOBAL_LEVELS, globalLevelIdx,
+  GLOBAL_LEVELS, globalLevelIdx, useLimit, ShowMore,
   type EarningsSummary, type PaymentRow, type Period,
 } from "./shared";
 
@@ -515,6 +515,9 @@ export function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
     prevSince: periodToPrevSince(period),
   });
   const appStats = useQuery(api.shops.getAppUsageStats, { adminSecret });
+  const shopLimit = useLimit(10);
+  const appLimit = useLimit(10);
+  const multiShopUsers = appStats?.filter(c => c.shopCount >= 2) ?? [];
 
   return (
     <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
@@ -611,7 +614,7 @@ export function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
                 <span className="text-sm font-medium text-zinc-200">Shops im Zeitraum</span>
               </div>
               <div className="divide-y divide-zinc-800/50">
-                {data.shops.map((shop, i) => (
+                {data.shops.slice(0, shopLimit.limit).map((shop, i) => (
                   <div key={shop._id} className="flex items-center gap-3 px-4 py-3">
                     <span className="text-[11px] font-bold text-zinc-600 w-4 shrink-0">{i + 1}</span>
                     <div className="flex-1 min-w-0">
@@ -625,6 +628,7 @@ export function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
                   </div>
                 ))}
               </div>
+              <ShowMore shown={shopLimit.limit} total={data.shops.length} onMore={shopLimit.more} />
             </div>
           )}
 
@@ -633,17 +637,17 @@ export function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
           )}
 
           {/* App Details: Kunden mit 2+ Shops */}
-          {appStats && appStats.filter(c => c.shopCount >= 2).length > 0 && (
+          {multiShopUsers.length > 0 && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
                 <LayoutGrid size={14} className="text-amber-400" />
                 <span className="text-sm font-medium text-zinc-200">App Details</span>
                 <span className="ml-auto text-[10px] text-zinc-500">
-                  {appStats.filter(c => c.shopCount >= 2).length} freigeschaltet
+                  {multiShopUsers.length} freigeschaltet
                 </span>
               </div>
               <div className="divide-y divide-zinc-800/50">
-                {appStats.filter(c => c.shopCount >= 2).map((c, i) => {
+                {multiShopUsers.slice(0, appLimit.limit).map((c, i) => {
                   const lvlIdx = globalLevelIdx(c.shopCount);
                   return (
                     <div key={i} className="flex items-center gap-3 px-4 py-3">
@@ -667,6 +671,7 @@ export function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
                   );
                 })}
               </div>
+              <ShowMore shown={appLimit.limit} total={multiShopUsers.length} onMore={appLimit.more} />
             </div>
           )}
         </>

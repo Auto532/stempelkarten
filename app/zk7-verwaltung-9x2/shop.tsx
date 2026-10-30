@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Link, MessageSquare, Palette, Plus, Printer, QrCode, Sliders,
   Store, TrendingUp, Trophy, Users, X, type LucideIcon,
 } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { errMsg } from "@/app/lib/errMsg";
@@ -18,7 +18,7 @@ import { STAMP_ICONS } from "@/app/me/components";
 import { affiliateQuery, affiliateMutation, AFFILIATE_APP_URL } from "./lib/affiliate";
 import { DesignEditor } from "./DesignEditor";
 import {
-  PayBadge, ToggleSwitch, PeriodSelector, periodToSince, periodToPrevSince, PERIOD_LABELS,
+  PayBadge, ToggleSwitch, PeriodSelector, periodToSince, periodToPrevSince, PERIOD_LABELS, useLimit, ShowMore,
   type PayStatus, type Tier, type Period,
 } from "./shared";
 
@@ -210,18 +210,23 @@ function ContractInfoCard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecr
 // ─── ShopDashboard ────────────────────────────────────────────────────────────
 
 function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
-  const customers = useQuery(
-    api.shops.listCustomersForShopAsAdmin,
-    { shopId: shop._id, adminSecret }
+  // Kennzahlen vom Server, Kundenliste seitenweise (nie alle auf einmal)
+  const stats = useQuery(api.shops.getShopStatsAsAdmin, { shopId: shop._id, adminSecret });
+  const customerPages = usePaginatedQuery(
+    api.shops.listCustomersForShopAsAdminPaged,
+    { shopId: shop._id, adminSecret },
+    { initialNumItems: 15 }
   );
+  const customers = customerPages.status === "LoadingFirstPage" ? undefined : customerPages.results;
   const loginLinks = useQuery(api.shops.getLoginLinksForShop, { shopId: shop._id, adminSecret });
   const messages = useQuery(api.messages.getMessagesForShop, { shopId: shop._id, adminSecret });
   const markRead = useMutation(api.messages.markMessagesRead);
   const [messagesOpen, setMessagesOpen] = useState(false);
+  const msgLimit = useLimit(10);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const totalStamps  = customers?.reduce((s, c) => s + c.membership.totalStampsEver, 0) ?? 0;
-  const totalRewards = customers?.reduce((s, c) => s + c.membership.rewardsRedeemed, 0) ?? 0;
+  const totalStamps  = stats?.stamps ?? "–";
+  const totalRewards = stats?.rewards ?? "–";
 
   const base           = typeof window !== "undefined" ? window.location.origin : "";
   const joinUrl        = `${base}/join/${shop.slug}`;
@@ -240,7 +245,7 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { icon: Users, value: customers?.length ?? "–", label: "Kunden", color: "text-blue-400" },
+          { icon: Users, value: stats?.customers ?? "–", label: "Kunden", color: "text-blue-400" },
           { icon: Stamp, value: totalStamps, label: "Stempel", color: "text-amber-400" },
           { icon: Award, value: totalRewards, label: "Belohnungen", color: "text-purple-400" },
         ].map(({ icon: Icon, value, label, color }) => (
@@ -333,8 +338,8 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
               <ChevronRight size={13} className={`text-zinc-600 transition-transform ${messagesOpen ? "rotate-90" : ""}`} />
             </button>
             {messagesOpen && (
-              <div className="divide-y divide-zinc-800/50 max-h-80 overflow-y-auto">
-                {messages.map(msg => (
+              <div className="divide-y divide-zinc-800/50">
+                {messages.slice(0, msgLimit.limit).map(msg => (
                   <div key={msg._id} className="px-4 py-3">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-zinc-300">{msg.customerName}</span>
@@ -345,6 +350,7 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
                     <p className="text-sm text-zinc-400 whitespace-pre-wrap">{msg.text}</p>
                   </div>
                 ))}
+                <ShowMore shown={msgLimit.limit} total={messages.length} onMore={msgLimit.more} />
               </div>
             )}
           </div>
@@ -356,8 +362,8 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
         <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
           <Users size={14} className="text-zinc-500" />
           <span className="text-sm font-medium text-zinc-200">Kunden</span>
-          {customers !== undefined && (
-            <span className="ml-auto text-xs text-zinc-600">{customers.length}</span>
+          {stats && (
+            <span className="ml-auto text-xs text-zinc-600">{stats.customers}</span>
           )}
         </div>
         <div className="divide-y divide-zinc-800/50">
@@ -388,6 +394,12 @@ function ShopDashboard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
             </div>
           ))}
         </div>
+        {(customerPages.status === "CanLoadMore" || customerPages.status === "LoadingMore") && (
+          <button onClick={() => customerPages.loadMore(15)} disabled={customerPages.status === "LoadingMore"}
+            className="w-full py-3 text-xs font-medium text-zinc-400 hover:text-amber-300 border-t border-zinc-800 transition-colors disabled:opacity-60">
+            {customerPages.status === "LoadingMore" ? "Lädt…" : "Mehr laden"}
+          </button>
+        )}
       </div>
     </motion.div>
   );
@@ -1010,47 +1022,61 @@ export function ShopWorkspace({ shop, adminSecret, onBack }: { shop: Doc<"shops"
   const [subView, setSubView] = useState<SubView>("dashboard");
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col">
-      {/* Top bar */}
-      <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur border-b border-zinc-800/60 px-4 py-3 flex items-center gap-3">
-        <button onClick={onBack}
-          className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors">
-          <ArrowLeft size={18} />
-        </button>
-        <div className="flex-1 min-w-0">
-          <AnimatePresence mode="wait">
-            <motion.div key={shop.name} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-              <p className="font-semibold text-zinc-100 truncate">{shop.name}</p>
-              <p className="text-[10px] text-zinc-500">{shop.slug}</p>
-            </motion.div>
-          </AnimatePresence>
+    <div className="min-h-screen flex flex-col">
+      {/* Kopfzeile */}
+      <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/40 backdrop-blur-xl" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        <div className="mx-auto max-w-4xl px-4 py-3 flex items-center gap-3">
+          <button onClick={onBack} aria-label="Zurück"
+            className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-100 transition-colors">
+            <ArrowLeft size={18} />
+          </button>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center text-zinc-900 font-bold shrink-0">
+            {shop.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-zinc-100 truncate leading-tight">{shop.name}</p>
+            <p className="text-[11px] text-zinc-500 truncate">/{shop.slug}{shop.active === false ? " · deaktiviert" : ""}</p>
+          </div>
         </div>
-        <span className="text-[10px] text-zinc-600 uppercase tracking-widest font-medium">Admin</span>
-      </div>
+        {/* Reiter (PC) */}
+        <div className="hidden lg:block mx-auto max-w-4xl px-4 pb-3">
+          <div className="inline-flex gap-1 p-1 rounded-2xl bg-zinc-900 border border-zinc-800">
+            {SUB_TABS.map(({ id, label, icon: Icon }) => (
+              <button key={id} onClick={() => setSubView(id)}
+                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${subView === id ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-100"}`}>
+                {subView === id && <motion.div layoutId="shop-tab-desktop" className="absolute inset-0 rounded-xl bg-amber-400" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
+                <Icon size={15} className="relative" />
+                <span className="relative">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
 
-      {/* Content */}
-      <div className="flex-1 px-4 pt-5 pb-28 overflow-y-auto">
+      {/* Inhalt */}
+      <main className="flex-1 mx-auto w-full max-w-4xl px-4 pt-5 pb-32 lg:pb-12">
         <AnimatePresence mode="wait">
           {subView === "dashboard"     && <ShopDashboard     key={`${shop._id}-dash`}  shop={shop} adminSecret={adminSecret} />}
           {subView === "analytics"     && <ShopAnalytics     key={`${shop._id}-anal`}  shop={shop} adminSecret={adminSecret} />}
           {subView === "vertrag"       && <ShopVertragTab    key={`${shop._id}-vertr`} shop={shop} adminSecret={adminSecret} />}
           {subView === "einstellungen" && <ShopEinstellungen key={`${shop._id}-einst`} shop={shop} adminSecret={adminSecret} onDeleted={onBack} />}
         </AnimatePresence>
-      </div>
+      </main>
 
-      {/* Sub bottom nav */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm bg-zinc-900/95 backdrop-blur border-t border-zinc-800 flex">
-        {SUB_TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setSubView(id)}
-            className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors relative ${subView === id ? "text-amber-400" : "text-zinc-600 hover:text-zinc-400"}`}>
-            <Icon size={20} />
-            <span className="text-[10px] font-medium">{label}</span>
-            {subView === id && (
-              <motion.div layoutId="shop-tab-indicator" className="absolute bottom-0 w-8 h-0.5 bg-amber-400 rounded-full" />
-            )}
-          </button>
-        ))}
-      </div>
+      {/* Schwebende Navigation (Handy) */}
+      <nav className="lg:hidden fixed inset-x-3 z-20 rounded-[26px] border border-zinc-800 bg-zinc-900 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.9)]"
+        style={{ bottom: "calc(env(safe-area-inset-bottom) + 12px)" }}>
+        <div className="flex p-1.5">
+          {SUB_TABS.map(({ id, label, icon: Icon }) => (
+            <button key={id} onClick={() => setSubView(id)}
+              className={`relative flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[20px] transition-colors ${subView === id ? "text-zinc-900" : "text-zinc-500"}`}>
+              {subView === id && <motion.div layoutId="shop-dock-active" className="absolute inset-0 rounded-[20px] bg-amber-400" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
+              <Icon size={19} className="relative" />
+              <span className="relative text-[9.5px] font-semibold">{label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
@@ -1375,6 +1401,7 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
     { shopId: shop._id, adminSecret, since: periodToSince(period) }
   );
   const company = useQuery(api.company.getCompanyProfile, { adminSecret });
+  const activeLimit = useLimit(10);
 
   const handleExport = async () => {
     if (!data) return;
@@ -1471,7 +1498,7 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
               {data.customers.length === 0 && (
                 <div className="px-4 py-6 text-center text-zinc-600 text-sm">Keine Aktivität im Zeitraum.</div>
               )}
-              {data.customers.map((c) => (
+              {data.customers.slice(0, activeLimit.limit).map((c) => (
                 <div key={c.membershipId} className="flex items-center gap-3 px-4 py-3">
                   <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs font-bold shrink-0">
                     {c.customerName[0]?.toUpperCase() ?? "?"}
@@ -1489,6 +1516,7 @@ function ShopAnalytics({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret:
                 </div>
               ))}
             </div>
+            <ShowMore shown={activeLimit.limit} total={data.customers.length} onMore={activeLimit.more} />
           </div>
         </>
       )}

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { BarChart2, Store, TrendingUp, Users, MessageSquare, Settings, Shield, type LucideIcon } from "lucide-react";
+import { LayoutGrid, Store, TrendingUp, Users, MessageSquare, Settings, Shield, LogOut, type LucideIcon } from "lucide-react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { errMsg } from "@/app/lib/errMsg";
 import { affiliateQuery } from "./lib/affiliate";
@@ -14,16 +14,15 @@ import { AnalyticsTab } from "./AnalyticsTab";
 import { SettingsTab } from "./SettingsTab";
 import { ShopWorkspace } from "./shop";
 import { OverviewTab, ShopsTab } from "./overview";
+import type { AdminTab as Tab } from "./shared";
 
-type Tab = "overview" | "shops" | "analytics" | "settings" | "partner" | "support";
-
-const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
-  { id: "overview",   label: "Übersicht",    icon: BarChart2  },
-  { id: "shops",      label: "Shops",        icon: Store      },
-  { id: "analytics",  label: "Analytics",    icon: TrendingUp },
-  { id: "partner",    label: "Partner",      icon: Users      },
-  { id: "support",    label: "Support",      icon: MessageSquare },
-  { id: "settings",   label: "Settings",     icon: Settings  },
+const TABS: { id: Tab; label: string; title: string; icon: LucideIcon }[] = [
+  { id: "overview",  label: "Start",     title: "Übersicht",     icon: LayoutGrid    },
+  { id: "shops",     label: "Shops",     title: "Shops",         icon: Store         },
+  { id: "analytics", label: "Analytics", title: "Analytics",     icon: TrendingUp    },
+  { id: "partner",   label: "Partner",   title: "Partner",       icon: Users         },
+  { id: "support",   label: "Support",   title: "Support",       icon: MessageSquare },
+  { id: "settings",  label: "System",    title: "Einstellungen", icon: Settings      },
 ];
 
 export default function SuperAdminPage() {
@@ -34,12 +33,13 @@ export default function SuperAdminPage() {
   const [checking, setChecking]     = useState(false);
   const [pinError, setPinError]     = useState<string | null>(null);
   const [activeTab, setActiveTab]   = useState<Tab>("overview");
+  const [createShopOpen, setCreateShopOpen] = useState(false);
   const [selectedShopId, setSelectedShopId] = useState<Id<"shops"> | null>(null);
 
   const allShops = useQuery(api.shops.listAllShops, authed && adminSecret ? { adminSecret } : "skip") as Doc<"shops">[] | undefined;
   const selectedShop = selectedShopId ? allShops?.find(s => s._id === selectedShopId) : null;
 
-  // Offene Support-Tickets (beide Apps) → roter Punkt am Support-Tab
+  // Offene Support-Tickets (beide Apps) → Zähler am Support-Tab
   const btTickets = useQuery(api.support.adminListTickets, authed && adminSecret ? { adminSecret } : "skip");
   const [affOpenCount, setAffOpenCount] = useState(0);
   useEffect(() => {
@@ -57,16 +57,14 @@ export default function SuperAdminPage() {
     if (!authed) return;
     window.history.pushState({ adminBack: true }, "");
     const handlePop = () => {
-      if (selectedShopIdRef.current) {
-        setSelectedShopId(null);
-      }
+      if (selectedShopIdRef.current) setSelectedShopId(null);
       window.history.pushState({ adminBack: true }, "");
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
   }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-login from sessionStorage (cleared on tab close)
+  // Auto-Login aus sessionStorage (wird beim Schließen des Tabs gelöscht)
   useEffect(() => {
     const saved = sessionStorage.getItem("adminPin");
     if (saved) {
@@ -92,96 +90,158 @@ export default function SuperAdminPage() {
     } finally { setChecking(false); }
   };
 
+  const handleLogout = () => {
+    sessionStorage.removeItem("adminPin");
+    setAdminSecret(""); setAuthed(false); setPin(""); setSelectedShopId(null); setActiveTab("overview");
+  };
+
+  const goTo = (tab: Tab, opts?: { createShop?: boolean }) => {
+    setActiveTab(tab);
+    setCreateShopOpen(!!opts?.createShop);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   if (!authed && checking) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-zinc-500 text-sm">Laden...</motion.div>
+      <div className="adm min-h-screen flex items-center justify-center">
+        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
+          className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30" />
       </div>
     );
   }
 
   if (!authed) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-xs space-y-5">
+      <div className="adm min-h-screen flex flex-col items-center justify-center px-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-xs rounded-[28px] border border-zinc-800 bg-zinc-900 p-7 space-y-5">
           <div className="text-center">
-            <div className="w-14 h-14 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Shield size={26} className="text-amber-400" />
+            <div className="relative w-16 h-16 mx-auto mb-4">
+              <div className="absolute inset-0 rounded-2xl bg-amber-400/30 blur-xl" />
+              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center shadow-lg">
+                <Shield size={28} className="text-zinc-900" />
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-zinc-100">Admin</h1>
-            <p className="text-zinc-500 text-sm mt-1">Nur für interne Nutzung</p>
+            <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">Admin</h1>
+            <p className="text-zinc-500 text-sm mt-1">LoyaltyCard · intern</p>
           </div>
-          <input type="password" value={pin} onChange={e => { setPin(e.target.value); setPinError(null); }}
+          <input type="password" inputMode="numeric" value={pin} onChange={e => { setPin(e.target.value); setPinError(null); }}
             placeholder="PIN" onKeyDown={e => { if (e.key === "Enter") handleLogin(); }} autoFocus
-            className={`w-full px-4 py-3.5 bg-zinc-900 border rounded-2xl text-zinc-100 placeholder-zinc-600 focus:outline-none text-center tracking-widest text-xl transition-colors ${pinError ? "border-red-500/60" : "border-zinc-800 focus:border-amber-400/50"}`} />
+            className={`w-full px-4 py-3.5 bg-zinc-950/60 border rounded-2xl text-zinc-100 placeholder-zinc-600 focus:outline-none text-center tracking-[0.4em] text-xl transition-colors ${pinError ? "border-red-500/60" : "border-zinc-800 focus:border-amber-400/50"}`} />
           {pinError && <p className="text-red-400 text-sm text-center -mt-2">{pinError}</p>}
           <button onClick={handleLogin} disabled={checking || !pin}
-            className="w-full py-3.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-semibold rounded-2xl transition-colors">
-            {checking ? "Prüfe..." : "Einloggen"}
+            className="w-full py-3.5 bg-gradient-to-r from-amber-300 to-amber-400 hover:brightness-105 disabled:opacity-50 text-zinc-900 font-semibold rounded-2xl transition shadow-[0_10px_30px_-10px_rgba(251,191,36,0.6)]">
+            {checking ? "Prüfe…" : "Einloggen"}
           </button>
         </motion.div>
       </div>
     );
   }
 
-  // Shop workspace mode
+  // Shop-Arbeitsbereich ersetzt die Hauptansicht
   if (selectedShopId && selectedShop) {
     return (
-      <ShopWorkspace
-        shop={selectedShop as Doc<"shops">}
-        adminSecret={adminSecret}
-        onBack={() => setSelectedShopId(null)}
-      />
+      <div className="adm min-h-screen">
+        <ShopWorkspace shop={selectedShop as Doc<"shops">} adminSecret={adminSecret} onBack={() => setSelectedShopId(null)} />
+      </div>
     );
   }
 
+  const current = TABS.find(t => t.id === activeTab)!;
+  const badgeFor = (id: Tab) => (id === "support" ? supportOpenCount : 0);
+
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur border-b border-zinc-800/60 px-4 py-3 flex items-center gap-3">
-        <AnimatePresence mode="wait">
-          <motion.span key={activeTab} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.15 }}
-            className="font-semibold text-zinc-100 text-base">
-            {activeTab === "overview"  && "Übersicht"}
-            {activeTab === "shops"     && "Shops"}
-            {activeTab === "analytics" && "Analytics"}
-            {activeTab === "settings"  && "Einstellungen"}
-            {activeTab === "partner"   && "Partner"}
-            {activeTab === "support"   && "Support"}
-          </motion.span>
-        </AnimatePresence>
-        <span className="ml-auto text-[10px] text-zinc-600 uppercase tracking-widest font-medium">Admin</span>
+    <div className="adm min-h-screen">
+      {/* ── Seitenleiste (PC) ── */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-zinc-800 bg-zinc-900 px-4 py-6 z-20">
+        <div className="flex items-center gap-3 px-2 mb-8">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center">
+            <Shield size={17} className="text-zinc-900" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-zinc-100 leading-tight">LoyaltyCard</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Admin</p>
+          </div>
+        </div>
+        <nav className="space-y-1 flex-1">
+          {TABS.map(({ id, title, icon: Icon }) => {
+            const active = activeTab === id;
+            const badge = badgeFor(id);
+            return (
+              <button key={id} onClick={() => goTo(id)}
+                className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${active ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-100 hover:bg-white/5"}`}>
+                {active && <motion.div layoutId="side-active" className="absolute inset-0 rounded-xl bg-amber-400" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+                <Icon size={17} className="relative" />
+                <span className="relative flex-1 text-left">{title}</span>
+                {badge > 0 && (
+                  <span className={`relative text-[10px] font-bold px-1.5 py-0.5 rounded-full ${active ? "bg-zinc-900/20 text-zinc-900" : "bg-red-500 text-white"}`}>{badge}</span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+        <button onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors">
+          <LogOut size={17} /> Abmelden
+        </button>
+      </aside>
+
+      <div className="lg:pl-64">
+        {/* ── Kopfzeile ── */}
+        <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/40 backdrop-blur-xl"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}>
+          <div className="mx-auto max-w-4xl px-5 py-3.5 flex items-center gap-3">
+            <AnimatePresence mode="wait">
+              <motion.div key={activeTab} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500 lg:hidden">LoyaltyCard Admin</p>
+                <h1 className="text-lg font-bold text-zinc-100 tracking-tight leading-tight">{current.title}</h1>
+              </motion.div>
+            </AnimatePresence>
+            <button onClick={handleLogout} aria-label="Abmelden"
+              className="lg:hidden ml-auto w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-900 flex items-center justify-center text-zinc-500 hover:text-red-300 transition-colors">
+              <LogOut size={16} />
+            </button>
+          </div>
+        </header>
+
+        {/* ── Inhalt ── */}
+        <main className="mx-auto max-w-4xl px-5 pt-5 pb-32 lg:pb-12">
+          <AnimatePresence mode="wait">
+            {activeTab === "overview"  && <OverviewTab key="overview" adminSecret={adminSecret} supportOpenCount={supportOpenCount} onNavigate={goTo} onSelectShop={id => setSelectedShopId(id)} />}
+            {activeTab === "shops"     && <ShopsTab key="shops" shops={allShops} adminSecret={adminSecret} initialCreate={createShopOpen} onSelectShop={id => setSelectedShopId(id)} />}
+            {activeTab === "analytics" && <AnalyticsTab key="analytics" adminSecret={adminSecret} />}
+            {activeTab === "settings"  && <SettingsTab key="settings" adminSecret={adminSecret} />}
+            {activeTab === "partner"   && <PartnerTab key="partner" adminSecret={adminSecret} />}
+            {activeTab === "support"   && <SupportTab key="support" adminSecret={adminSecret} />}
+          </AnimatePresence>
+        </main>
       </div>
 
-      <div className="flex-1 px-5 pt-5 pb-28 overflow-y-auto">
-        <AnimatePresence mode="wait">
-          {activeTab === "overview"  && <OverviewTab   key="overview"   adminSecret={adminSecret} onSelectShop={id => setSelectedShopId(id)} />}
-          {activeTab === "shops"     && <ShopsTab      key="shops"      shops={allShops} adminSecret={adminSecret} onSelectShop={id => { setSelectedShopId(id); }} />}
-          {activeTab === "analytics" && <AnalyticsTab  key="analytics"  adminSecret={adminSecret} />}
-          {activeTab === "settings"  && <SettingsTab   key="settings"   adminSecret={adminSecret} />}
-          {activeTab === "partner"   && <PartnerTab    key="partner"    adminSecret={adminSecret} />}
-          {activeTab === "support"   && <SupportTab    key="support"    adminSecret={adminSecret} />}
-        </AnimatePresence>
-      </div>
-
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm bg-zinc-900/95 backdrop-blur border-t border-zinc-800 flex">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setActiveTab(id)}
-            className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors relative ${activeTab === id ? "text-amber-400" : "text-zinc-600 hover:text-zinc-400"}`}>
-            <span className="relative">
-              <Icon size={20} />
-              {id === "support" && supportOpenCount > 0 && (
-                <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center">
-                  {supportOpenCount > 9 ? "9+" : supportOpenCount}
+      {/* ── Schwebende Navigation (Handy) ── */}
+      <nav className="lg:hidden fixed inset-x-3 z-20 rounded-[26px] border border-zinc-800 bg-zinc-900 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.9)]"
+        style={{ bottom: "calc(env(safe-area-inset-bottom) + 12px)" }}>
+        <div className="flex p-1.5">
+          {TABS.map(({ id, label, icon: Icon }) => {
+            const active = activeTab === id;
+            const badge = badgeFor(id);
+            return (
+              <button key={id} onClick={() => goTo(id)}
+                className={`relative flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[20px] transition-colors ${active ? "text-zinc-900" : "text-zinc-500"}`}>
+                {active && <motion.div layoutId="dock-active" className="absolute inset-0 rounded-[20px] bg-amber-400" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
+                <span className="relative">
+                  <Icon size={19} />
+                  {badge > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-1 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-zinc-900">
+                      {badge > 9 ? "9+" : badge}
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
-            <span className="text-[10px] font-medium">{label}</span>
-            {activeTab === id && (
-              <motion.div layoutId="tab-indicator" className="absolute bottom-0 w-8 h-0.5 bg-amber-400 rounded-full" />
-            )}
-          </button>
-        ))}
-      </div>
+                <span className="relative text-[9.5px] font-semibold">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

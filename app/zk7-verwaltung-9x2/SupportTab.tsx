@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { affiliateQuery, affiliateMutation } from "./lib/affiliate";
+import { MoreCard } from "./shared";
 
 // ─── SupportTab (Tickets aus beiden Apps: Betrieb + Partner) ──────────────────
 
@@ -48,7 +49,9 @@ export function SupportTab({ adminSecret }: { adminSecret: string }) {
     })),
   ].sort((a, b) => b.createdAt - a.createdAt);
 
-  const shown = tickets.filter(t => filter === "all" || t.status === filter);
+  const filtered = tickets.filter(t => filter === "all" || t.status === filter);
+  const [limit, setLimit] = useState(15);
+  const shown = filtered.slice(0, limit);
 
   // Antworten hält das Ticket offen — geschlossen wird nur explizit.
   const act = async (t: AdminTicket, opts: { reply?: boolean; status?: "open" | "done" }) => {
@@ -163,6 +166,7 @@ export function SupportTab({ adminSecret }: { adminSecret: string }) {
         </div>
         );
       })}
+      <MoreCard shown={limit} total={filtered.length} onMore={() => setLimit(l => l + 15)} />
     </motion.div>
   );
 }

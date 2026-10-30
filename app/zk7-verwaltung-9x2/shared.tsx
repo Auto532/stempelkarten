@@ -5,6 +5,38 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { affiliateQuery } from "./lib/affiliate";
 
+export type AdminTab = "overview" | "shops" | "analytics" | "settings" | "partner" | "support";
+
+// ─── Listen nie endlos: erst N Einträge, dann "Mehr anzeigen" ────────────────
+
+export function useLimit(initial = 10, step = initial) {
+  const [limit, setLimit] = useState(initial);
+  return { limit, more: () => setLimit(l => l + step), reset: () => setLimit(initial) };
+}
+
+export function ShowMore({ shown, total, onMore, className = "" }: {
+  shown: number; total: number; onMore: () => void; className?: string;
+}) {
+  if (total <= shown) return null;
+  return (
+    <button onClick={onMore}
+      className={`w-full py-3 text-xs font-medium text-zinc-400 hover:text-amber-300 border-t border-zinc-800 transition-colors ${className}`}>
+      Mehr anzeigen <span className="text-zinc-600">· noch {total - shown}</span>
+    </button>
+  );
+}
+
+// Variante als eigene Karte (für Listen aus einzelnen Karten statt Zeilen)
+export function MoreCard({ shown, total, onMore }: { shown: number; total: number; onMore: () => void }) {
+  if (total <= shown) return null;
+  return (
+    <button onClick={onMore}
+      className="w-full py-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-xs font-medium text-zinc-400 hover:text-amber-300 transition-colors">
+      Mehr anzeigen <span className="text-zinc-600">· noch {total - shown}</span>
+    </button>
+  );
+}
+
 export type PayStatus = { paid: boolean; payLater: boolean; amountDue: number; paymentToken: string };
 
 export function usePayStatus(adminSecret: string): Record<string, PayStatus> {

@@ -11,6 +11,7 @@ import {
   affiliateQuery, affiliateMutation, AFFILIATE_URL, AFFILIATE_APP_URL,
   type AffiliateLead, type AffiliatePartner, type AffiliateDashboard,
 } from "./lib/affiliate";
+import { useLimit, ShowMore, MoreCard } from "./shared";
 
 // ─── Partner Tab ─────────────────────────────────────────────────────────────
 
@@ -531,22 +532,17 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
   const [section, setSection]         = useState<"leads" | "partners" | "provisionen">("leads");
   const [detailId, setDetailId]       = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true); setError("");
+  // Verträge + Provisionen sind teuer (2 Anfragen pro aktivem Shop) → erst
+  // laden, wenn der Bereich "Provisionen" geöffnet wird
+  const [provisionsLoaded, setProvisionsLoaded] = useState(false);
+  const [provisionsLoading, setProvisionsLoading] = useState(false);
+  const leadLimit = useLimit(10);
+  const partnerLimit = useLimit(15);
+  const provLimit = useLimit(10);
+
+  const loadProvisions = async (active: any[]) => {
+    setProvisionsLoading(true);
     try {
-      const [dash, pendingLeads, allPartners, allLeads] = await Promise.all([
-        affiliateQuery("admin:getAdminDashboard", { adminSecret }),
-        affiliateQuery("admin:getAllLeads",         { adminSecret }),
-        affiliateQuery("admin:listAffiliates",    { adminSecret }),
-        affiliateQuery("admin:getAllLeads",        { adminSecret }),
-      ]);
-      setDashboard(dash);
-      setLeads(pendingLeads);
-      setPartners(allPartners);
-
-      const active = (allLeads ?? []).filter((l: any) => l.status === "active");
-      setActiveLeads(active);
-
       const contracts: Record<string, any>    = {};
       const commissions: Record<string, any[]> = {};
       await Promise.all(active.map(async (lead: any) => {
@@ -559,12 +555,39 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
       }));
       setContractMap(contracts);
       setCommissionsMap(commissions);
+      setProvisionsLoaded(true);
+    } catch (e: unknown) {
+      setError(errMsg(e, "Verbindungsfehler zur Partner-App"));
+    } finally { setProvisionsLoading(false); }
+  };
+
+  const load = async () => {
+    setLoading(true); setError("");
+    try {
+      // getAllLeads nur einmal holen (war doppelt)
+      const [dash, allLeads, allPartners] = await Promise.all([
+        affiliateQuery("admin:getAdminDashboard", { adminSecret }),
+        affiliateQuery("admin:getAllLeads",       { adminSecret }),
+        affiliateQuery("admin:listAffiliates",    { adminSecret }),
+      ]);
+      setDashboard(dash);
+      setLeads(allLeads);
+      setPartners(allPartners);
+
+      const active = (allLeads ?? []).filter((l: any) => l.status === "active");
+      setActiveLeads(active);
+      // Bereits geöffnete Provisionen nach Änderungen frisch nachladen
+      if (provisionsLoaded) await loadProvisions(active);
     } catch (e: unknown) {
       setError(errMsg(e, "Verbindungsfehler zur Partner-App"));
     } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (section === "provisionen" && !provisionsLoaded && !provisionsLoading && !loading) loadProvisions(activeLeads);
+  }, [section, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApproveLead = async (leadId: string) => {
     setApproving(leadId);
@@ -732,7 +755,7 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
           {leads?.length === 0 && (
             <p className="text-center text-zinc-500 text-sm py-6">Keine neuen Shops</p>
           )}
-          {leads?.map((lead: any) => (
+          {leads?.slice(0, leadLimit.limit).map((lead: any) => (
             <div key={lead._id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -752,6 +775,7 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
               </p>
             </div>
           ))}
+          <MoreCard shown={leadLimit.limit} total={leads?.length ?? 0} onMore={leadLimit.more} />
         </div>
       )}
 
@@ -767,7 +791,7 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
               <p className="text-center text-zinc-500 text-sm p-6">Noch keine Partner</p>
             )}
             <div className="divide-y divide-zinc-800/50">
-              {partners?.map(p => (
+              {partners?.slice(0, partnerLimit.limit).map(p => (
                 <div key={p._id} className="flex items-center gap-3 px-4 py-3">
                   <button onClick={() => setDetailId(p._id)} className="flex-1 min-w-0 text-left group">
                     <p className="text-sm text-zinc-200 group-hover:text-amber-400 transition-colors flex items-center gap-2">
@@ -810,6 +834,7 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
                 </div>
               ))}
             </div>
+            <ShowMore shown={partnerLimit.limit} total={partners?.length ?? 0} onMore={partnerLimit.more} />
           </div>
         </div>
       )}
@@ -830,7 +855,12 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
           {activeLeads.length === 0 && (
             <p className="text-center text-zinc-500 text-sm py-6">Keine aktiven Shops</p>
           )}
-          {activeLeads.map(lead => {
+          {provisionsLoading && !provisionsLoaded && (
+            <div className="space-y-3">
+              {[0, 1].map(i => <div key={i} className="h-32 rounded-2xl bg-zinc-900 border border-zinc-800 animate-pulse" />)}
+            </div>
+          )}
+          {provisionsLoaded && activeLeads.slice(0, provLimit.limit).map(lead => {
             const contract = contractMap[lead._id];
             if (!contract) return null;
             const comms    = commissionsMap[lead._id] ?? [];
@@ -908,6 +938,7 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
               </div>
             );
           })}
+          {provisionsLoaded && <MoreCard shown={provLimit.limit} total={activeLeads.length} onMore={provLimit.more} />}
         </div>
       )}
 
