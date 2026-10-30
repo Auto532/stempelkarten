@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "./providers";
 import { StarField } from "./components/StarField";
+import { PageWidth } from "./components/PageWidth";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -47,9 +48,7 @@ export default function RootLayout({
       <body className={`${jakarta.variable} antialiased bg-zinc-950 text-zinc-100 min-h-screen`}>
         <ConvexClientProvider>
           <StarField />
-          <div className="max-w-sm mx-auto min-h-screen relative">
-            {children}
-          </div>
+          <PageWidth>{children}</PageWidth>
         </ConvexClientProvider>
       </body>
     </html>

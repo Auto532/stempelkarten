@@ -88,6 +88,9 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
         ))}
       </div>
 
+      {/* Am PC zweispaltig: links Aufgaben, rechts neueste Shops */}
+      <div className="grid gap-5 lg:grid-cols-2 items-start">
+      <div className="space-y-5">
       {/* Braucht Aufmerksamkeit */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
@@ -117,6 +120,7 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
 
       {/* Später-zahlen-Liste (mit Bezahllink und Erledigt-Button) */}
       <PayLaterCard adminSecret={adminSecret} />
+      </div>
 
       {/* Neueste Shops */}
       {newestShops.length > 0 && (
@@ -144,6 +148,7 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
           <ShowMore shown={recent.limit} total={newestShops.length} onMore={recent.more} />
         </div>
       )}
+      </div>
     </motion.div>
   );
 }
