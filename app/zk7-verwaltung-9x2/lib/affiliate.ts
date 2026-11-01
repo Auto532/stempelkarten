@@ -15,12 +15,34 @@ function affiliateError(data: { errorData?: unknown; errorMessage?: string }): E
   return new Error(msg);
 }
 
+// Die Partner-App hat eigene Admin-Sitzungen. Beim Admin-Login wird dort ein
+// eigener Schlüssel geholt; alle Aufrufe mit `adminSecret` bekommen automatisch
+// diesen Schlüssel statt des Stempelkarten-Schlüssels.
+const AFFILIATE_SESSION_KEY = "affiliateAdminSession";
+
+export function setAffiliateAdminToken(token: string | null) {
+  if (token) sessionStorage.setItem(AFFILIATE_SESSION_KEY, token);
+  else sessionStorage.removeItem(AFFILIATE_SESSION_KEY);
+}
+
+function withAffiliateSession(args: Record<string, unknown>): Record<string, unknown> {
+  if (!("adminSecret" in args)) return args;
+  return { ...args, adminSecret: sessionStorage.getItem(AFFILIATE_SESSION_KEY) ?? "" };
+}
+
+// PIN gegen die Partner-App prüfen und deren Sitzungs-Schlüssel merken
+export async function affiliateAdminLogin(pin: string): Promise<void> {
+  if (!AFFILIATE_URL) return;
+  const res = await affiliateMutation("admin:adminLogin", { pin });
+  setAffiliateAdminToken(res?.ok ? res.token : null);
+}
+
 export async function affiliateQuery(path: string, args: Record<string, unknown>) {
   if (!AFFILIATE_URL) return null;
   const res = await fetch(`${AFFILIATE_URL}/api/query`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, format: "json", args }),
+    body: JSON.stringify({ path, format: "json", args: withAffiliateSession(args) }),
   });
   const data = await res.json();
   if (data.status === "error") throw affiliateError(data);
@@ -32,7 +54,7 @@ export async function affiliateMutation(path: string, args: Record<string, unkno
   const res = await fetch(`${AFFILIATE_URL}/api/mutation`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, format: "json", args }),
+    body: JSON.stringify({ path, format: "json", args: withAffiliateSession(args) }),
   });
   const data = await res.json();
   if (data.status === "error") throw affiliateError(data);

@@ -233,7 +233,7 @@ export const updatePriceInfo = mutation({
     priceInfo: v.optional(v.string()),
   },
   handler: async (ctx, { shopId, adminSecret, priceInfo }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     await ctx.db.patch(shopId, { priceInfo });
   },
 });
@@ -259,7 +259,7 @@ export const adminUpdateShopContent = mutation({
     stampValue: v.optional(v.number()),
   },
   handler: async (ctx, { shopId, adminSecret, stampsRequired, rewardText, rewardTiers, milestones, stampValue }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     validateRewardSettings({ stampsRequired, rewardText, rewardTiers, stampValue });
     if (milestones) validateMilestones(milestones);
     await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, milestones, stampValue });
@@ -282,7 +282,7 @@ export const adminSetFeatures = mutation({
     accentColor: v.optional(v.string()),
   },
   handler: async (ctx, { shopId, adminSecret, ...flags }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const patch: Record<string, unknown> = {};
     if (flags.showLeads !== undefined) patch.showLeads = flags.showLeads;
     if (flags.bonusProgramEnabled !== undefined) patch.bonusProgramEnabled = flags.bonusProgramEnabled;
@@ -308,7 +308,7 @@ export const adminSetFeatures = mutation({
 export const adminGenerateUploadUrl = mutation({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -345,7 +345,7 @@ export const adminSetDesignConfig = mutation({
     })),
   },
   handler: async (ctx, { shopId, adminSecret, config }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
 
     // Bisherige Bild-IDs merken, um ersetzte/entfernte Dateien NACH dem
     // erfolgreichen Speichern aufzuräumen.
@@ -385,7 +385,7 @@ export const adminSetDesignConfig = mutation({
 export const adminDeleteShop = mutation({
   args: { shopId: v.id("shops"), adminSecret: v.string() },
   handler: async (ctx, { shopId, adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const shop = await ctx.db.get(shopId);
     if (!shop) throw new ConvexError("Shop nicht gefunden");
 
@@ -436,7 +436,7 @@ export const createShop = mutation({
     rewardCount:      v.optional(v.number()),
   },
   handler: async (ctx, { adminSecret, ownerName, ownerEmail, ownerPhone, rewardCount, ...shopArgs }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     validateRewardSettings(shopArgs);
 
     // Slug muss eindeutig sein: getBySlug/Join-Links laufen über .unique() und
@@ -482,7 +482,7 @@ export const createShop = mutation({
 export const listAllShops = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const shops = await ctx.db.query("shops").order("desc").collect();
     return shops.map(sanitizeShop);
   },
@@ -491,7 +491,7 @@ export const listAllShops = query({
 export const getLoginLinksForShop = query({
   args: { shopId: v.id("shops"), adminSecret: v.string() },
   handler: async (ctx, { shopId, adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const shop = await ctx.db.get(shopId);
     if (!shop) return null;
     return {
@@ -504,7 +504,7 @@ export const getLoginLinksForShop = query({
 export const listCustomersForShopAsAdmin = query({
   args: { shopId: v.id("shops"), adminSecret: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminSecret, limit }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const memberships = await ctx.db
       .query("memberships")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
@@ -598,7 +598,7 @@ async function computeShopAnalytics(ctx: QueryCtx, shopId: Id<"shops">, since: n
 export const getShopAnalyticsByPeriodAsAdmin = query({
   args: { shopId: v.id("shops"), adminSecret: v.string(), since: v.optional(v.number()) },
   handler: async (ctx, { shopId, adminSecret, since }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     return computeShopAnalytics(ctx, shopId, since);
   },
 });
@@ -612,7 +612,7 @@ export const adminUpdateLegalTexts = mutation({
     datenschutzText: v.optional(v.string()),
   },
   handler: async (ctx, { shopId, adminSecret, impressumText, agbText, datenschutzText }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     validateLegalTexts({ impressumText, agbText, datenschutzText });
     await ctx.db.patch(shopId, { impressumText, agbText, datenschutzText });
   },
@@ -621,7 +621,7 @@ export const adminUpdateLegalTexts = mutation({
 export const getGlobalStats = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const shops = await ctx.db.query("shops").collect();
     // Ein Durchlauf über die Mitgliedschaften (gestreamt statt alles im
     // Speicher); die Kunden-Tabelle wird nicht mehr extra komplett geladen:
@@ -648,7 +648,7 @@ export const getGlobalAnalyticsByPeriod = query({
     prevSince: v.optional(v.number()),
   },
   handler: async (ctx, { adminSecret, since, prevSince }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const shops = await ctx.db.query("shops").collect();
     const shopById = new Map(shops.map(s => [s._id.toString(), s]));
 
@@ -753,7 +753,7 @@ export const getShopAnalyticsByPeriod = query({
 export const getAppUsageStats = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const customers = await ctx.db.query("customers").collect();
     const memberships = await ctx.db.query("memberships").collect();
     // Einmal gruppieren statt pro Kunde alle Mitgliedschaften zu filtern (war n²)
@@ -876,7 +876,7 @@ export const getShopStats = query({
 export const getShopStatsAsAdmin = query({
   args: { shopId: v.id("shops"), adminSecret: v.string() },
   handler: async (ctx, { shopId, adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const shop = await ctx.db.get(shopId);
     if (!shop) throw new ConvexError("Shop nicht gefunden");
     return computeShopStats(ctx, shop);
@@ -887,7 +887,7 @@ export const getShopStatsAsAdmin = query({
 export const listCustomersForShopAsAdminPaged = query({
   args: { shopId: v.id("shops"), adminSecret: v.string(), paginationOpts: paginationOptsValidator },
   handler: async (ctx, { shopId, adminSecret, paginationOpts }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const result = await ctx.db
       .query("memberships")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
@@ -901,7 +901,7 @@ export const listCustomersForShopAsAdminPaged = query({
 export const adminRestoreCustomerStamps = mutation({
   args: { membershipId: v.id("memberships"), adminSecret: v.string(), stamps: v.number() },
   handler: async (ctx, { membershipId, adminSecret, stamps }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const membership = await ctx.db.get(membershipId);
     if (!membership) throw new ConvexError("Membership not found");
     await ctx.db.patch(membershipId, { currentStamps: Math.max(0, stamps) });

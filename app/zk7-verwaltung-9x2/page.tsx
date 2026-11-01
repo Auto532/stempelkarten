@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvex, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutGrid, Store, TrendingUp, Users, MessageSquare, Settings, LogOut, type LucideIcon } from "lucide-react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { errMsg } from "@/app/lib/errMsg";
-import { affiliateQuery } from "./lib/affiliate";
+import { affiliateQuery, affiliateAdminLogin, affiliateMutation, setAffiliateAdminToken } from "./lib/affiliate";
 import { PartnerTab } from "./PartnerTab";
 import { SupportTab } from "./SupportTab";
 import { AnalyticsTab } from "./AnalyticsTab";
@@ -26,7 +26,9 @@ const TABS: { id: Tab; label: string; title: string; icon: LucideIcon }[] = [
 ];
 
 export default function SuperAdminPage() {
+  const convex = useConvex();
   const checkPinMutation = useMutation(api.admin.checkPin);
+  const logoutMutation = useMutation(api.admin.logoutAdmin);
   const [pin, setPin]               = useState("");
   const [adminSecret, setAdminSecret] = useState("");
   const [authed, setAuthed]         = useState(false);
@@ -64,20 +66,34 @@ export default function SuperAdminPage() {
     return () => window.removeEventListener("popstate", handlePop);
   }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-Login aus sessionStorage (wird beim Schließen des Tabs gelöscht)
+  // Auto-Login aus sessionStorage (wird beim Schließen des Tabs gelöscht).
+  // Gespeichert ist nur der Sitzungs-Schlüssel, nie der PIN.
   useEffect(() => {
-    const saved = sessionStorage.getItem("adminPin");
+    sessionStorage.removeItem("adminPin"); // Altlast: früher wurde der PIN selbst gespeichert
+    const saved = sessionStorage.getItem("adminSession");
     if (saved) {
       setChecking(true);
-      checkPinMutation({ pin: saved })
-        .then((res) => {
-          if (res.ok) { setAdminSecret(saved); setAuthed(true); }
-          else sessionStorage.removeItem("adminPin");
+      convex.query(api.admin.isAdminSession, { token: saved })
+        .then((valid) => {
+          if (valid) { setAdminSecret(saved); setAuthed(true); }
+          else { sessionStorage.removeItem("adminSession"); setAffiliateAdminToken(null); }
         })
-        .catch(() => { sessionStorage.removeItem("adminPin"); })
+        .catch(() => { sessionStorage.removeItem("adminSession"); })
         .finally(() => setChecking(false));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sitzung läuft nach 12 h ab → regelmäßig prüfen und dann sauber ausloggen,
+  // statt dass geschützte Abfragen mit Fehlern abbrechen.
+  useEffect(() => {
+    if (!authed || !adminSecret) return;
+    const id = setInterval(() => {
+      convex.query(api.admin.isAdminSession, { token: adminSecret })
+        .then((valid) => { if (!valid) handleLogout(); })
+        .catch(() => {});
+    }, 5 * 60_000);
+    return () => clearInterval(id);
+  }, [authed, adminSecret]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogin = async () => {
     if (!pin) return;
@@ -85,8 +101,11 @@ export default function SuperAdminPage() {
     try {
       const res = await checkPinMutation({ pin });
       if (!res.ok) { setPinError(res.error); setPin(""); return; }
-      sessionStorage.setItem("adminPin", pin);
-      setAdminSecret(pin);
+      // Partner-App: eigener Sitzungs-Schlüssel (Fehler dort blockieren den Admin nicht)
+      await affiliateAdminLogin(pin).catch(() => setAffiliateAdminToken(null));
+      sessionStorage.setItem("adminSession", res.token);
+      setAdminSecret(res.token);
+      setPin("");
       setAuthed(true);
     } catch (err: unknown) {
       setPinError(errMsg(err, "Fehler"));
@@ -95,7 +114,11 @@ export default function SuperAdminPage() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("adminPin");
+    logoutMutation({ token: adminSecret }).catch(() => {});
+    const affiliateToken = sessionStorage.getItem("affiliateAdminSession");
+    if (affiliateToken) affiliateMutation("admin:adminLogout", { token: affiliateToken }).catch(() => {});
+    setAffiliateAdminToken(null);
+    sessionStorage.removeItem("adminSession");
     setAdminSecret(""); setAuthed(false); setPin(""); setSelectedShopId(null); setActiveTab("overview");
   };
 

@@ -118,7 +118,7 @@ export const replyTicket = mutation({
 export const adminListTickets = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const numbers = await ticketNumbers(ctx);
     const tickets = await ctx.db.query("supportTickets").order("desc").collect();
     return Promise.all(tickets.map(async t => {
@@ -143,7 +143,7 @@ export const adminAnswerTicket = mutation({
     status:      v.optional(v.union(v.literal("open"), v.literal("done"))),
   },
   handler: async (ctx, { adminSecret, ticketId, reply, status }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const ticket = await ctx.db.get(ticketId);
     if (!ticket) throw new ConvexError("Ticket nicht gefunden");
     const patch: Record<string, unknown> = {};

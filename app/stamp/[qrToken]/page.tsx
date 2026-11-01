@@ -63,7 +63,8 @@ export default function StampPage() {
     try {
       const res = await checkPin({ pin: adminPinInput });
       if (!res.ok) { setAdminPinError(true); return; }
-      setAdminPin(adminPinInput);
+      // Ab hier nur noch der Sitzungs-Schlüssel, nicht der PIN
+      setAdminPin(res.token);
       setAdminMode(true);
       setNoCredentials(false);
     } catch {

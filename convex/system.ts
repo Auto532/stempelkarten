@@ -16,7 +16,7 @@ export const ping = query({
 export const getSystemHealth = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const shops = await ctx.db.query("shops").collect();
     const customers = await ctx.db.query("customers").collect();
     const memberships = await ctx.db.query("memberships").collect();

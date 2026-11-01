@@ -129,7 +129,7 @@ export const markMessagesReadByOwner = mutation({
 export const getMessagesForShop = query({
   args: { shopId: v.id("shops"), adminSecret: v.string() },
   handler: async (ctx, { shopId, adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const msgs = await ctx.db
       .query("messages")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))
@@ -147,7 +147,7 @@ export const getMessagesForShop = query({
 export const markMessagesRead = mutation({
   args: { shopId: v.id("shops"), adminSecret: v.string() },
   handler: async (ctx, { shopId, adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const msgs = await ctx.db
       .query("messages")
       .withIndex("by_shop", (q) => q.eq("shopId", shopId))

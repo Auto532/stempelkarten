@@ -29,13 +29,13 @@ export const syncBonusBilling = internalAction({
     if (count === null) return;
 
     const siteUrl  = process.env.AFFILIATE_CONVEX_SITE_URL ?? "";
-    const adminPin = process.env.ADMIN_PIN ?? "";
-    if (!siteUrl || !adminPin) return;
+    const secret   = process.env.BRIDGE_SECRET ?? "";
+    if (!siteUrl || !secret) return;
 
     await fetch(`${siteUrl}/sync-reward-count`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ adminPin, loatycardShopId: shopId, rewardCount: count }),
+      body:    JSON.stringify({ secret, loatycardShopId: shopId, rewardCount: count }),
     }).catch(() => {});
   },
 });

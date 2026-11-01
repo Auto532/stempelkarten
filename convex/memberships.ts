@@ -201,7 +201,7 @@ export const redeemReward = mutation({
 export const adminStampForCustomer = mutation({
   args: { adminSecret: v.string(), shopId: v.id("shops"), qrToken: v.string() },
   handler: async (ctx, { adminSecret, shopId, qrToken }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
 
     let customer = await ctx.db
       .query("customers")
@@ -340,7 +340,7 @@ export const confirmPendingRedemption = mutation({
 export const adminConfirmPendingRedemption = mutation({
   args: { membershipId: v.id("memberships"), adminSecret: v.string() },
   handler: async (ctx, { membershipId, adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const membership = await ctx.db.get(membershipId);
     if (!membership) throw new ConvexError("Mitgliedschaft nicht gefunden");
     const pending = membership.pendingRedemption;

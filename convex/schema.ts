@@ -174,6 +174,14 @@ export default defineSchema({
     lockedUntil: v.optional(v.number()),
   }).index("by_key", ["key"]),
 
+  // Admin-Sitzungen: nach erfolgreichem PIN-Login bekommt der Browser einen
+  // zufälligen Sitzungs-Schlüssel, der PIN selbst wird nicht mehr mitgeschickt.
+  adminSessions: defineTable({
+    token: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  }).index("by_token", ["token"]).index("by_expiresAt", ["expiresAt"]),
+
   // Firmenprofil (Einzeldatensatz) für den Kopf des Finanzberichts. Steuerlich
   // relevante Angaben, damit das PDF ans Finanzamt übermittelbar ist.
   companyProfile: defineTable({

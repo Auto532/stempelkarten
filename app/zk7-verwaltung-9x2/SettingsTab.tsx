@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, BarChart2, Check, ChevronRight, Link, Shield, Sliders, Trash2, User } from "lucide-react";
 import { useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { affiliateQuery, affiliateMutation } from "./lib/affiliate";
+import { affiliateQuery, affiliateMutation, AFFILIATE_URL } from "./lib/affiliate";
+import { errMsg } from "@/app/lib/errMsg";
 
 
 // ─── SettingsTab ──────────────────────────────────────────────────────────────
@@ -174,10 +175,17 @@ export function SettingsTab({ adminSecret }: { adminSecret: string }) {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await clearAllData({ adminSecret: pinInput });
-      await affiliateMutation("admin:clearAllData", { adminSecret: pinInput });
+      // Erst die Partner-App, dann die Stempelkarten: scheitert der erste Schritt,
+      // bleibt alles erhalten (keine halb gelöschten Daten mit Verträgen ohne Shop).
+      if (AFFILIATE_URL && !sessionStorage.getItem("affiliateAdminSession")) {
+        throw new Error("Keine Verbindung zur Partner-App. Bitte einmal ab- und neu anmelden.");
+      }
+      await affiliateMutation("admin:clearAllData", { adminSecret, pin: pinInput });
+      await clearAllData({ adminSecret, pin: pinInput });
       setDeleted(true);
       setConfirmDelete(false);
+    } catch (err: unknown) {
+      alert(errMsg(err, "Löschen fehlgeschlagen"));
     } finally { setDeleting(false); }
   };
 
@@ -225,7 +233,7 @@ export function SettingsTab({ adminSecret }: { adminSecret: string }) {
         <p className="text-[11px] text-zinc-500">Löscht alle gespeicherten Tokens auf <span className="text-zinc-400 font-medium">diesem Gerät</span> (QR-Token, Admin-PIN, Shop-Login). Nur lokal, keine Daten in der Datenbank werden gelöscht.</p>
         <button onClick={() => {
           ["qrToken","adminTestQrToken","adminToken","adminShopSlug","adminRole","adminPinLS","meAccentColor","meBgPreset","meStarsOn"].forEach(k => localStorage.removeItem(k));
-          sessionStorage.removeItem("adminPin");
+          ["adminPin", "adminSession", "affiliateAdminSession"].forEach(k => sessionStorage.removeItem(k));
           window.location.reload();
         }} className="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors">
           Lokalen Speicher löschen & neu laden

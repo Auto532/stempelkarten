@@ -23,7 +23,7 @@ const profileFields = {
 export const getCompanyProfile = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     return await ctx.db.query("companyProfile").first();
   },
 });
@@ -31,7 +31,7 @@ export const getCompanyProfile = query({
 export const setCompanyProfile = mutation({
   args: { adminSecret: v.string(), profile: v.object(profileFields) },
   handler: async (ctx, { adminSecret, profile }) => {
-    requireAdmin({ secret: adminSecret });
+    await requireAdmin(ctx, { secret: adminSecret });
     const existing = await ctx.db.query("companyProfile").first();
     if (existing) {
       await ctx.db.patch(existing._id, { ...profile, updatedAt: Date.now() });
