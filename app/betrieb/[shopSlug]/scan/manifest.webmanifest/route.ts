@@ -2,9 +2,9 @@ import { buildManifest } from "@/lib/buildManifest";
 
 export async function GET(
   _req: Request,
-  { params }: { params: { shopSlug: string } }
+  { params }: { params: Promise<{ shopSlug: string }> }
 ) {
-  const slug = params.shopSlug;
+  const { shopSlug: slug } = await params;
   const manifest = buildManifest({
     name: `Stempelkarte Mitarbeiter`,
     shortName: "Mitarbeiter",
