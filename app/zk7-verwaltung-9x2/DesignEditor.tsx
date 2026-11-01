@@ -9,7 +9,7 @@ import { makeConfigTheme, normalizeDecor, type ShopDesignConfig } from "@/app/me
 import { STAMP_ICONS, ICON_CATEGORIES } from "@/app/me/components";
 import { errMsg } from "@/app/lib/errMsg";
 
-// ─── DesignEditor (Config-Design, 99€-Produkt) ────────────────────────────────
+// ─── DesignEditor (Config-Design, im Abo enthalten) ────────────────────────────────
 // Baut das Kunden-Design aus DB-Daten zusammen: Farben, Hintergrund, Logo,
 // Stempel-Icon, Kartenstil — mit Live-Vorschau. Kein Code/Deploy pro Shop.
 

@@ -183,8 +183,6 @@ export function GrowthCard({ label, value, prev, color, period }: {
 
 export type EarningsSummary = {
   revenueTotal: number; commTotal: number; commPaid: number;
-  // Einrichtungsgebühren-Anteil (einmalig, in Zahlung #1) und Abo-Anteil des Umsatzes
-  setupFeesTotal?: number; aboRevenue?: number;
   commConfirmed: number; commPending: number; netEarnings: number; activeContracts: number;
   // Vertrags-Aufschlüsselung (ältere Server-Version liefert die Felder noch nicht)
   payingContracts?: number; payingMonthly?: number; payingAnnual?: number;
@@ -198,8 +196,6 @@ export type PaymentRow = {
   date: number; shopName: string; planType: "annual" | "monthly"; paymentNumber: number;
   paidAmount: number; commission: number; commissionStatus: string; direct: boolean;
   discountCode: string | null;
-  // Einrichtungsanteil dieser Zahlung (nur #1): gezahlt und Listenpreis (45/99 €)
-  setupFeePaid?: number; setupFeeList?: number;
 };
 
 export function groupPayments(payments: PaymentRow[], mode: "month" | "year") {

@@ -73,7 +73,7 @@ export default function DemoPage() {
   }, []);
 
   const designs = useMemo(() => [
-    // Normale Designs: im Preis enthalten (99 € Einrichtung inkl. Design)
+    // Normale Designs: im Abo enthalten (keine Einrichtungsgebühr)
     ...CONFIG_DEMOS.map(d => ({
       id: d.id, label: d.label, color: d.color, signature: false,
       theme: getShopTheme({ customDesignEnabled: true, designConfig: d.config })!,

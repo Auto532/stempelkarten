@@ -40,7 +40,7 @@ export default defineSchema({
     datenschutzText: v.optional(v.string()),
     stampIcon: v.optional(v.string()),
     theme: v.optional(v.string()),
-    // Config-Design (99€-Produkt): DB-basiertes Design, gerendert von der
+    // Config-Design (im Abo enthalten): DB-basiertes Design, gerendert von der
     // generischen Theme-Komponente (app/me/themes/configTheme.tsx) — kein
     // Code/Deploy pro Shop. Ein gesetztes coded Theme (shops.theme) hat Vorrang.
     // *Url-Felder werden serverseitig aus den Storage-IDs aufgelöst (adminSetDesignConfig).

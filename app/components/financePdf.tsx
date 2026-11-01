@@ -28,7 +28,6 @@ export type FinanceReportData = {
   dateStr:     string;
   totals: {
     revenue: number; commission: number; net: number;
-    setupFees: number; aboRevenue: number;
     payingContracts: number; paymentCount: number;
     commPending: number; commConfirmed: number; commPaid: number;
   };
@@ -165,9 +164,6 @@ export function FinanceReport({ data, logoSrc = "/logo-dunkel.png", markSrc = "/
           <Text style={s.sectionTitle}>AUFSCHLÜSSELUNG</Text>
         </View>
         <View style={s.breakCard}>
-          <View style={s.bRow}><Text style={s.bLabel}>Abo-Umsatz (laufend)</Text><Text style={s.bVal}>{euro(t.aboRevenue)}</Text></View>
-          <View style={s.bRow}><Text style={s.bLabel}>Einrichtungsgebühren (einmalig)</Text><Text style={s.bVal}>{euro(t.setupFees)}</Text></View>
-          <View style={s.bDiv} />
           <View style={s.bRow}><Text style={s.bLabel}>Gesamtumsatz</Text><Text style={s.bVal}>{euro(t.revenue)}</Text></View>
           <View style={s.bRow}><Text style={s.bLabel}>abzgl. Provisionen an Partner</Text><Text style={[s.bVal, { color: C.red }]}>- {euro(t.commission)}</Text></View>
           <View style={s.bRowSum}><Text style={s.bSumLabel}>Ergebnis (vor Steuern)</Text><Text style={s.bSumVal}>{euro(t.net)}</Text></View>

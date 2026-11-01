@@ -480,8 +480,7 @@ function ContractBonusCard({ shop, adminSecret }: { shop: Doc<"shops">; adminSec
           angeglichen, sobald Bonus-Stufen oder der Bonus-Toggle des Shops geändert werden
           (manuell ändern nur für Sonderfälle). Gilt ab der nächsten Abrechnung
           {contract.paymentCount === 0 ? " (erste Zahlung steht noch aus)" : ""}.
-          {contract.firstYearDiscount ? ` Rabatt ${contract.discountCode ?? ""} (nur 1. Rechnung, Einrichtung dann €45) wird automatisch mit eingerechnet.` : ""}
-          {" "}Einrichtung einmalig: €{contract.setupFee}.
+          {contract.firstYearDiscount ? ` Rabatt ${contract.discountCode ?? ""} (nur 1. Rechnung) wird automatisch mit eingerechnet.` : ""}
         </p>
         {err && <p className="text-red-400 text-xs">{err}</p>}
         {dirty && (
@@ -942,7 +941,7 @@ function ShopVertragTab({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret
           <div className="border-t border-zinc-800 pt-2">
             {priceRow("Wiederkehrend gesamt", `€${contract.recurringPrice}/${periodTxt}`)}
           </div>
-          {priceRow(`Einrichtung & Design (einmalig, 1. Rechnung)`, `€${contract.setupFee}`, true)}
+          {priceRow("Einrichtung & Design", "inklusive", true)}
           {contract.discountCode && priceRow(
             `Rabattcode ${contract.discountCode} (−${Math.round((contract.firstYearDiscount ?? 0) * 100)}%, nur 1. Rechnung)`,
             contract.paymentCount === 0 ? "aktiv" : "eingelöst", true
@@ -965,7 +964,7 @@ function ShopVertragTab({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret
               {contract.nextRenewalAt && priceRow("Läuft bis / Verlängerung am", fmt(contract.nextRenewalAt))}
               {contract.nextRenewalAt && (
                 <p className="text-[10px] text-zinc-600">
-                  Zur Verlängerung wird wieder €{contract.recurringPrice}/{periodTxt} fällig (ohne Einrichtung).
+                  Zur Verlängerung wird wieder €{contract.recurringPrice}/{periodTxt} fällig.
                 </p>
               )}
             </>
@@ -1280,7 +1279,7 @@ export function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; ad
         <div className="rounded-xl p-3 bg-amber-400/10 border border-amber-400/25">
           <p className="text-sm font-semibold text-zinc-100">Einrichtung & individuelles Design</p>
           <p className="text-[10px] text-zinc-500 mt-0.5">
-            Einmalig €99, bei jedem Shop automatisch dabei. Mit Rabattcode auf der Zahlungsseite nur €45.
+            Im Abo inklusive, keine Einrichtungsgebühr.
           </p>
         </div>
 

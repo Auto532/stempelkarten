@@ -119,9 +119,7 @@ function EarningsCard({ adminSecret }: { adminSecret: string }) {
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Gesamtumsatz</p>
               <p className="text-2xl font-bold text-green-400">€{data.revenueTotal.toFixed(2)}</p>
               <p className="text-[10px] text-zinc-600 mt-0.5">
-                {(data.setupFeesTotal ?? 0) > 0
-                  ? <>€{(data.aboRevenue ?? 0).toFixed(0)} Abo + €{(data.setupFeesTotal ?? 0).toFixed(0)} Einrichtung</>
-                  : "alle eingegangenen Zahlungen"}
+                alle eingegangenen Zahlungen
               </p>
             </div>
             <div className="bg-zinc-800/50 rounded-xl p-3">
@@ -361,7 +359,6 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
             {summary.payingContracts ?? summary.activeContracts} zahlende Shops
             {(summary.awaitingPayment ?? 0) > 0 && ` · ${summary.awaitingPayment} warten auf Zahlung`}
             {" "}· {payments ? `${payments.length} Zahlungen` : "…"}
-            {(summary.setupFeesTotal ?? 0) > 0 && ` · davon €${(summary.setupFeesTotal ?? 0).toFixed(0)} Einrichtungsgebühren (einmalig)`}
           </p>
 
           {/* Ansicht wählen */}
@@ -426,13 +423,6 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
                       {p.direct && <span className="text-blue-400"> · Direkt</span>}
                       {p.discountCode && <span className="text-purple-400"> · {p.discountCode}</span>}
                     </p>
-                    {(p.setupFeePaid ?? 0) > 0 && (
-                      <p className="text-[10px] text-amber-400/80">
-                        inkl. €{(p.setupFeePaid ?? 0).toFixed(2)} Einrichtung
-                        {(p.setupFeeList ?? 0) === 45 ? " (45 € Bonus-Preis)" : ""}
-                        {p.discountCode && (p.setupFeePaid ?? 0) < (p.setupFeeList ?? 0) ? ` (statt €${p.setupFeeList})` : ""}
-                      </p>
-                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-green-400">€{p.paidAmount.toFixed(2)}</p>
@@ -483,8 +473,6 @@ async function exportFinancePdf(
       revenue:    summary.revenueTotal,
       commission: summary.commTotal,
       net:        summary.netEarnings,
-      setupFees:  summary.setupFeesTotal ?? 0,
-      aboRevenue: summary.aboRevenue ?? (summary.revenueTotal - (summary.setupFeesTotal ?? 0)),
       payingContracts: summary.payingContracts ?? summary.activeContracts,
       paymentCount:    payments.length,
       commPending:   summary.commPending,
