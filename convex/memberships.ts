@@ -27,6 +27,23 @@ export async function nextMemberNumber(
   return mems.reduce((max: number, m: any) => Math.max(max, m.memberNumber ?? 0), mems.length) + 1;
 }
 
+// Spam-Schutz bei Anmeldungen: legitim sind wenige Beitritte pro Minute und
+// Shop. Ab 20 neuen Karten in 60 s wird kurz gebremst (nur Lesen, kein Zähler).
+const JOIN_BURST_WINDOW_MS = 60_000;
+const JOIN_BURST_MAX = 20;
+
+export async function assertJoinAllowed(ctx: QueryCtx, shop: Doc<"shops">): Promise<void> {
+  if (shop.active === false) throw new ConvexError("Dieser Shop ist derzeit nicht aktiv");
+  const since = Date.now() - JOIN_BURST_WINDOW_MS;
+  const recent = await ctx.db.query("memberships")
+    .withIndex("by_shop", (q) => q.eq("shopId", shop._id))
+    .order("desc")
+    .take(JOIN_BURST_MAX + 5);
+  if (recent.filter((m) => m._creationTime >= since).length >= JOIN_BURST_MAX) {
+    throw new ConvexError("Gerade sind sehr viele Anmeldungen. Bitte versuche es in einer Minute erneut.");
+  }
+}
+
 // Einmaliger Backfill für Bestandskunden: nummeriert pro Shop in
 // Beitritts-Reihenfolge (_creationTime), vorhandene Nummern bleiben.
 export const backfillMemberNumbers = internalMutation({
@@ -91,6 +108,10 @@ export const createMembershipForExistingCustomer = mutation({
       )
       .unique();
     if (existing) return existing._id;
+
+    const shop = await ctx.db.get(shopId);
+    if (!shop) throw new ConvexError("Shop nicht gefunden");
+    await assertJoinAllowed(ctx, shop);
 
     return await ctx.db.insert("memberships", {
       customerId: customer._id,

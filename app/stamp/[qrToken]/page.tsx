@@ -61,7 +61,8 @@ export default function StampPage() {
     if (!adminPinInput) return;
     setLoading(true); setAdminPinError(false);
     try {
-      await checkPin({ pin: adminPinInput });
+      const res = await checkPin({ pin: adminPinInput });
+      if (!res.ok) { setAdminPinError(true); return; }
       setAdminPin(adminPinInput);
       setAdminMode(true);
       setNoCredentials(false);

@@ -9,13 +9,20 @@ export const checkPin = mutation({
     if (!expected) throw new ConvexError("ADMIN_PIN nicht gesetzt");
 
     // Brute-Force-Schutz (C2): globaler Schlüssel, da es genau einen Admin-PIN gibt.
-    const throttle = await assertNotLocked(ctx, "admin-pin");
+    // Fehler werden ZURÜCKGEGEBEN statt geworfen: ein throw rollt in Convex alle
+    // Schreibvorgänge zurück, dann würde der Fehlversuch nie gezählt.
+    let throttle;
+    try {
+      throttle = await assertNotLocked(ctx, "admin-pin");
+    } catch (err) {
+      return { ok: false as const, error: err instanceof ConvexError ? String(err.data) : "Gesperrt" };
+    }
     if (!timingSafeEqual(pin, expected)) {
       await recordFailure(ctx, "admin-pin", throttle);
-      throw new ConvexError("Falscher PIN");
+      return { ok: false as const, error: "Falscher PIN" };
     }
     await clearFailures(ctx, throttle);
-    return true;
+    return { ok: true as const };
   },
 });
 

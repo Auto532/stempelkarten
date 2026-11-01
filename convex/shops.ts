@@ -6,6 +6,51 @@ import { requireAdmin, requireShopRole, sanitizeShop } from "./auth";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 
+// ─── Eingabe-Grenzen ─────────────────────────────────────────────────────────
+// Schützt vor unsinnigen Werten (0 Stempel = Belohnung bei jedem Stempel) und
+// riesigen Texten, egal ob die Änderung vom Inhaber oder vom Admin kommt.
+
+type Tier = { stamps: number; text: string; enabled: boolean };
+
+function checkInt(value: number, min: number, max: number, label: string) {
+  if (!Number.isInteger(value) || value < min || value > max)
+    throw new ConvexError(`${label} muss eine ganze Zahl von ${min} bis ${max} sein`);
+}
+
+function checkText(value: string | undefined, max: number, label: string) {
+  if (value !== undefined && value.length > max)
+    throw new ConvexError(`${label} ist zu lang (max. ${max} Zeichen)`);
+}
+
+function validateRewardSettings(a: { stampsRequired: number; rewardText: string; rewardTiers?: Tier[]; stampValue?: number }) {
+  checkInt(a.stampsRequired, 1, 100, "Stempel bis zur Belohnung");
+  if (!a.rewardText.trim()) throw new ConvexError("Bitte einen Belohnungstext angeben");
+  checkText(a.rewardText, 200, "Belohnungstext");
+  if (a.rewardTiers) {
+    if (a.rewardTiers.length > 10) throw new ConvexError("Maximal 10 Bonus-Stufen");
+    for (const t of a.rewardTiers) {
+      checkInt(t.stamps, 1, 1000, "Stempel einer Bonus-Stufe");
+      checkText(t.text, 200, "Text einer Bonus-Stufe");
+    }
+  }
+  if (a.stampValue !== undefined && (!Number.isFinite(a.stampValue) || a.stampValue < 0 || a.stampValue > 1000))
+    throw new ConvexError("Stempelwert muss zwischen 0 und 1000 liegen");
+}
+
+function validateMilestones(milestones: Tier[]) {
+  if (milestones.length > 20) throw new ConvexError("Maximal 20 Meilensteine");
+  for (const m of milestones) {
+    checkInt(m.stamps, 1, 10000, "Stempel eines Meilensteins");
+    checkText(m.text, 200, "Text eines Meilensteins");
+  }
+}
+
+function validateLegalTexts(a: { impressumText?: string; agbText?: string; datenschutzText?: string }) {
+  checkText(a.impressumText, 20000, "Impressum");
+  checkText(a.agbText, 20000, "AGB");
+  checkText(a.datenschutzText, 20000, "Datenschutzerklärung");
+}
+
 // Löscht alte Storage-Dateien sicher. Löscht nur IDs, die NICHT mehr in der
 // neuen Konfiguration referenziert werden (keepIds), dedupliziert, ignoriert
 // fehlende IDs und schluckt Fehler bewusst: eine nicht gelöschte Datei ist nur
@@ -129,6 +174,7 @@ export const updateSettings = mutation({
   },
   handler: async (ctx, { shopId, adminToken, stampsRequired, rewardText, rewardTiers, stampValue }) => {
     await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
+    validateRewardSettings({ stampsRequired, rewardText, rewardTiers, stampValue });
     await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, stampValue });
     // Abrechnung folgt den echten Bonus-Stufen (auch bei Inhaber-Änderungen)
     await ctx.scheduler.runAfter(0, internal.billingSync.syncBonusBilling, { shopId });
@@ -143,6 +189,7 @@ export const updateMilestones = mutation({
   },
   handler: async (ctx, { shopId, adminToken, milestones }) => {
     await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
+    validateMilestones(milestones);
     await ctx.db.patch(shopId, { milestones });
   },
 });
@@ -157,6 +204,7 @@ export const updateLegalTexts = mutation({
   },
   handler: async (ctx, { shopId, inhaberToken, impressumText, agbText, datenschutzText }) => {
     await requireShopRole(ctx, { shopId, token: inhaberToken, role: "inhaber" });
+    validateLegalTexts({ impressumText, agbText, datenschutzText });
     await ctx.db.patch(shopId, { impressumText, agbText, datenschutzText });
   },
 });
@@ -171,6 +219,9 @@ export const updateShopConfig = mutation({
   },
   handler: async (ctx, { shopId, inhaberToken, accentColor, stampIcon, theme }) => {
     await requireShopRole(ctx, { shopId, token: inhaberToken, role: "inhaber" });
+    checkText(accentColor, 50, "Akzentfarbe");
+    checkText(stampIcon, 50, "Stempel-Symbol");
+    checkText(theme, 50, "Theme");
     await ctx.db.patch(shopId, { accentColor, stampIcon, theme });
   },
 });
@@ -209,6 +260,8 @@ export const adminUpdateShopContent = mutation({
   },
   handler: async (ctx, { shopId, adminSecret, stampsRequired, rewardText, rewardTiers, milestones, stampValue }) => {
     requireAdmin({ secret: adminSecret });
+    validateRewardSettings({ stampsRequired, rewardText, rewardTiers, stampValue });
+    if (milestones) validateMilestones(milestones);
     await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, milestones, stampValue });
     // Abrechnung folgt den echten Bonus-Stufen
     await ctx.scheduler.runAfter(0, internal.billingSync.syncBonusBilling, { shopId });
@@ -384,6 +437,7 @@ export const createShop = mutation({
   },
   handler: async (ctx, { adminSecret, ownerName, ownerEmail, ownerPhone, rewardCount, ...shopArgs }) => {
     requireAdmin({ secret: adminSecret });
+    validateRewardSettings(shopArgs);
 
     // Slug muss eindeutig sein: getBySlug/Join-Links laufen über .unique() und
     // brechen bei Doppelbelegung für ALLE Shops mit diesem Slug. (.first statt
@@ -559,6 +613,7 @@ export const adminUpdateLegalTexts = mutation({
   },
   handler: async (ctx, { shopId, adminSecret, impressumText, agbText, datenschutzText }) => {
     requireAdmin({ secret: adminSecret });
+    validateLegalTexts({ impressumText, agbText, datenschutzText });
     await ctx.db.patch(shopId, { impressumText, agbText, datenschutzText });
   },
 });

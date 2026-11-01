@@ -70,7 +70,10 @@ export default function SuperAdminPage() {
     if (saved) {
       setChecking(true);
       checkPinMutation({ pin: saved })
-        .then(() => { setAdminSecret(saved); setAuthed(true); })
+        .then((res) => {
+          if (res.ok) { setAdminSecret(saved); setAuthed(true); }
+          else sessionStorage.removeItem("adminPin");
+        })
         .catch(() => { sessionStorage.removeItem("adminPin"); })
         .finally(() => setChecking(false));
     }
@@ -80,7 +83,8 @@ export default function SuperAdminPage() {
     if (!pin) return;
     setChecking(true); setPinError(null);
     try {
-      await checkPinMutation({ pin });
+      const res = await checkPinMutation({ pin });
+      if (!res.ok) { setPinError(res.error); setPin(""); return; }
       sessionStorage.setItem("adminPin", pin);
       setAdminSecret(pin);
       setAuthed(true);

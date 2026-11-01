@@ -1,7 +1,7 @@
 import { v, ConvexError } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { normalizeEmail } from "./lib/phone";
-import { nextMemberNumber } from "./memberships";
+import { nextMemberNumber, assertJoinAllowed } from "./memberships";
 import { sanitizeShop } from "./auth";
 
 export const findCustomerByEmail = query({
@@ -13,25 +13,28 @@ export const findCustomerByEmail = query({
       .first();
     if (!shop) return null;
 
-    const customer = await ctx.db
+    // Eine E-Mail kann mehrere Karten haben (neues Handy = neue Karte), daher
+    // die Karte suchen, die zu DIESEM Shop gehört.
+    const customers = await ctx.db
       .query("customers")
       .withIndex("by_email", q => q.eq("email", normalizeEmail(email)))
-      .first();
-    if (!customer) return null;
-
-    const membership = await ctx.db
-      .query("memberships")
-      .withIndex("by_customer_and_shop", q =>
-        q.eq("customerId", customer._id).eq("shopId", shop._id)
-      )
-      .unique();
-    if (!membership) return null;
-
-    return {
-      name: customer.name,
-      currentStamps: membership.currentStamps,
-      qrToken: customer.qrToken,
-    };
+      .take(20);
+    for (const customer of customers) {
+      const membership = await ctx.db
+        .query("memberships")
+        .withIndex("by_customer_and_shop", q =>
+          q.eq("customerId", customer._id).eq("shopId", shop._id)
+        )
+        .unique();
+      if (membership) {
+        return {
+          name: customer.name,
+          currentStamps: membership.currentStamps,
+          qrToken: customer.qrToken,
+        };
+      }
+    }
+    return null;
   },
 });
 
@@ -113,6 +116,7 @@ export const registerCustomer = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", shopSlug))
       .unique();
     if (!shop) throw new ConvexError("Shop nicht gefunden");
+    await assertJoinAllowed(ctx, shop);
 
     let customerId;
     let qrToken;
@@ -129,23 +133,16 @@ export const registerCustomer = mutation({
     }
 
     if (!customerId) {
-      // Deduplicate by email: returning customer gets their old card back
-      const byEmail = await ctx.db
-        .query("customers")
-        .withIndex("by_email", (q) => q.eq("email", normalized))
-        .first();
-      if (byEmail) {
-        customerId = byEmail._id;
-        qrToken = byEmail.qrToken;
-      } else {
-        qrToken = crypto.randomUUID();
-        customerId = await ctx.db.insert("customers", {
-          name,
-          email: normalized,
-          qrToken: qrToken!,
-          createdAt: Date.now(),
-        });
-      }
+      // Bewusst KEINE Zusammenführung per E-Mail: sonst bekäme jeder, der eine
+      // fremde Adresse eintippt, deren Karte (Datenschutz). Ohne passenden
+      // qrToken auf dem Gerät gibt es immer eine neue, leere Karte.
+      qrToken = crypto.randomUUID();
+      customerId = await ctx.db.insert("customers", {
+        name,
+        email: normalized,
+        qrToken: qrToken!,
+        createdAt: Date.now(),
+      });
     }
 
     const existingMembership = await ctx.db
