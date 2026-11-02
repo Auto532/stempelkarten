@@ -1,28 +1,21 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { ChevronRight, Palette, QrCode, Store, type LucideIcon } from "lucide-react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { ChevronRight, Eye, Image as ImageIcon, Moon, Palette, Stamp, Store, Sun, Upload, X, type LucideIcon } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { makeConfigTheme, normalizeDecor, type ShopDesignConfig } from "@/app/me/themes/configTheme";
+import {
+  makeConfigTheme, normalizeDecor, resolveColorMode, CornerOrnament, CLIP_SHAPES,
+  type ShopDesignConfig,
+} from "@/app/me/themes/configTheme";
 import { STAMP_ICONS, ICON_CATEGORIES } from "@/app/me/components";
 import { errMsg } from "@/app/lib/errMsg";
 
 // ─── DesignEditor (Config-Design, im Abo enthalten) ────────────────────────────────
-// Baut das Kunden-Design aus DB-Daten zusammen: Farben, Hintergrund, Logo,
-// Stempel-Icon, Kartenstil — mit Live-Vorschau. Kein Code/Deploy pro Shop.
-
-// Farbpalette: gedeckte Töne quer durch alle Farbbereiche. Ein Klick leitet
-// daraus ein komplettes, dezentes Farbschema ab (Karte, Hintergrund, Texte) —
-// keine benannten Vorlagen mehr, nur Farbton wählen + Feinschliff darunter.
-// Gedeckte, aber farbige Grundtöne ("Juwelentöne"): bunt, jedoch weder grell
-// noch hell. Nach Farbspektrum sortiert (warm → grün → blau → lila → neutral).
-const COLOR_PALETTE = [
-  "#a94f3d", "#8c5a4a", "#b06a47", "#8c6239", "#a8862e", "#b5923a", "#99772f", "#6b7539",
-  "#5d7a3a", "#4a7a52", "#3a7a63", "#357d75", "#3a6b7d", "#3f6b8c", "#4a5a8c", "#5f5088",
-  "#6b4a7d", "#7d4a6b", "#8c4463", "#8f3f4e", "#9c4a4a", "#7a6b5f", "#5f6b6b", "#8a7d6b",
-];
+// Baut das Kunden-Design aus DB-Daten zusammen: Hell/Dunkel, vier Farben,
+// Hintergrund (Farbe/Verlauf/Foto), Logo, Stempel-Symbol und Details — mit
+// Live-Vorschau. Kein Code/Deploy pro Shop.
 
 function hexToHsl(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -80,66 +73,54 @@ function hsvToHex(h: number, s: number, v: number): string {
   return `#${f(5)}${f(3)}${f(1)}`;
 }
 
-// Leitet aus einem Palettenton ein stimmiges, gedecktes Schema ab. Sättigung
-// wird gedeckelt, damit auch kräftige Töne dezent bleiben; im Hell-Modus wird
-// die Akzentfarbe bei Bedarf abgedunkelt (Kontrast auf hellem Grund).
+// Hell/Dunkel-Schema aus einer Akzentfarbe: Farbton bleibt, Sättigung wird
+// gedeckelt (nichts knallt), Karte und Hintergrund nur leicht getönt.
+// Wiederholtes Umschalten verändert den Farbton nicht.
 function deriveScheme(base: string, mode: "dark" | "light") {
-  const [h, s, l] = hexToHsl(base);
-  const sat = Math.min(s, 0.45);
+  const [h, s] = hexToHsl(base);
   if (mode === "dark") {
     return {
-      accent:   base,
-      text:     hslToHex(h, sat * 0.35, 0.92),
-      textBody: hslToHex(h, sat * 0.3, 0.62),
-      cardBg:   hslToHex(h, sat * 0.5, 0.09),
-      bgColor:  hslToHex(h, sat * 0.5, 0.05),
-      bgColor2: hslToHex(h, sat * 0.5, 0.11),
+      accent:   hslToHex(h, Math.min(s, 0.32), 0.66),
+      text:     hslToHex(h, 0.06, 0.93),
+      textBody: hslToHex(h, 0.06, 0.68),
+      cardBg:   hslToHex(h, 0.08, 0.11),
+      bgColor:  hslToHex(h, 0.08, 0.06),
+      bgColor2: hslToHex(h, 0.10, 0.12),
     };
   }
   return {
-    accent:   l > 0.55 ? hslToHex(h, Math.min(s + 0.08, 0.5), 0.42) : base,
-    text:     hslToHex(h, sat * 0.7, 0.16),
-    textBody: hslToHex(h, sat * 0.45, 0.4),
-    cardBg:   hslToHex(h, sat * 0.5, 0.975),
-    bgColor:  hslToHex(h, sat * 0.55, 0.94),
-    bgColor2: hslToHex(h, sat * 0.6, 0.88),
+    accent:   hslToHex(h, Math.min(s, 0.38), 0.40),
+    text:     hslToHex(h, 0.10, 0.14),
+    textBody: hslToHex(h, 0.06, 0.40),
+    cardBg:   hslToHex(h, 0.12, 0.985),
+    bgColor:  hslToHex(h, 0.12, 0.95),
+    bgColor2: hslToHex(h, 0.14, 0.90),
   };
 }
 
-// Gruppiert die Editor-Bereiche optisch (Übersichtlichkeit)
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+// Auswahlfarben für die Farbfelder (8 pro Reihe): 16 Farbrichtungen in je
+// zwei gedeckten Abstufungen, dazu warme und kühle Grautöne von fast Weiß
+// bis fast Schwarz (für Texte und Flächen).
+const GREY_STEPS = [0.97, 0.9, 0.8, 0.65, 0.5, 0.35, 0.2, 0.09];
+const FIELD_COLORS = [
+  ...Array.from({ length: 16 }, (_, i) => hslToHex(i / 16, 0.3, 0.58)),
+  ...Array.from({ length: 16 }, (_, i) => hslToHex(i / 16, 0.26, 0.4)),
+  ...GREY_STEPS.map(l => hslToHex(0.08, 0.08, l)),
+  ...GREY_STEPS.map(l => hslToHex(0.6, 0.06, l)),
+];
+
+// Einstellungs-Block mit Titel (und optionalem Hinweis)
+function Panel({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-zinc-950/40 border border-zinc-800 rounded-xl p-3 space-y-2">
-      <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">{title}</p>
+    <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-3.5 space-y-2.5">
+      <div className="px-0.5">
+        <p className="text-xs font-semibold text-zinc-200">{title}</p>
+        {hint && <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">{hint}</p>}
+      </div>
       {children}
     </div>
   );
 }
-
-// Aufklappbarer Editor-Abschnitt: bündelt mehrere Sektionen, damit nicht alles
-// gleichzeitig offen ist (übersichtlicher, gerade für Einsteiger).
-function EditorGroup({ title, icon: Icon, isOpen, onToggle, children }: {
-  title: string; icon: LucideIcon; isOpen: boolean; onToggle: () => void; children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <button type="button" onClick={onToggle}
-        className="w-full px-1 py-2 flex items-center gap-2 text-left">
-        <Icon size={14} className="text-amber-400 shrink-0" />
-        <span className="text-xs font-bold text-zinc-200 uppercase tracking-wide">{title}</span>
-        <ChevronRight size={14} className={`ml-auto text-zinc-600 transition-transform ${isOpen ? "rotate-90" : ""}`} />
-      </button>
-      {isOpen && <div className="space-y-3 pt-1">{children}</div>}
-    </div>
-  );
-}
-
-// Auswahlfarben für die Farbfelder: gedeckte Töne + Neutral-/Hell-/Dunkeltöne
-// (für Text- und Flächenfarben), Stil wie die Akzentfarben-Auswahl in /me.
-const FIELD_COLORS = [
-  ...COLOR_PALETTE,
-  "#f4f4f5", "#f0e9db", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46", "#18181b", "#0b0b0d",
-];
 
 // Benutzerdefinierte Farbwahl: großes Sättigungs-/Helligkeitsfeld + Farbton-
 // Leiste zum Tippen/Ziehen — ersetzt den nativen Browser-Picker.
@@ -193,18 +174,18 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   const [custom, setCustom] = useState(false);
   const sel = value.toLowerCase();
   return (
-    <div className="bg-zinc-800/50 rounded-xl">
+    <div className="rounded-xl bg-white/[0.03] border border-white/[0.07]">
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5">
+        className="w-full min-h-12 flex items-center justify-between gap-2 px-3 py-2">
         <div className="min-w-0 text-left">
-          <p className="text-[11px] text-zinc-400 truncate">{label}</p>
-          <p className="text-[9px] font-mono text-zinc-600">{value}</p>
+          <p className="text-xs text-zinc-300 truncate">{label}</p>
+          <p className="text-[10px] font-mono text-zinc-600">{value}</p>
         </div>
-        <span className="w-7 h-7 shrink-0 rounded-lg border"
-          style={{ background: value, borderColor: open ? "#a1a1aa" : "#3f3f46" }} />
+        <span className="w-8 h-8 shrink-0 rounded-lg border"
+          style={{ background: value, borderColor: open ? "#a1a1aa" : "rgba(255,255,255,.12)" }} />
       </button>
       {open && (
-        <div className="px-2.5 pb-2.5 space-y-1.5">
+        <div className="px-3 pb-3 space-y-2">
           <div className="grid grid-cols-8 gap-1.5">
             {FIELD_COLORS.map(c => (
               <button key={c} type="button" onClick={() => onChange(c)}
@@ -217,7 +198,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
             ))}
           </div>
           <button type="button" onClick={() => setCustom(c => !c)}
-            className="w-full py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-[10px] font-semibold text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors">
+            className="w-full min-h-9 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] font-semibold text-zinc-400 hover:text-zinc-200 transition-colors">
             Benutzerdefiniert {custom ? "▴" : "▾"}
           </button>
           {custom && <CustomColorPicker value={value} onChange={onChange} />}
@@ -355,6 +336,46 @@ async function optimizeToWebp(source: Blob, opts: OptimizeOpts): Promise<Blob> {
   return best;
 }
 
+type EditorTab = "farben" | "hintergrund" | "logo" | "stempel";
+
+const TABS: { id: EditorTab; label: string; icon: LucideIcon }[] = [
+  { id: "farben",      label: "Farben",     icon: Palette   },
+  { id: "hintergrund", label: "Hintergrund", icon: ImageIcon },
+  { id: "logo",        label: "Logo & Text", icon: Store     },
+  { id: "stempel",     label: "Stempel",    icon: Stamp     },
+];
+
+const STAMP_SHAPES = [
+  { id: "circle",  label: "Kreis"   },
+  { id: "square",  label: "Eckig"   },
+  { id: "diamond", label: "Raute"   },
+  { id: "hex",     label: "Wabe"    },
+  { id: "octagon", label: "Achteck" },
+  { id: "star",    label: "Stern"   },
+  { id: "shield",  label: "Schild"  },
+] as const;
+
+const DECORS = [
+  { id: "none",    label: "Ohne"        },
+  { id: "thin",    label: "Fein"        },
+  { id: "double",  label: "Doppelt"     },
+  { id: "swirl",   label: "Geschwungen" },
+  { id: "bracket", label: "Fläche"      },
+  { id: "dots",    label: "Punkte"      },
+  { id: "ornate",  label: "Verziert"    },
+] as const;
+
+// Kleine Form-Vorschau für die Stempel-Form-Kacheln
+function ShapePreview({ shape, color }: { shape: string; color: string }) {
+  if (CLIP_SHAPES[shape]) {
+    return <span className="block w-6 h-6" style={{ clipPath: CLIP_SHAPES[shape], background: color }} />;
+  }
+  if (shape === "diamond") {
+    return <span className="block w-4 h-4 rotate-45 rounded-[3px]" style={{ background: color }} />;
+  }
+  return <span className="block w-6 h-6" style={{ background: color, borderRadius: shape === "square" ? 6 : 9999 }} />;
+}
+
 export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret: string }) {
   const generateUploadUrl = useMutation(api.shops.adminGenerateUploadUrl);
   const setDesignConfig   = useMutation(api.shops.adminSetDesignConfig);
@@ -362,15 +383,19 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
   const dc = shop.designConfig;
   const [open, setOpen] = useState(!!dc);
 
+  // Ohne gespeichertes Design: dezentes dunkles Schema aus der Shop-Akzentfarbe
+  const start = useMemo(() => deriveScheme(shop.accentColor ?? "#5f8a83", "dark"), [shop.accentColor]);
+
   // Farben
-  const [accent, setAccent]     = useState(dc?.accent   ?? shop.accentColor ?? "#fbbf24");
-  const [text, setText]         = useState(dc?.text     ?? "#f4f4f5");
-  const [textBody, setTextBody] = useState(dc?.textBody ?? "#a1a1aa");
-  const [cardBg, setCardBg]     = useState(dc?.cardBg   ?? "#18181b");
+  const [colorMode, setColorMode] = useState<"dark" | "light">(dc ? resolveColorMode(dc) : "dark");
+  const [accent, setAccent]     = useState(dc?.accent   ?? start.accent);
+  const [text, setText]         = useState(dc?.text     ?? start.text);
+  const [textBody, setTextBody] = useState(dc?.textBody ?? start.textBody);
+  const [cardBg, setCardBg]     = useState(dc?.cardBg   ?? start.cardBg);
   // Hintergrund
-  const [bgType, setBgType]     = useState<"color" | "gradient" | "image">(dc?.bgType ?? "color");
-  const [bgColor, setBgColor]   = useState(dc?.bgColor  ?? "#09090b");
-  const [bgColor2, setBgColor2] = useState(dc?.bgColor2 ?? "#1c1917");
+  const [bgType, setBgType]     = useState<"color" | "gradient" | "image">(dc?.bgType ?? "gradient");
+  const [bgColor, setBgColor]   = useState(dc?.bgColor  ?? start.bgColor);
+  const [bgColor2, setBgColor2] = useState(dc?.bgColor2 ?? start.bgColor2);
   const [bgImageId, setBgImageId]     = useState<Id<"_storage"> | undefined>(dc?.bgImageId);
   const [bgPreviewUrl, setBgPreviewUrl] = useState<string | undefined>(dc?.bgImageUrl);
   // Logo
@@ -380,25 +405,25 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
   const [logoWidth, setLogoWidth]     = useState(dc?.logoWidth ?? 80);
   const [tagline, setTagline]         = useState(dc?.tagline ?? "");
   const [qrStyle, setQrStyle]         = useState<"button" | "icon" | "both">(dc?.qrStyle ?? "button");
-  // Aufklappbare Editor-Gruppen (Akkordeon: nur eine offen)
-  const [openGroup, setOpenGroup]     = useState<"farben" | "logo" | "extras" | null>("farben");
-  const toggleGroup = (g: "farben" | "logo" | "extras") => setOpenGroup(cur => (cur === g ? null : g));
-  // Stempel & Stil
+  // Stempel & Details
   const [icon, setIcon]           = useState(dc?.stampIcon ?? shop.stampIcon ?? "stamp");
   const [stampShape, setStampShape] = useState(dc?.stampShape ?? "circle");
   // Stempel-Umrandung: eigene Farbe (leer = Akzentfarbe) + Stärke
   const [stampBorderColor, setStampBorderColor] = useState<string>(dc?.stampBorderColor ?? "");
   const [stampBorderStyle, setStampBorderStyle] = useState<"thin" | "bold">(dc?.stampBorderStyle ?? "thin");
   const [decor, setDecor]         = useState<"none" | "thin" | "double" | "swirl" | "bracket" | "dots" | "ornate">(normalizeDecor(dc?.decor));
-  // Farbpalette: gewählter Grundton + Hell/Dunkel für das abgeleitete Schema
-  const [paletteSel, setPaletteSel]   = useState<string | null>(null);
-  const [paletteMode, setPaletteMode] = useState<"dark" | "light">("dark");
 
-  const applyPalette = (base: string, mode: "dark" | "light" = paletteMode) => {
-    const s = deriveScheme(base, mode);
-    setPaletteSel(base);
+  const [tab, setTab]             = useState<EditorTab>("farben");
+  const previewRef                = useRef<HTMLDivElement>(null);
+
+  // Hell/Dunkel: leitet aus der aktuellen Akzentfarbe ein ruhiges Schema ab
+  // (Karte, Texte, Hintergrundfarben). Ein Hintergrundfoto bleibt erhalten
+  // und unverändert, die Karte liegt dann als helles bzw. dunkles Milchglas darauf.
+  const applyMode = (mode: "dark" | "light") => {
+    const s = deriveScheme(accent, mode);
+    setColorMode(mode);
     setAccent(s.accent); setText(s.text); setTextBody(s.textBody); setCardBg(s.cardBg);
-    setBgType("gradient"); setBgColor(s.bgColor); setBgColor2(s.bgColor2);
+    setBgColor(s.bgColor); setBgColor2(s.bgColor2);
   };
 
   const [uploading, setUploading] = useState<"logo" | "bg" | null>(null);
@@ -449,16 +474,26 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
     } finally { setUploading(null); e.target.value = ""; }
   };
 
+  // Gespeicherte Konfiguration (auch Grundlage für "ungespeicherte Änderungen")
+  const config = useMemo(() => ({
+    accent, text, textBody, cardBg, bgType,
+    bgColor, bgColor2, bgImageId, logoId, logoShowName, logoWidth,
+    tagline: tagline.trim() || undefined,
+    qrStyle, stampIcon: icon, stampShape,
+    stampBorderColor: stampBorderColor || undefined, stampBorderStyle, decor, colorMode,
+  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgImageId, logoId, logoShowName, logoWidth, tagline, qrStyle, icon, stampShape, stampBorderColor, stampBorderStyle, decor, colorMode]);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => (dc ? JSON.stringify(config) : ""));
+  // Ohne gespeichertes Design gibt es nichts zu vergleichen: dann immer speicherbar
+  const dirty = !dc || JSON.stringify(config) !== savedSnapshot;
+
   // Live-Vorschau: dieselbe Komponente, die auch die Kunden sehen
   const previewCfg: ShopDesignConfig = useMemo(() => ({
-    accent, text, textBody, cardBg, bgType, bgColor, bgColor2,
-    bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl, logoShowName, logoWidth, tagline: tagline.trim() || undefined,
-    qrStyle, stampIcon: icon, stampShape,
-    stampBorderColor: stampBorderColor || undefined, stampBorderStyle, decor,
-  }), [accent, text, textBody, cardBg, bgType, bgColor, bgColor2, bgPreviewUrl, logoPreviewUrl, logoShowName, logoWidth, tagline, qrStyle, icon, stampShape, stampBorderColor, stampBorderStyle, decor]);
+    ...config, bgImageUrl: bgPreviewUrl, logoUrl: logoPreviewUrl,
+  }), [config, bgPreviewUrl, logoPreviewUrl]);
   const previewTheme = useMemo(() => makeConfigTheme(previewCfg), [previewCfg]);
 
-  const previewBg: React.CSSProperties = bgType === "image" && bgPreviewUrl
+  const hasPhoto = bgType === "image" && !!bgPreviewUrl;
+  const previewBg: React.CSSProperties = hasPhoto
     ? { backgroundImage: `url('${bgPreviewUrl}')`, backgroundSize: "cover", backgroundPosition: "center" }
     : bgType === "gradient"
       ? { background: `linear-gradient(180deg, ${bgColor} 0%, ${bgColor2} 100%)` }
@@ -467,16 +502,8 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
   const handleSave = async () => {
     setSaving(true); setErr(""); setSaved(false);
     try {
-      await setDesignConfig({
-        shopId: shop._id, adminSecret,
-        config: {
-          accent, text, textBody, cardBg, bgType,
-          bgColor, bgColor2, bgImageId, logoId, logoShowName, logoWidth,
-          tagline: tagline.trim() || undefined,
-          qrStyle, stampIcon: icon, stampShape,
-          stampBorderColor: stampBorderColor || undefined, stampBorderStyle, decor,
-        },
-      });
+      await setDesignConfig({ shopId: shop._id, adminSecret, config });
+      setSavedSnapshot(JSON.stringify(config));
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } catch (ex: unknown) {
       setErr(errMsg(ex, "Fehler beim Speichern"));
@@ -486,13 +513,27 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
   const handleRemove = async () => {
     if (!window.confirm("Eigenes Design entfernen? Der Shop nutzt dann wieder den Standard-Look.")) return;
     setSaving(true); setErr("");
-    try { await setDesignConfig({ shopId: shop._id, adminSecret, config: null }); }
+    try {
+      await setDesignConfig({ shopId: shop._id, adminSecret, config: null });
+      // Editor auf den Ausgangszustand zurücksetzen; die Bilder hat der Server gelöscht
+      setColorMode("dark");
+      setAccent(start.accent); setText(start.text); setTextBody(start.textBody); setCardBg(start.cardBg);
+      setBgType("gradient"); setBgColor(start.bgColor); setBgColor2(start.bgColor2);
+      setBgImageId(undefined); setBgPreviewUrl(undefined);
+      setLogoId(undefined); setLogoPreviewUrl(undefined);
+      setSavedSnapshot("");
+    }
     catch (ex: unknown) { setErr(errMsg(ex, "Fehler")); }
     finally { setSaving(false); }
   };
 
+  // Einheitliche Auswahl-Optik: gewählt = hell, sonst zurückhaltend
+  const chip = (active: boolean) => active
+    ? "bg-zinc-100 text-zinc-900 border-zinc-100"
+    : "bg-white/[0.03] text-zinc-400 border-white/[0.07] hover:text-zinc-200 hover:border-white/15";
+
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl">
       <button type="button" onClick={() => setOpen(o => !o)}
         className="w-full px-4 py-3 flex items-center gap-2 text-left">
         <Palette size={14} className={dc ? "text-amber-400" : "text-zinc-500"} />
@@ -502,277 +543,290 @@ export function DesignEditor({ shop, adminSecret }: { shop: Doc<"shops">; adminS
       </button>
 
       {open && (
-        <div className="px-4 pb-4 space-y-4 border-t border-zinc-800 pt-4">
+        <div className="border-t border-zinc-800">
           {shop.theme && (
-            <p className="text-[10px] text-yellow-400 bg-yellow-400/10 border border-yellow-400/25 rounded-lg px-2.5 py-2">
+            <p className="mx-4 mt-4 text-[11px] text-yellow-400 bg-yellow-400/10 border border-yellow-400/25 rounded-xl px-3 py-2">
               Signature-Theme „{shop.theme}" ist aktiv und überdeckt den Editor. Beim Speichern hier wird es automatisch ersetzt.
             </p>
           )}
 
-          {/* Vorschau immer oben sichtbar, damit Änderungen sofort zu sehen sind */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Vorschau (so sieht es der Kunde)</p>
-            <div className="rounded-2xl p-4 space-y-3 border border-zinc-800" style={previewBg}>
-              <previewTheme.Card
-                shopName={shop.name}
-                stampsRequired={shop.stampsRequired}
-                currentStamps={Math.min(4, shop.stampsRequired)}
-                animateIndex={null}
-                qrToken="preview"
-                onShowQR={() => {}}
-                rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
-                stampValue={shop.stampValue}
-                cardNumber={1}
-              />
-              <previewTheme.Banner
-                rewardText={shop.rewardText}
-                stampsRequired={shop.stampsRequired}
-                rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
-              />
+          <div className="p-4 lg:grid lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-6 space-y-4 lg:space-y-0">
+            {/* Vorschau: am Handy oben, am PC links und beim Scrollen fest */}
+            <div ref={previewRef} className="lg:sticky lg:top-4 lg:self-start space-y-2 scroll-mt-4">
+              <p className="text-[11px] text-zinc-500 font-medium">Vorschau, so sieht es der Kunde</p>
+              <div className="relative rounded-[28px] overflow-hidden border border-white/[0.06] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]" style={previewBg}>
+                <div className="relative p-4 space-y-3">
+                  <previewTheme.Card
+                    shopName={shop.name}
+                    stampsRequired={shop.stampsRequired}
+                    currentStamps={Math.min(4, shop.stampsRequired)}
+                    animateIndex={null}
+                    qrToken="preview"
+                    onShowQR={() => {}}
+                    rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
+                    stampValue={shop.stampValue}
+                    cardNumber={1}
+                  />
+                  <previewTheme.Banner
+                    rewardText={shop.rewardText}
+                    stampsRequired={shop.stampsRequired}
+                    rewardTiers={shop.bonusProgramEnabled ? shop.rewardTiers : undefined}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Einstellungen */}
+            <div className="space-y-4 min-w-0">
+              {/* Hell / Dunkel: Hauptschalter, gilt auch mit Foto */}
+              <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.06]">
+                {([
+                  { id: "dark",  label: "Dunkel", Icon: Moon },
+                  { id: "light", label: "Hell",   Icon: Sun  },
+                ] as const).map(m => (
+                  <button key={m.id} type="button" onClick={() => applyMode(m.id)}
+                    className={`min-h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-colors ${colorMode === m.id ? "bg-zinc-100 text-zinc-900" : "text-zinc-400 hover:text-zinc-200"}`}>
+                    <m.Icon size={15} /> {m.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Reiter */}
+              <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+                {TABS.map(t => (
+                  <button key={t.id} type="button" onClick={() => setTab(t.id)}
+                    className={`min-h-12 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-colors ${tab === t.id ? "bg-white/10 text-zinc-100" : "text-zinc-500 hover:text-zinc-300"}`}>
+                    <t.icon size={15} />
+                    <span className="leading-tight text-center">{t.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {tab === "farben" && (
+                <Panel title="Die vier Farben der Karte" hint="Hell/Dunkel oben stellt alle vier passend ein. Hier kannst du jede einzeln anpassen.">
+                  <ColorField label="Akzentfarbe (Stempel, Button)" value={accent}   onChange={setAccent} />
+                  <ColorField label="Überschrift"                   value={text}     onChange={setText} />
+                  <ColorField label="Text"                          value={textBody} onChange={setTextBody} />
+                  <ColorField label="Kartenfläche"                  value={cardBg}   onChange={setCardBg} />
+                </Panel>
+              )}
+
+              {tab === "hintergrund" && (
+                <Panel title="Hintergrund">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([
+                      { id: "color",    label: "Farbe"   },
+                      { id: "gradient", label: "Verlauf" },
+                      { id: "image",    label: "Foto"    },
+                    ] as const).map(t => (
+                      <button key={t.id} type="button" onClick={() => setBgType(t.id)}
+                        className={`min-h-10 rounded-xl border text-xs font-semibold transition-colors ${chip(bgType === t.id)}`}>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                  {bgType !== "image" && (
+                    <>
+                      <ColorField label={bgType === "gradient" ? "Farbe oben" : "Hintergrundfarbe"} value={bgColor} onChange={setBgColor} />
+                      {bgType === "gradient" && <ColorField label="Farbe unten" value={bgColor2} onChange={setBgColor2} />}
+                    </>
+                  )}
+                  {bgType === "image" && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <label className="flex-1">
+                          <span className="w-full min-h-11 flex items-center justify-center gap-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-zinc-200 text-xs font-semibold cursor-pointer hover:bg-white/10 transition-colors">
+                            <Upload size={14} />
+                            {uploading === "bg" ? "Lädt hoch…" : bgPreviewUrl ? "Foto ändern" : "Foto hochladen"}
+                          </span>
+                          <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="hidden" onChange={handleUpload("bg")} disabled={uploading !== null} />
+                        </label>
+                        {bgPreviewUrl && (
+                          <button type="button" aria-label="Foto entfernen"
+                            onClick={() => { setBgImageId(undefined); setBgPreviewUrl(undefined); setBgType("gradient"); }}
+                            className="min-h-11 px-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-zinc-500 hover:text-red-400 transition-colors">
+                            <X size={15} />
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-zinc-500 leading-relaxed">
+                        Am besten Hochformat (z. B. 1024×1792), ruhige Bildmitte, ohne Text. Das Foto bleibt unverändert, die Karte liegt je nach Hell/Dunkel als helles oder dunkles Milchglas darauf.
+                      </p>
+                    </>
+                  )}
+                </Panel>
+              )}
+
+              {tab === "logo" && (
+                <Panel title="Logo & Text">
+                  <div className="flex items-center gap-2">
+                    <label className="flex-1">
+                      <span className="w-full min-h-11 flex items-center justify-center gap-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-zinc-200 text-xs font-semibold cursor-pointer hover:bg-white/10 transition-colors">
+                        <Upload size={14} />
+                        {uploading === "logo" ? "Verarbeite…" : logoPreviewUrl ? "Logo ändern" : "Logo hochladen (statt Shopname)"}
+                      </span>
+                      <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="hidden" onChange={handleUpload("logo")} disabled={uploading !== null} />
+                    </label>
+                    {logoPreviewUrl && (
+                      <button type="button" aria-label="Logo entfernen" onClick={() => { setLogoId(undefined); setLogoPreviewUrl(undefined); }}
+                        className="min-h-11 px-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-zinc-500 hover:text-red-400 transition-colors">
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Weißer/karierter Hintergrund wird automatisch entfernt. Am besten trotzdem ein PNG mit transparentem Hintergrund verwenden.
+                  </p>
+                  {logoPreviewUrl && (
+                    <button type="button" onClick={() => setLogoShowName(v => !v)}
+                      className="w-full min-h-11 flex items-center gap-3 px-3 rounded-xl bg-white/[0.03] border border-white/[0.07] text-xs text-zinc-300 text-left">
+                      <span className={`w-9 h-5 rounded-full shrink-0 flex items-center transition-colors ${logoShowName ? "bg-zinc-100" : "bg-zinc-700"}`}>
+                        <span className={`w-4 h-4 rounded-full transition-transform ${logoShowName ? "translate-x-[18px] bg-zinc-900" : "translate-x-0.5 bg-zinc-300"}`} />
+                      </span>
+                      Shopname zusätzlich unter dem Logo anzeigen
+                    </button>
+                  )}
+                  {logoPreviewUrl && (
+                    <div className="px-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <label htmlFor="logo-width" className="text-xs text-zinc-400">Logo-Größe (Breite)</label>
+                        <span className="text-xs text-zinc-500 tabular-nums">{logoWidth}%</span>
+                      </div>
+                      <input id="logo-width" type="range" min={40} max={100} step={5} value={logoWidth}
+                        onChange={e => setLogoWidth(Number(e.target.value))}
+                        className="w-full accent-zinc-100" />
+                    </div>
+                  )}
+                  <div>
+                    <label htmlFor="tagline" className="block text-xs text-zinc-400 mb-1.5 px-1">Kleiner Text unter Logo/Name (optional)</label>
+                    <input id="tagline" value={tagline} onChange={e => setTagline(e.target.value)} maxLength={60}
+                      placeholder="z. B. Ladenname oder Slogan"
+                      className="w-full min-h-11 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-white/25" />
+                  </div>
+                </Panel>
+              )}
+
+              {tab === "stempel" && (
+                <>
+                  <Panel title="Stempel-Symbol">
+                    <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                      {ICON_CATEGORIES.map(cat => (
+                        <div key={cat.label}>
+                          <p className="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold mb-1">{cat.label}</p>
+                          <div className="flex gap-1.5 flex-wrap">
+                            {cat.keys.map(key => {
+                              const IconComp = STAMP_ICONS[key];
+                              if (!IconComp) return null;
+                              return (
+                                <button key={key} type="button" onClick={() => setIcon(key)} aria-label={key}
+                                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
+                                  style={icon === key
+                                    ? { background: `${accent}26`, border: `1px solid ${accent}80` }
+                                    : { background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.07)" }}>
+                                  <IconComp size={16} style={{ color: icon === key ? accent : "#71717a" }} />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Panel>
+
+                  <Panel title="Stempel-Form">
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {STAMP_SHAPES.map(s => (
+                        <button key={s.id} type="button" onClick={() => setStampShape(s.id)}
+                          className={`min-h-16 rounded-xl border flex flex-col items-center justify-center gap-1.5 text-[11px] font-semibold transition-colors ${chip(stampShape === s.id)}`}>
+                          <ShapePreview shape={s.id} color={stampShape === s.id ? "#18181b" : accent} />
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </Panel>
+
+                  <Panel title="Stempel-Umrandung">
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {([
+                        { id: "thin", label: "Fein" },
+                        { id: "bold", label: "Fett" },
+                      ] as const).map(s => (
+                        <button key={s.id} type="button" onClick={() => setStampBorderStyle(s.id)}
+                          className={`min-h-10 rounded-xl border text-xs font-semibold transition-colors ${chip(stampBorderStyle === s.id)}`}>
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button type="button" onClick={() => setStampBorderColor("")}
+                        className={`min-h-10 rounded-xl border text-xs font-semibold transition-colors ${chip(!stampBorderColor)}`}>
+                        Akzentfarbe
+                      </button>
+                      <button type="button" onClick={() => setStampBorderColor(c => c || accent)}
+                        className={`min-h-10 rounded-xl border text-xs font-semibold transition-colors ${chip(!!stampBorderColor)}`}>
+                        Eigene Farbe
+                      </button>
+                    </div>
+                    {stampBorderColor && (
+                      <ColorField label="Umrandungsfarbe" value={stampBorderColor} onChange={setStampBorderColor} />
+                    )}
+                  </Panel>
+
+                  <Panel title="Ecken-Verzierung">
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {DECORS.map(d => (
+                        <button key={d.id} type="button" onClick={() => setDecor(d.id)}
+                          className={`min-h-16 rounded-xl border flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors ${chip(decor === d.id)}`}>
+                          <span className="h-6 flex items-center">
+                            {d.id === "none"
+                              ? <span className="block w-5 h-px" style={{ background: decor === d.id ? "#18181b" : "#52525b" }} />
+                              : <CornerOrnament color={decor === d.id ? "#18181b" : accent} variant={d.id} />}
+                          </span>
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </Panel>
+
+                  <Panel title="QR-Code">
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {([
+                        { id: "button", label: "Button unten" },
+                        { id: "icon",   label: "Klein oben"   },
+                        { id: "both",   label: "Beide"        },
+                      ] as const).map(s => (
+                        <button key={s.id} type="button" onClick={() => setQrStyle(s.id)}
+                          className={`min-h-10 rounded-xl border text-xs font-semibold transition-colors ${chip(qrStyle === s.id)}`}>
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </Panel>
+                </>
+              )}
             </div>
           </div>
 
-          <EditorGroup title="Farben & Hintergrund" icon={Palette} isOpen={openGroup === "farben"} onToggle={() => toggleGroup("farben")}>
-          {/* Farbpalette: Ton anklicken → komplettes dezentes Schema */}
-          <Section title="Farbpalette (Ton wählen, setzt das ganze Schema)">
-            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
-              {([
-                { id: "dark",  label: "Dunkel" },
-                { id: "light", label: "Hell"   },
-              ] as const).map(m => (
-                <button key={m.id} type="button"
-                  onClick={() => { setPaletteMode(m.id); if (paletteSel) applyPalette(paletteSel, m.id); }}
-                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                  style={paletteMode === m.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
-                  {m.label}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-8 gap-1.5">
-              {COLOR_PALETTE.map(c => (
-                <button key={c} type="button" onClick={() => applyPalette(c)}
-                  className="aspect-square rounded-full transition-transform hover:scale-110"
-                  style={{
-                    background: c,
-                    border: paletteSel === c ? "2px solid #fff" : "2px solid rgba(0,0,0,.35)",
-                    boxShadow: paletteSel === c ? `0 0 8px ${c}88` : undefined,
-                  }} />
-              ))}
-            </div>
-          </Section>
-
-          {/* Farben (Feinschliff) */}
-          <Section title="Farben (Feinschliff)">
-            <ColorField label="Akzentfarbe"  value={accent}   onChange={setAccent} />
-            <ColorField label="Überschrift"  value={text}     onChange={setText} />
-            <ColorField label="Text"         value={textBody} onChange={setTextBody} />
-            <ColorField label="Kartenfläche" value={cardBg}   onChange={setCardBg} />
-          </Section>
-
-          {/* Hintergrund */}
-          <Section title="Hintergrund">
-            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
-              {([
-                { id: "color",    label: "Farbe"   },
-                { id: "gradient", label: "Verlauf" },
-                { id: "image",    label: "Foto"    },
-              ] as const).map(t => (
-                <button key={t.id} type="button" onClick={() => setBgType(t.id)}
-                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                  style={bgType === t.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            {bgType !== "image" && (
-              <>
-                <ColorField label={bgType === "gradient" ? "Farbe oben" : "Hintergrundfarbe"} value={bgColor} onChange={setBgColor} />
-                {bgType === "gradient" && <ColorField label="Farbe unten" value={bgColor2} onChange={setBgColor2} />}
-              </>
-            )}
-            {bgType === "image" && (
-              <label className="block">
-                <span className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-700 transition-colors">
-                  {uploading === "bg" ? "Lädt hoch…" : bgPreviewUrl ? "Hintergrundfoto ändern" : "Hintergrundfoto hochladen"}
-                </span>
-                <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="hidden" onChange={handleUpload("bg")} disabled={uploading !== null} />
-              </label>
-            )}
-          </Section>
-          </EditorGroup>
-
-          <EditorGroup title="Logo & Stempel-Symbol" icon={Store} isOpen={openGroup === "logo"} onToggle={() => toggleGroup("logo")}>
-          {/* Logo, Zusatz-Text & Stempel-Symbol */}
-          <Section title="Logo, Text & Symbol">
+          {/* Speichern-Leiste: bleibt unten sichtbar (am Handy über der schwebenden Admin-Navigation) */}
+          <div className="sticky z-10 bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] lg:bottom-0 px-4 py-3 border-t border-white/[0.06] bg-zinc-900/85 backdrop-blur-xl rounded-b-2xl">
+            {err && <p className="text-red-400 text-xs mb-2">{err}</p>}
             <div className="flex items-center gap-2">
-              <label className="flex-1">
-                <span className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-700 transition-colors">
-                  {uploading === "logo" ? "Verarbeite…" : logoPreviewUrl ? "Logo ändern" : "Logo hochladen (statt Shopname)"}
-                </span>
-                <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="hidden" onChange={handleUpload("logo")} disabled={uploading !== null} />
-              </label>
-              {logoPreviewUrl && (
-                <button type="button" onClick={() => { setLogoId(undefined); setLogoPreviewUrl(undefined); }}
-                  className="px-2.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-500 hover:text-red-400 text-xs transition-colors">✕</button>
+              <button type="button" onClick={() => previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                className="lg:hidden min-h-11 px-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-zinc-300 text-xs font-semibold flex items-center gap-1.5">
+                <Eye size={14} /> Vorschau
+              </button>
+              <button type="button" onClick={handleSave} disabled={saving || uploading !== null}
+                className="flex-1 min-h-11 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 text-sm font-semibold rounded-xl transition-colors">
+                {saving ? "Speichert…" : saved ? "Gespeichert ✓" : dirty ? "Design speichern" : "Gespeichert"}
+              </button>
+              {dc && (
+                <button type="button" onClick={handleRemove} disabled={saving}
+                  className="min-h-11 px-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-zinc-500 hover:text-red-400 text-xs transition-colors disabled:opacity-50">
+                  Entfernen
+                </button>
               )}
             </div>
-            <p className="text-[10px] text-zinc-500 px-1">
-              Weißer/karierter Hintergrund wird automatisch entfernt. Am besten trotzdem ein PNG mit transparentem Hintergrund verwenden.
-            </p>
-            {logoPreviewUrl && (
-              <button type="button" onClick={() => setLogoShowName(v => !v)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 transition-colors">
-                <span className={`w-8 h-5 rounded-full shrink-0 flex items-center transition-colors ${logoShowName ? "bg-amber-400" : "bg-zinc-600"}`}>
-                  <span className={`w-4 h-4 rounded-full bg-white transition-transform ${logoShowName ? "translate-x-3.5" : "translate-x-0.5"}`} />
-                </span>
-                Shopname zusätzlich unter dem Logo anzeigen
-              </button>
-            )}
-            {logoPreviewUrl && (
-              <div className="px-1">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] text-zinc-400">Logo-Größe (Breite)</label>
-                  <span className="text-[11px] text-zinc-500 tabular-nums">{logoWidth}%</span>
-                </div>
-                <input type="range" min={40} max={100} step={5} value={logoWidth}
-                  onChange={e => setLogoWidth(Number(e.target.value))}
-                  className="w-full accent-amber-400" />
-              </div>
-            )}
-            <input value={tagline} onChange={e => setTagline(e.target.value)} maxLength={60}
-              placeholder="Kleiner Text unter Logo/Name (optional), z.B. Ladenname oder Slogan"
-              className="w-full px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />
-            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-              {ICON_CATEGORIES.map(cat => (
-                <div key={cat.label}>
-                  <p className="text-[9px] uppercase tracking-wider text-zinc-600 font-semibold mb-1">{cat.label}</p>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {cat.keys.map(key => {
-                      const IconComp = STAMP_ICONS[key];
-                      if (!IconComp) return null;
-                      return (
-                        <button key={key} type="button" onClick={() => setIcon(key)}
-                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
-                          style={icon === key
-                            ? { background: `${accent}22`, border: `1px solid ${accent}66` }
-                            : { background: "#27272a", border: "1px solid #3f3f46" }}>
-                          <IconComp size={15} style={{ color: icon === key ? accent : "#71717a" }} />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Section>
-          </EditorGroup>
-
-          <EditorGroup title="Form & Extras" icon={QrCode} isOpen={openGroup === "extras"} onToggle={() => toggleGroup("extras")}>
-          {/* QR-Code-Darstellung */}
-          <Section title="QR-Code">
-            <div className="flex gap-1.5 p-1 bg-zinc-800/60 rounded-xl">
-              {([
-                { id: "button", label: "Button unten" },
-                { id: "icon",   label: "Klein oben"   },
-                { id: "both",   label: "Beide"        },
-              ] as const).map(s => (
-                <button key={s.id} type="button" onClick={() => setQrStyle(s.id)}
-                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                  style={qrStyle === s.id ? { background: "#fbbf24", color: "#18181b" } : { color: "#71717a" }}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </Section>
-
-          {/* Stempel-Form */}
-          <Section title="Stempel-Form">
-            <div className="grid grid-cols-4 gap-1.5">
-              {([
-                { id: "circle",  label: "Kreis"   },
-                { id: "square",  label: "Eckig"   },
-                { id: "diamond", label: "Raute"   },
-                { id: "hex",     label: "Wabe"    },
-                { id: "octagon", label: "Achteck" },
-                { id: "star",    label: "Stern"   },
-                { id: "shield",  label: "Schild"  },
-              ] as const).map(s => (
-                <button key={s.id} type="button" onClick={() => setStampShape(s.id)}
-                  className="py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                  style={stampShape === s.id ? { background: "#fbbf24", color: "#18181b" } : { background: "#27272a", color: "#71717a" }}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </Section>
-
-          {/* Stempel-Umrandung: Stärke + eigene Farbe */}
-          <Section title="Stempel-Umrandung">
-            <div className="grid grid-cols-2 gap-1.5 mb-2">
-              {([
-                { id: "thin", label: "Fein" },
-                { id: "bold", label: "Fett" },
-              ] as const).map(s => (
-                <button key={s.id} type="button" onClick={() => setStampBorderStyle(s.id)}
-                  className="py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                  style={stampBorderStyle === s.id ? { background: "#fbbf24", color: "#18181b" } : { background: "#27272a", color: "#71717a" }}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button type="button" onClick={() => setStampBorderColor("")}
-                className="py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                style={!stampBorderColor ? { background: "#fbbf24", color: "#18181b" } : { background: "#27272a", color: "#71717a" }}>
-                Akzentfarbe
-              </button>
-              <button type="button" onClick={() => setStampBorderColor(c => c || accent)}
-                className="py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                style={stampBorderColor ? { background: "#fbbf24", color: "#18181b" } : { background: "#27272a", color: "#71717a" }}>
-                Eigene Farbe
-              </button>
-            </div>
-            {stampBorderColor && (
-              <div className="mt-1.5">
-                <ColorField label="Umrandungsfarbe" value={stampBorderColor} onChange={setStampBorderColor} />
-              </div>
-            )}
-          </Section>
-
-          {/* Ecken-Verzierung in Akzentfarbe */}
-          <Section title="Ecken">
-            <div className="grid grid-cols-4 gap-1.5">
-              {([
-                { id: "none",    label: "Ohne"        },
-                { id: "thin",    label: "Fein"        },
-                { id: "double",  label: "Doppelt"     },
-                { id: "swirl",   label: "Geschwungen" },
-                { id: "bracket", label: "Fläche"      },
-                { id: "dots",    label: "Punkte"      },
-                { id: "ornate",  label: "Verziert"    },
-              ] as const).map(d => (
-                <button key={d.id} type="button" onClick={() => setDecor(d.id)}
-                  className="py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                  style={decor === d.id ? { background: "#fbbf24", color: "#18181b" } : { background: "#27272a", color: "#71717a" }}>
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </Section>
-          </EditorGroup>
-
-          {err && <p className="text-red-400 text-xs">{err}</p>}
-          <div className="flex gap-2">
-            <button type="button" onClick={handleSave} disabled={saving || uploading !== null}
-              className="flex-1 py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 text-sm font-semibold rounded-xl transition-colors">
-              {saving ? "Speichert…" : saved ? "Gespeichert ✓" : "Design speichern"}
-            </button>
-            {dc && (
-              <button type="button" onClick={handleRemove} disabled={saving}
-                className="px-4 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-red-400 text-sm transition-colors disabled:opacity-50">
-                Entfernen
-              </button>
-            )}
+            {dc && dirty && !saving && <p className="text-[11px] text-amber-400/80 mt-1.5">Ungespeicherte Änderungen</p>}
           </div>
         </div>
       )}

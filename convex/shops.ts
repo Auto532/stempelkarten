@@ -332,6 +332,7 @@ export const adminSetDesignConfig = mutation({
       stampBorderStyle: v.optional(v.union(v.literal("thin"), v.literal("bold"))),
       cardStyle: v.optional(v.union(v.literal("classic"), v.literal("glow"), v.literal("paper"))),
       decor:     v.optional(v.string()),
+      colorMode: v.optional(v.union(v.literal("dark"), v.literal("light"))),
     })),
   },
   handler: async (ctx, { shopId, adminSecret, config }) => {

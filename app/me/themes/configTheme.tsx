@@ -5,6 +5,7 @@
 // Farb-/Bild-Konfiguration — kein Code und kein Deploy pro Shop nötig.
 // Logik (Tiers inkl. Basis-Stufe, maxStamps, Slots) gespiegelt aus beatesGrill.
 
+import type React from "react";
 import { motion } from "framer-motion";
 import { QrCode, Gift, Award } from "lucide-react";
 import { getStampIcon, InkFilter, stampJitter, useInkId } from "@/app/me/components";
@@ -49,6 +50,34 @@ export interface ShopDesignConfig {
   // Ecken-Verzierung in Akzentfarbe: "none" | "thin" | "double" | "swirl"
   // (Altwerte: "full" → thin, "lines" → none)
   decor?: string;
+  // Hell/Dunkel (fehlend = aus der Kartenfarbe abgeleitet)
+  colorMode?: "dark" | "light";
+}
+
+// Relative Helligkeit 0..1 einer #rrggbb-Farbe (für Hell/Dunkel-Erkennung)
+function luminance(hex: string): number {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return 0;
+  const ch = (i: number) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * ch(1) + 0.7152 * ch(3) + 0.0722 * ch(5);
+}
+
+export function resolveColorMode(cfg: Pick<ShopDesignConfig, "colorMode" | "cardBg">): "dark" | "light" {
+  return cfg.colorMode ?? (luminance(cfg.cardBg) > 0.45 ? "light" : "dark");
+}
+
+// Flächen (Karte, Banner, Meilensteine): mit Foto als Milchglas, sonst deckend.
+// Das Foto selbst bleibt immer unverändert; Hell/Dunkel wirkt nur auf die Karte.
+function surface(cfg: ShopDesignConfig): React.CSSProperties {
+  if (!(cfg.bgType === "image" && cfg.bgImageUrl)) return { background: cfg.cardBg };
+  const dark = resolveColorMode(cfg) === "dark";
+  return {
+    background: alpha(cfg.cardBg, dark ? "DE" : "E6"),
+    backdropFilter: "blur(18px) saturate(0.85)",
+    WebkitBackdropFilter: "blur(18px) saturate(0.85)",
+  };
 }
 
 // Hex #rrggbb + Alpha-Suffix (z.B. "28"). Nicht-Hex-Werte unverändert lassen.
@@ -109,8 +138,8 @@ export function normalizeDecor(decor?: string): DecorVariant {
   return "none";
 }
 
-// Eck-Ornament in Akzentfarbe, wird 4× rotiert platziert
-function CornerOrnament({ color, variant }: { color: string; variant: Exclude<DecorVariant, "none"> }) {
+// Eck-Ornament in Akzentfarbe, wird 4× rotiert platziert (auch Editor-Vorschau)
+export function CornerOrnament({ color, variant }: { color: string; variant: Exclude<DecorVariant, "none"> }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"
       style={{ width: 22, height: 22, color, opacity: 0.55 }}>
@@ -149,7 +178,7 @@ function CornerOrnament({ color, variant }: { color: string; variant: Exclude<De
 
 // Stempelformen als clip-path (clip-path frisst Borders, deshalb bei leeren
 // Stempeln zweilagig: äußere Form in Akzent, innere minimal kleiner in Kartenfarbe)
-const CLIP_SHAPES: Record<string, string> = {
+export const CLIP_SHAPES: Record<string, string> = {
   hex:     "polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%)",
   octagon: "polygon(30% 2%, 70% 2%, 98% 30%, 98% 70%, 70% 98%, 30% 98%, 2% 70%, 2% 30%)",
   star:    "polygon(50% 2%, 61% 36%, 97% 36%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 3% 36%, 39% 36%)",
@@ -264,7 +293,7 @@ function makeCard(cfg: ShopDesignConfig) {
     return (
       <>
       <div className="relative overflow-hidden rounded-3xl"
-        style={{ background: C, border: `1px solid ${alpha(A, "30")}` }}>
+        style={{ ...surface(cfg), border: `1px solid ${alpha(A, "30")}` }}>
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${alpha(A, "0C")}, transparent)` }} />
         {corner !== "none" && (
@@ -388,7 +417,7 @@ function makeBanner(cfg: ShopDesignConfig) {
       : [];
     if (activeTiers.length > 0) {
       return (
-        <div className="rounded-2xl px-4 py-3 space-y-2.5" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
+        <div className="rounded-2xl px-4 py-3 space-y-2.5" style={{ ...surface(cfg), border: `1px solid ${alpha(A, "22")}` }}>
           <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: TB }}>Belohnungen</p>
           {activeTiers.map((tier, i) => (
             <div key={i} className="flex items-center gap-3">
@@ -404,7 +433,7 @@ function makeBanner(cfg: ShopDesignConfig) {
       );
     }
     return (
-      <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
+      <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ ...surface(cfg), border: `1px solid ${alpha(A, "22")}` }}>
         <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: alpha(A, "18"), border: `1px solid ${alpha(A, "30")}` }}>
           <Gift size={16} style={{ color: A }} />
@@ -425,7 +454,7 @@ function makeMilestones(cfg: ShopDesignConfig) {
     const active = milestones.filter(m => m.enabled).sort((a, b) => a.stamps - b.stamps);
     if (active.length === 0) return null;
     return (
-      <div className="rounded-2xl px-4 py-4" style={{ background: C, border: `1px solid ${alpha(A, "22")}` }}>
+      <div className="rounded-2xl px-4 py-4" style={{ ...surface(cfg), border: `1px solid ${alpha(A, "22")}` }}>
         <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: TB }}>Meilensteine</p>
         <div className="space-y-3">
           {active.map((m, i) => {

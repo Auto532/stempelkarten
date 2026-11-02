@@ -85,6 +85,9 @@ export default defineSchema({
       // Ecken-Verzierung in Akzentfarbe: none/thin/double/swirl
       // (Altwerte "lines"/"full" werden vom Renderer gemappt)
       decor: v.optional(v.string()),
+      // Hell/Dunkel-Modus: steuert u. a. den Schleier über einem Hintergrundfoto
+      // (fehlend = aus der Kartenfarbe abgeleitet)
+      colorMode: v.optional(v.union(v.literal("dark"), v.literal("light"))),
     })),
     stampValue: v.optional(v.number()),
     priceInfo: v.optional(v.string()),
