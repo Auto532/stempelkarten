@@ -18,7 +18,7 @@ Digitale Stempelkarten-SaaS für lokale Betriebe (Friseure, Shops etc.). Kunden 
 
 ## Aktuelle Features
 - Stempelkarte mit konfigurierbarer Stempelanzahl
-- Bonus-Programm (mehrere Reward-Tiers, Paid Feature)
+- Bonus-Programm (mehrere Reward-Tiers, in jeder Preisstufe inklusive)
 - Meilensteine (Treue-Belohnungen basierend auf Gesamtstempeln, Paid Feature)
 - Per-Shop Akzentfarbe + Custom Design (Paid Feature)
 - Impressum & AGB pro Shop
@@ -36,7 +36,9 @@ Digitale Stempelkarten-SaaS für lokale Betriebe (Friseure, Shops etc.). Kunden 
 - Kunden: `qrToken` in localStorage (gesetzt via /me/[qrToken])
 - Betrieb: `adminToken` + `adminShopSlug` in localStorage (gesetzt via /betrieb/login/[token])
 
-## Pricing-Idee
-- Basic: 15–25€/Monat
-- Pro: 40–60€/Monat (Bonus, Design, Meilensteine)
-- Premium: 80–120€/Monat
+## Preise (seit 2026-11-02, Quelle: affiliate-app/convex/pricing.ts)
+Monatlich nach Anzahl Kunden-Karten des Betriebs:
+- Free: bis 25 Kunden, 0 €
+- Starter: 26 bis 75 Kunden, 10 €/Monat
+- Business: 76 bis 200 Kunden, 20 €/Monat
+- Premium: ab 201 Kunden, 30 €/Monat

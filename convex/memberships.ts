@@ -4,6 +4,7 @@ import type { QueryCtx } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
 import { requireShopRole, requireAdmin } from "./auth";
 import type { Doc, Id } from "./_generated/dataModel";
+import { afterMembershipCreated } from "./billingSync";
 
 // Fortlaufende Kunden-Nummer pro Shop (#1, #2, …). Basis ist das Maximum der
 // vergebenen Nummern (nicht die Anzahl), damit Nummern gelöschter Kunden nie
@@ -113,7 +114,7 @@ export const createMembershipForExistingCustomer = mutation({
     if (!shop) throw new ConvexError("Shop nicht gefunden");
     await assertJoinAllowed(ctx, shop);
 
-    return await ctx.db.insert("memberships", {
+    const membershipId = await ctx.db.insert("memberships", {
       customerId: customer._id,
       shopId,
       memberNumber: await nextMemberNumber(ctx, shopId),
@@ -123,6 +124,8 @@ export const createMembershipForExistingCustomer = mutation({
       acquisitionType,
       consentedAt: Date.now(),
     });
+    await afterMembershipCreated(ctx, shopId, customer._id);
+    return membershipId;
   },
 });
 
@@ -239,6 +242,7 @@ export const adminStampForCustomer = mutation({
         rewardsRedeemed: 0,
         consentedAt: Date.now(),
       });
+      await afterMembershipCreated(ctx, shopId, customer._id);
       membership = await ctx.db.get(mId);
     }
     if (!membership) throw new ConvexError("Mitgliedschaft konnte nicht erstellt werden");

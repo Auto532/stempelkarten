@@ -49,7 +49,8 @@ export function MoreCard({ shown, total, onMore }: { shown: number; total: numbe
   );
 }
 
-export type PayStatus = { paid: boolean; payLater: boolean; amountDue: number; paymentToken: string };
+// paid = freigeschaltet (Zahlungsdaten hinterlegt bzw. vom Admin aktiviert)
+export type PayStatus = { paid: boolean; payLater: boolean; tierName: string; price: number; paymentToken: string };
 
 export function usePayStatus(adminSecret: string): Record<string, PayStatus> {
   const [map, setMap] = useState<Record<string, PayStatus>>({});
@@ -70,12 +71,12 @@ export function PayBadge({ status }: { status?: PayStatus }) {
   if (!status) return null;
   if (status.paid) return (
     <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-green-900/25 border border-green-800/40 text-green-400 shrink-0">
-      Bezahlt
+      {status.tierName ?? "Aktiv"}
     </span>
   );
   return (
     <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-yellow-900/25 border border-yellow-700/40 text-yellow-400 shrink-0">
-      {status.payLater ? "Später zahlen" : "Zahlung offen"} · €{status.amountDue}
+      {status.payLater ? "Später einrichten" : "Freischaltung offen"}
     </span>
   );
 }
@@ -190,12 +191,13 @@ export type EarningsSummary = {
   monthlyRunRate?: number; yearlyRunRate?: number;
   // Laufender Abo-Umsatz getrennt nach Abo-Modell
   monthlyPlanRunRate?: number; annualPlanRunRate?: number;
+  // Live-Shops je Preisstufe
+  tierCounts?: { free: number; starter: number; business: number; premium: number };
 };
 
 export type PaymentRow = {
   date: number; shopName: string; planType: "annual" | "monthly"; paymentNumber: number;
   paidAmount: number; commission: number; commissionStatus: string; direct: boolean;
-  discountCode: string | null;
 };
 
 export function groupPayments(payments: PaymentRow[], mode: "month" | "year") {

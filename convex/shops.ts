@@ -176,8 +176,6 @@ export const updateSettings = mutation({
     await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
     validateRewardSettings({ stampsRequired, rewardText, rewardTiers, stampValue });
     await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, stampValue });
-    // Abrechnung folgt den echten Bonus-Stufen (auch bei Inhaber-Änderungen)
-    await ctx.scheduler.runAfter(0, internal.billingSync.syncBonusBilling, { shopId });
   },
 });
 
@@ -263,8 +261,6 @@ export const adminUpdateShopContent = mutation({
     validateRewardSettings({ stampsRequired, rewardText, rewardTiers, stampValue });
     if (milestones) validateMilestones(milestones);
     await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, milestones, stampValue });
-    // Abrechnung folgt den echten Bonus-Stufen
-    await ctx.scheduler.runAfter(0, internal.billingSync.syncBonusBilling, { shopId });
   },
 });
 
@@ -293,12 +289,6 @@ export const adminSetFeatures = mutation({
     if (flags.theme !== undefined) patch.theme = flags.theme;
     if (flags.accentColor !== undefined) patch.accentColor = flags.accentColor;
     await ctx.db.patch(shopId, patch);
-
-    // Bonus-Toggle wirkt auf die Abrechnung: an → aktive Zusatz-Stufen zählen,
-    // aus → 0 Belohnungen berechnet.
-    if (flags.bonusProgramEnabled !== undefined) {
-      await ctx.scheduler.runAfter(0, internal.billingSync.syncBonusBilling, { shopId });
-    }
   },
 });
 
@@ -433,9 +423,8 @@ export const createShop = mutation({
     ownerName:        v.optional(v.string()),
     ownerEmail:       v.optional(v.string()),
     ownerPhone:       v.optional(v.string()),
-    rewardCount:      v.optional(v.number()),
   },
-  handler: async (ctx, { adminSecret, ownerName, ownerEmail, ownerPhone, rewardCount, ...shopArgs }) => {
+  handler: async (ctx, { adminSecret, ownerName, ownerEmail, ownerPhone, ...shopArgs }) => {
     await requireAdmin(ctx, { secret: adminSecret });
     validateRewardSettings(shopArgs);
 
@@ -855,14 +844,18 @@ async function computeShopStats(ctx: QueryCtx, shop: Doc<"shops">) {
     : [shop.stampsRequired];
   const lowestTier = Math.min(shop.stampsRequired, ...tiers);
   let customers = 0, stamps = 0, rewards = 0, ready = 0;
+  // Verschiedene E-Mail-Adressen = abgerechnete Kunden (Preisstufe)
+  const emails = new Set<string>();
   for await (const m of ctx.db.query("memberships").withIndex("by_shop", (q) => q.eq("shopId", shop._id))) {
     if (customers >= SHOP_SCAN_CAP) break;
     customers++;
+    const customer = await ctx.db.get(m.customerId);
+    if (customer) emails.add(customer.email);
     stamps += m.totalStampsEver;
     rewards += m.rewardsRedeemed;
     if (m.currentStamps >= lowestTier) ready++;
   }
-  return { customers, stamps, rewards, ready, capped: customers >= SHOP_SCAN_CAP };
+  return { customers, billableCustomers: emails.size, stamps, rewards, ready, capped: customers >= SHOP_SCAN_CAP };
 }
 
 export const getShopStats = query({

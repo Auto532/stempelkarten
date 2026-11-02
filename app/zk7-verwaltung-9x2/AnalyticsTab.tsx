@@ -63,7 +63,7 @@ export function PayLaterCard({ adminSecret }: { adminSecret: string }) {
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="text-sm font-bold text-amber-400">€{r.amount}</p>
-                <p className="text-[10px] text-zinc-500">{r.planType === "annual" ? "Jahresabo" : "Monatsabo"}{r.rewardCount > 0 ? ` · ${r.rewardCount} Bonus` : ""}</p>
+                <p className="text-[10px] text-zinc-500">Stufe {r.tierName}</p>
               </div>
             </div>
             <div className="flex items-center justify-between gap-2 pt-1">
@@ -129,21 +129,21 @@ function EarningsCard({ adminSecret }: { adminSecret: string }) {
             </div>
           </div>
 
-          {/* Verträge: nur wer gezahlt hat, zählt als wirklich aktiv */}
+          {/* Verträge: nur freigeschaltete Shops zählen als wirklich aktiv */}
           {data.payingContracts !== undefined && (
             <div className="border-t border-zinc-800 pt-3 space-y-2">
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Verträge</p>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-500">Zahlende Shops</span>
+                <span className="text-xs text-zinc-500">Freigeschaltete Shops</span>
                 <span className="text-sm font-semibold text-green-400">
                   {data.payingContracts}
                   <span className="text-[10px] text-zinc-600 font-normal">
-                    {" "}({data.payingAnnual ?? 0}× Jahr, {data.payingMonthly ?? 0}× Monat)
+                    {(data.payingAnnual ?? 0) > 0 ? ` (${data.payingAnnual}× Jahresabo)` : ""}
                   </span>
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-500">Warten auf Zahlung</span>
+                <span className="text-xs text-zinc-500">Warten auf Freischaltung</span>
                 <span className="text-sm font-semibold text-yellow-400">{data.awaitingPayment ?? 0}</span>
               </div>
               {(data.canceledContracts ?? 0) > 0 && (
@@ -152,15 +152,26 @@ function EarningsCard({ adminSecret }: { adminSecret: string }) {
                   <span className="text-sm font-semibold text-zinc-400">{data.canceledContracts}</span>
                 </div>
               )}
-              {/* Laufender Abo-Umsatz getrennt nach Abo-Modell */}
+              {/* Live-Shops je Preisstufe */}
+              {data.tierCounts && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-500">Stufen</span>
+                  <span className="text-[11px] text-zinc-300">
+                    Free {data.tierCounts.free} · Starter {data.tierCounts.starter} · Business {data.tierCounts.business} · Premium {data.tierCounts.premium}
+                  </span>
+                </div>
+              )}
+              {/* Laufender Abo-Umsatz (aktuelle Stufenpreise) */}
               <div className="flex items-center justify-between pt-1 border-t border-zinc-800">
-                <span className="text-xs text-zinc-400 font-semibold">Jährliche Zahlungen (Jahresabos)</span>
-                <span className="text-sm font-bold text-green-400">€{(data.annualPlanRunRate ?? 0).toFixed(0)}/Jahr</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-400 font-semibold">Monatliche Zahlungen (Monatsabos)</span>
+                <span className="text-xs text-zinc-400 font-semibold">Monatliche Einnahmen (aktuelle Stufen)</span>
                 <span className="text-sm font-bold text-green-400">€{(data.monthlyPlanRunRate ?? 0).toFixed(0)}/Monat</span>
               </div>
+              {(data.annualPlanRunRate ?? 0) > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-400 font-semibold">Jahresabos</span>
+                  <span className="text-sm font-bold text-green-400">€{(data.annualPlanRunRate ?? 0).toFixed(0)}/Jahr</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -421,7 +432,6 @@ function FinanceDetailModal({ adminSecret, summary, onClose }: {
                       {new Date(p.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
                       {" · "}{p.planType === "annual" ? "Jahresabo" : "Monatsabo"} · #{p.paymentNumber}
                       {p.direct && <span className="text-blue-400"> · Direkt</span>}
-                      {p.discountCode && <span className="text-purple-400"> · {p.discountCode}</span>}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
@@ -459,7 +469,7 @@ async function exportFinancePdf(
     date: new Date(p.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }),
     shopName: p.shopName,
     model: `${p.planType === "annual" ? "Jahresabo" : "Monatsabo"} #${p.paymentNumber}`
-      + (p.discountCode ? ` · ${p.discountCode}` : "") + (p.direct ? " · Direkt" : ""),
+      + (p.direct ? " · Direkt" : ""),
     gross: p.paidAmount,
     commission: p.commission,
     net: p.paidAmount - p.commission,

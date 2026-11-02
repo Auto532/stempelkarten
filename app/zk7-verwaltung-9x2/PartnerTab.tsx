@@ -12,6 +12,7 @@ import {
   type AffiliateLead, type AffiliatePartner, type AffiliateDashboard,
 } from "./lib/affiliate";
 import { useLimit, ShowMore, MoreCard, useScrollLock } from "./shared";
+import { tierInfo, tierForCardCount, type Tier } from "@/convex/lib/pricing";
 
 // ─── Partner Tab ─────────────────────────────────────────────────────────────
 
@@ -226,17 +227,15 @@ function InvitePartnerButton({ adminSecret }: { adminSecret: string }) {
   );
 }
 
-function nextCommissionPreview(planType: "annual" | "monthly", paymentNumber: number, firstYearDiscount?: number | null) {
+function nextCommissionPreview(planType: "annual" | "monthly", tier: Tier, paymentNumber: number) {
   const phase =
     planType === "annual"
       ? paymentNumber === 1 ? "Jahr 1" : "Ab Jahr 2"
       : paymentNumber <= 12 ? "Jahr 1" : "Ab Jahr 2";
-  // Modell seit 2026-07-20: Jahr 1 = 35%, ab Jahr 2 dauerhaft 15% (lifetime)
+  // Jahr 1 (die ersten 12 bezahlten Monate) = 35%, danach dauerhaft 15%.
+  // Basis = Preis der aktuellen Stufe (Free = 0 €, also keine Provision).
   const rates: Record<string, number> = { "Jahr 1": 0.35, "Ab Jahr 2": 0.15 };
-  // Provision nur auf den GEZAHLTEN Abo-Anteil: Rabattcodes gibt es nur für das
-  // Jahresabo und dort nur auf Zahlung #1
-  const inPromo = !!firstYearDiscount && planType === "annual" && paymentNumber === 1;
-  const base = (planType === "annual" ? 240 : 20) * (inPromo ? 1 - firstYearDiscount! : 1);
+  const base   = tierInfo(tier).monthly * (planType === "annual" ? 12 : 1);
   const rate   = rates[phase];
   const amount = Math.round(base * rate * 100) / 100;
   return { phase, rate, amount };
@@ -362,15 +361,6 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
     finally { setBusy(false); }
   };
 
-  const toggleDiscount = async (eligible: boolean) => {
-    setBusy(true); setErr("");
-    try {
-      await affiliateMutation("admin:setDiscountEligible", { adminSecret, affiliateId, eligible });
-      await load(); onChanged();
-    } catch (e: any) { setErr(e?.message ?? "Fehler"); }
-    finally { setBusy(false); }
-  };
-
   const a = data?.affiliate;
   const pending = data?.pendingProfile as Record<string, any> | null | undefined;
 
@@ -469,18 +459,6 @@ function PartnerDetailModal({ adminSecret, affiliateId, onClose, onChanged }: {
               ))}
             </div>
 
-            {/* Rabatt-Berechtigung (muss vor Nutzung eines Rabattcodes aktiviert sein) */}
-            <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl p-3">
-              <div className="min-w-0 pr-3">
-                <p className="text-xs font-semibold text-zinc-200">Rabatt berechtigt</p>
-                <p className="text-[10px] text-zinc-500">Erlaubt Rabattcodes (z.B. LOYAL50 · 50% aufs 1. Jahr) für die Shops dieses Partners</p>
-              </div>
-              <button onClick={() => toggleDiscount(!a.discountEligible)} disabled={busy}
-                className={`relative w-11 h-6 rounded-full flex-shrink-0 transition-colors disabled:opacity-50 ${a.discountEligible ? "bg-green-600" : "bg-zinc-700"}`}>
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${a.discountEligible ? "translate-x-5" : ""}`} />
-              </button>
-            </div>
-
             <PModalSection title="Stammdaten">
               <PModalRow label="Telefon" value={a.phone} />
               <PModalRow label="Firma" value={a.company} />
@@ -528,7 +506,6 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
   const [rejecting, setRejecting]     = useState<string | null>(null);
   const [recording, setRecording]     = useState<string | null>(null);
   const [confirming, setConfirming]   = useState<string | null>(null);
-  const [planMap, setPlanMap]         = useState<Record<string, "annual" | "monthly">>({});
   const [reasonMap, setReasonMap]     = useState<Record<string, string>>({});
   const [section, setSection]         = useState<"leads" | "partners" | "provisionen">("leads");
   const [detailId, setDetailId]       = useState<string | null>(null);
@@ -594,7 +571,7 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
     setApproving(leadId);
     try {
       await affiliateMutation("admin:approveLead", {
-        adminSecret, leadId, planType: planMap[leadId] ?? "annual", adminName: "Admin",
+        adminSecret, leadId, planType: "monthly", adminName: "Admin",
       });
       await load();
     } catch (e: unknown) {
@@ -645,7 +622,10 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
     setRecording(contractId);
     try {
       const result = await affiliateMutation("admin:recordPayment", { adminSecret, shopContractId: contractId });
-      alert(`✓ Provision erfasst: €${(result as any)?.amount?.toFixed(2)} (${(result as any)?.phase})`);
+      const r = result as any;
+      alert(r?.activatedOnly
+        ? "✓ Shop freigeschaltet (Stufe Free, es war nichts zu zahlen)"
+        : `✓ Zahlung erfasst: €${r?.paidAmount?.toFixed(2)} · Provision €${r?.amount?.toFixed(2)} (${r?.phase})`);
       await load();
     } catch (e: unknown) {
       alert(errMsg(e, "Fehler"));
@@ -867,7 +847,8 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
             const comms    = commissionsMap[lead._id] ?? [];
             const pending  = comms.filter((c: any) => c.status === "pending");
             const confirmed = comms.filter((c: any) => c.status === "confirmed");
-            const preview  = nextCommissionPreview(contract.planType, contract.paymentCount + 1, contract.firstYearDiscount);
+            const tier: Tier = contract.tier ?? tierForCardCount(contract.cardCount ?? 0);
+            const preview  = nextCommissionPreview(contract.planType, tier, contract.paymentCount + 1);
             return (
               <div key={lead._id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
@@ -877,7 +858,7 @@ export function PartnerTab({ adminSecret }: { adminSecret: string }) {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-xs font-semibold text-amber-400">
-                      {contract.planType === "annual" ? "Jahresabo" : "Monatsabo"}
+                      {tierInfo(tier).name} · {contract.cardCount ?? 0} Kunden
                     </p>
                     <p className="text-[10px] text-zinc-600">{contract.paymentCount} Zahlungen</p>
                   </div>

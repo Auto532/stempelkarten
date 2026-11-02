@@ -20,6 +20,7 @@ import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
 import QRCode from "qrcode";
 import { errMsg } from "@/app/lib/errMsg";
 import { LoadMore, ListSkeleton, PAGE_SIZE } from "../ListHelpers";
+import { TIERS, tierForCardCount, tierInfo, tierRangeLabel } from "@/convex/lib/pricing";
 
 const Scanner = dynamic(
   () => import("@yudiel/react-qr-scanner").then(m => m.Scanner),
@@ -344,6 +345,40 @@ export default function BetriebDashboard() {
             </div>
           ))}
         </motion.div>
+
+        {/* Tarif: Preisstufe nach Kundenzahl + Abstand zur nächsten Grenze */}
+        {stats && (() => {
+          const count   = stats.billableCustomers;
+          const current = tierInfo(tierForCardCount(count));
+          const idx     = TIERS.findIndex(t => t.id === current.id);
+          const next    = TIERS[idx + 1];
+          const max     = current.maxCards;
+          const pct     = max ? Math.min(100, Math.round((count / max) * 100)) : 100;
+          const left    = max ? max - count : 0;
+          return (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+              className="rounded-2xl p-4 mb-5" style={card}>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: tm }}>Dein Tarif</p>
+                <p className="text-sm font-bold" style={{ color: tx }}>
+                  {current.name} · {current.monthly === 0 ? "kostenlos" : `${current.monthly} €/Monat`}
+                </p>
+              </div>
+              {max && (
+                <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ background: `${ic}22` }}>
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: ic }} />
+                </div>
+              )}
+              <p className="text-[11px] mt-2 leading-relaxed" style={{ color: tm }}>
+                {next
+                  ? `${count} von ${max} Kunden (${tierRangeLabel(current.id)}). ${left <= 5
+                      ? `Noch ${left} bis zur nächsten Stufe: ab dem ${max! + 1}. Kunden gilt ${next.name} für ${next.monthly} €/Monat, ab der nächsten Abrechnung.`
+                      : `Ab ${max! + 1} Kunden gilt ${next.name} (${next.monthly} €/Monat).`}`
+                  : `${count} Kunden, höchste Stufe erreicht.`}
+              </p>
+            </motion.div>
+          );
+        })()}
 
         {/* Nav Grid */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="grid grid-cols-2 gap-3">

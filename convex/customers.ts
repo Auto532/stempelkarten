@@ -2,6 +2,7 @@ import { v, ConvexError } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { normalizeEmail } from "./lib/phone";
 import { nextMemberNumber, assertJoinAllowed } from "./memberships";
+import { afterMembershipCreated } from "./billingSync";
 import { sanitizeShop } from "./auth";
 
 export const findCustomerByEmail = query({
@@ -163,6 +164,7 @@ export const registerCustomer = mutation({
         acquisitionType,
         consentedAt: Date.now(),
       });
+      await afterMembershipCreated(ctx, shop._id, customerId!);
     }
 
     return { qrToken: qrToken! };

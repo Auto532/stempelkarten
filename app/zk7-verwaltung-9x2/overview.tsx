@@ -41,7 +41,6 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
   }
 
   const inactiveShops = globalStats.shops.filter(s => s.active === false);
-  const openSum = openPayments.reduce((s, p) => s + p.amountDue, 0);
 
   // Shops mit offener Zahlung zählen nicht in die Statistik, sie stehen
   // unter "Braucht Aufmerksamkeit".
@@ -54,7 +53,7 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
 
   const attention = [
     supportOpenCount > 0 && { icon: LifeBuoy, label: `${supportOpenCount} Support-Anfrage${supportOpenCount > 1 ? "n" : ""} offen`, sub: "Antworten im Support-Tab", onClick: () => onNavigate("support") },
-    openPayments.length > 0 && { icon: Clock, label: `${openPayments.length} Zahlung${openPayments.length > 1 ? "en" : ""} offen`, sub: `gesamt €${openSum}`, onClick: () => onNavigate("shops") },
+    openPayments.length > 0 && { icon: Clock, label: `${openPayments.length} Freischaltung${openPayments.length > 1 ? "en" : ""} offen`, sub: "Zahlungsdaten fehlen noch", onClick: () => onNavigate("shops") },
     inactiveShops.length > 0 && { icon: PowerOff, label: `${inactiveShops.length} Shop${inactiveShops.length > 1 ? "s" : ""} deaktiviert`, sub: inactiveShops.slice(0, 2).map(s => s.name).join(", ") + (inactiveShops.length > 2 ? " …" : ""), onClick: () => onNavigate("shops") },
   ].filter(Boolean) as { icon: LucideIcon; label: string; sub: string; onClick: () => void }[];
 
@@ -188,7 +187,7 @@ export function ShopsTab({ shops, adminSecret, initialCreate = false, onSelectSh
   const chips: { id: typeof filter; label: string; count: number | null }[] = [
     { id: "alle",    label: "Alle",          count: sorted.length },
     { id: "aktiv",   label: "Aktiv",         count: activeCount },
-    { id: "offen",   label: "Zahlung offen", count: openCount },
+    { id: "offen",   label: "Freischaltung offen", count: openCount },
     { id: "inaktiv", label: "Inaktiv",       count: inactiveCount },
   ];
 
