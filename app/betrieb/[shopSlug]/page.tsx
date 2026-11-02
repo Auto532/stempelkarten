@@ -222,7 +222,7 @@ export default function BetriebDashboard() {
     try {
       await updateSettings({
         shopId: shop._id, adminToken, stampsRequired, rewardText,
-        stampValue: stampValue === "" ? undefined : Number(stampValue),
+        stampValue: stampValue === "" ? null : Number(stampValue),
       });
       setBaseSaved(true); setTimeout(() => setBaseSaved(false), 2500);
     } finally { setBaseSaving(false); }
@@ -233,7 +233,7 @@ export default function BetriebDashboard() {
     try {
       const sorted = [...tiers].sort((a, b) => a.stamps - b.stamps);
       const primary = sorted.find(t => t.enabled) ?? { stamps: shop.stampsRequired, text: shop.rewardText };
-      await updateSettings({ shopId: shop._id, adminToken, stampsRequired: primary.stamps, rewardText: primary.text, rewardTiers: sorted.length > 1 ? sorted : undefined });
+      await updateSettings({ shopId: shop._id, adminToken, stampsRequired: primary.stamps, rewardText: primary.text, rewardTiers: sorted.length > 1 ? sorted : null });
       setTierSaved(true); setTimeout(() => setTierSaved(false), 2500);
     } finally { setTierSaving(false); }
   };

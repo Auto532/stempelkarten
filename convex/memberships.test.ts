@@ -93,6 +93,47 @@ test("redeemReward zieht die Stempel ab und behält den Überschuss", async () =
   expect(m?.rewardsRedeemed).toBe(1);
 });
 
+test("redeemReward lehnt ab, wenn nicht genug Stempel da sind", async () => {
+  const t = convexTest(schema, modules);
+  const { membershipId } = await setupShop(t, { stampsRequired: 10 });
+  await t.run((ctx) => ctx.db.patch(membershipId, { currentStamps: 3 }));
+  await expect(
+    t.mutation(api.memberships.redeemReward, { membershipId, adminToken: "staff-token" }),
+  ).rejects.toThrow(/Nicht genug Stempel/);
+  const m = await t.run((ctx) => ctx.db.get(membershipId));
+  expect(m?.rewardsRedeemed).toBe(0);
+});
+
+test("redeemReward zieht bei einer höheren Prämienstufe deren Stempel ab", async () => {
+  const t = convexTest(schema, modules);
+  const { shopId, membershipId } = await setupShop(t, { stampsRequired: 10 });
+  await t.run(async (ctx) => {
+    await ctx.db.patch(shopId, { bonusProgramEnabled: true, rewardTiers: [
+      { stamps: 10, text: "Gratis Kaffee", enabled: true },
+      { stamps: 20, text: "Kuchen", enabled: true },
+    ] });
+    await ctx.db.patch(membershipId, { currentStamps: 21 });
+  });
+  await t.mutation(api.memberships.redeemReward, { membershipId, adminToken: "staff-token", rewardText: "Kuchen", tierStamps: 20 });
+  const m = await t.run((ctx) => ctx.db.get(membershipId));
+  expect(m?.currentStamps).toBe(1);   // 21 - 20
+});
+
+test("updateSettings lässt nicht übergebene Felder unverändert und leert mit null", async () => {
+  const t = convexTest(schema, modules);
+  const { shopId } = await setupShop(t);
+  const tiers = [{ stamps: 10, text: "Gratis Kaffee", enabled: true }, { stamps: 20, text: "Kuchen", enabled: true }];
+  await t.run((ctx) => ctx.db.patch(shopId, { rewardTiers: tiers, stampValue: 0.5 }));
+  await t.mutation(api.shops.updateSettings, { shopId, adminToken: "admin-token", stampsRequired: 10, rewardText: "Gratis Kaffee" });
+  let shop = await t.run((ctx) => ctx.db.get(shopId));
+  expect(shop?.rewardTiers).toEqual(tiers);
+  expect(shop?.stampValue).toBe(0.5);
+  await t.mutation(api.shops.updateSettings, { shopId, adminToken: "admin-token", stampsRequired: 10, rewardText: "Gratis Kaffee", stampValue: null });
+  shop = await t.run((ctx) => ctx.db.get(shopId));
+  expect(shop?.stampValue).toBeUndefined();
+  expect(shop?.rewardTiers).toEqual(tiers);
+});
+
 test("confirmPendingRedemption wirft bei zu wenig Stempeln", async () => {
   const t = convexTest(schema, modules);
   const { membershipId } = await setupShop(t, { stampsRequired: 10 });

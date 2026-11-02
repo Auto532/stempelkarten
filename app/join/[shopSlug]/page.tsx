@@ -115,7 +115,8 @@ export default function JoinPage() {
   };
 
   useShopThemeSync(shop);
-  const isLoading = shop === undefined || !tokenLoaded || (qrToken !== null && existing === undefined);
+  // Die Kunden-Abfrage läuft nur bei gefundenem Shop; sonst nicht auf sie warten
+  const isLoading = shop === undefined || !tokenLoaded || (!!shop && qrToken !== null && existing === undefined);
 
   if (isLoading) {
     return (

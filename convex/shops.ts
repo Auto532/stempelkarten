@@ -166,17 +166,21 @@ export const updateSettings = mutation({
     adminToken: v.string(),
     stampsRequired: v.number(),
     rewardText: v.string(),
-    rewardTiers: v.optional(v.array(v.object({
+    // Weggelassen = unverändert lassen, null = entfernen
+    rewardTiers: v.optional(v.union(v.null(), v.array(v.object({
       stamps: v.number(),
       text: v.string(),
       enabled: v.boolean(),
-    }))),
-    stampValue: v.optional(v.number()),
+    })))),
+    stampValue: v.optional(v.union(v.null(), v.number())),
   },
   handler: async (ctx, { shopId, adminToken, stampsRequired, rewardText, rewardTiers, stampValue }) => {
     await requireShopRole(ctx, { shopId, token: adminToken, role: "inhaber" });
-    validateRewardSettings({ stampsRequired, rewardText, rewardTiers, stampValue });
-    await ctx.db.patch(shopId, { stampsRequired, rewardText, rewardTiers, stampValue });
+    validateRewardSettings({ stampsRequired, rewardText, rewardTiers: rewardTiers ?? undefined, stampValue: stampValue ?? undefined });
+    const patch: Partial<Doc<"shops">> = { stampsRequired, rewardText };
+    if (rewardTiers !== undefined) patch.rewardTiers = rewardTiers ?? undefined;
+    if (stampValue !== undefined) patch.stampValue = stampValue ?? undefined;
+    await ctx.db.patch(shopId, patch);
   },
 });
 

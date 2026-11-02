@@ -178,14 +178,31 @@ export const addStamp = mutation({
 });
 
 export const redeemReward = mutation({
-  args: { membershipId: v.id("memberships"), adminToken: v.string(), rewardText: v.optional(v.string()) },
-  handler: async (ctx, { membershipId, adminToken, rewardText }) => {
+  args: {
+    membershipId: v.id("memberships"),
+    adminToken: v.string(),
+    rewardText: v.optional(v.string()),
+    // Stempelzahl der gewählten Prämienstufe; ohne Angabe gilt die Basis-Prämie
+    tierStamps: v.optional(v.number()),
+  },
+  handler: async (ctx, { membershipId, adminToken, rewardText, tierStamps }) => {
     const membership = await ctx.db.get(membershipId);
     if (!membership) throw new ConvexError("Mitgliedschaft nicht gefunden");
 
     const shop = await requireShopRole(ctx, { shopId: membership.shopId, token: adminToken, role: "mitarbeiter" });
 
-    const carryOver = Math.max(0, membership.currentStamps - shop.stampsRequired);
+    // Stufe serverseitig bestimmen: es werden immer die Stempel der gewählten
+    // Stufe abgezogen, und nur wenn die Karte genug Stempel hat.
+    const baseTier = { stamps: shop.stampsRequired, text: shop.rewardText };
+    const tiers = [baseTier, ...(shop.bonusProgramEnabled ? (shop.rewardTiers ?? []) : []).filter((t) => t.enabled)];
+    const wanted = tierStamps ?? shop.stampsRequired;
+    const tier = tiers.find((t) => t.stamps === wanted && (rewardText === undefined || t.text === rewardText))
+      ?? tiers.find((t) => t.stamps === wanted);
+    if (!tier) throw new ConvexError("Diese Belohnung gibt es nicht");
+    if (membership.currentStamps < tier.stamps) throw new ConvexError("Nicht genug Stempel");
+    rewardText = tier.text;
+
+    const carryOver = membership.currentStamps - tier.stamps;
 
     await ctx.db.patch(membershipId, {
       currentStamps: carryOver,

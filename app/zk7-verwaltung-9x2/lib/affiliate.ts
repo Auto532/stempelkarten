@@ -35,6 +35,15 @@ export async function affiliateAdminLogin(pin: string): Promise<void> {
   if (!AFFILIATE_URL) return;
   const res = await affiliateMutation("admin:adminLogin", { pin });
   setAffiliateAdminToken(res?.ok ? res.token : null);
+  if (!res?.ok) throw new Error(res?.error ?? "Anmeldung an der Partner-App fehlgeschlagen");
+}
+
+// Ist der gemerkte Partner-App-Schlüssel noch gültig? (true, wenn es keine Partner-App gibt)
+export async function affiliateSessionValid(): Promise<boolean> {
+  if (!AFFILIATE_URL) return true;
+  const token = sessionStorage.getItem(AFFILIATE_SESSION_KEY);
+  if (!token) return false;
+  return !!(await affiliateQuery("admin:isAdminSession", { token }));
 }
 
 export async function affiliateQuery(path: string, args: Record<string, unknown>) {

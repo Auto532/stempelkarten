@@ -105,7 +105,8 @@ export default function MeShopPage() {
     prevPendingRef.current = hasPending;
   }, [membership?.currentStamps, membership?.pendingRedemption]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!mounted || data === undefined) {
+  // Ohne gespeicherten Kunden-Token läuft keine Abfrage → direkt weiterleiten statt ewig laden
+  if (!mounted || (qrToken && data === undefined)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}

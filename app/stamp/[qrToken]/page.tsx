@@ -109,11 +109,11 @@ export default function StampPage() {
     finally { setLoading(false); }
   };
 
-  const handleRedeem = async (tierText?: string) => {
+  const handleRedeem = async (tierText?: string, tierStamps?: number) => {
     if (!data?.membership) return;
     setLoading(true); setError("");
     try {
-      await redeemReward({ membershipId: data.membership._id, adminToken, rewardText: tierText });
+      await redeemReward({ membershipId: data.membership._id, adminToken, rewardText: tierText, tierStamps });
       setRedeemedTierText(tierText ?? null);
       setDone("redeemed");
     } catch (e: unknown) { setError(errMsg(e, "Fehler")); }
@@ -543,7 +543,7 @@ export default function StampPage() {
                 </>
               )}
             </button>
-            <button onClick={() => handleRedeem(exactTier!.text)} disabled={loading}
+            <button onClick={() => handleRedeem(exactTier!.text, exactTier!.stamps)} disabled={loading}
               className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 border border-zinc-700 text-zinc-400 font-medium rounded-2xl flex items-center justify-center gap-2 transition-colors text-sm">
               {loading ? <Spinner /> : <><Gift size={15} className="shrink-0" /> <span className="truncate">Jetzt einlösen · {exactTier!.text}</span></>}
             </button>
@@ -558,7 +558,7 @@ export default function StampPage() {
               className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-base">
               {loading ? <Spinner /> : <><Stamp size={20} /> Stempel geben</>}
             </button>
-            <button onClick={() => handleRedeem(topTier.text)} disabled={loading}
+            <button onClick={() => handleRedeem(topTier.text, topTier.stamps)} disabled={loading}
               className="w-full py-3.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 border border-zinc-700 text-zinc-400 font-medium rounded-2xl flex items-center justify-center gap-2 transition-colors text-sm">
               {loading ? <Spinner /> : <><Gift size={15} className="shrink-0" /> <span className="truncate">Belohnung einlösen · {topTier.text}</span></>}
             </button>

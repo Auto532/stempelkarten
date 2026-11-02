@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LayoutGrid, Store, TrendingUp, Users, MessageSquare, Settings, LogOut, type LucideIcon } from "lucide-react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { errMsg } from "@/app/lib/errMsg";
-import { affiliateQuery, affiliateAdminLogin, affiliateMutation, setAffiliateAdminToken } from "./lib/affiliate";
+import { affiliateQuery, affiliateAdminLogin, affiliateMutation, affiliateSessionValid, setAffiliateAdminToken } from "./lib/affiliate";
 import { PartnerTab } from "./PartnerTab";
 import { SupportTab } from "./SupportTab";
 import { AnalyticsTab } from "./AnalyticsTab";
@@ -37,6 +37,11 @@ export default function SuperAdminPage() {
   const [activeTab, setActiveTab]   = useState<Tab>("overview");
   const [createShopOpen, setCreateShopOpen] = useState(false);
   const [selectedShopId, setSelectedShopId] = useState<Id<"shops"> | null>(null);
+  // Verbindung zur Partner-App (Finanzen, Partner, Verträge): false = abgelaufen/fehlgeschlagen
+  const [partnerOk, setPartnerOk]   = useState(true);
+  const [partnerPin, setPartnerPin] = useState("");
+  const [partnerBusy, setPartnerBusy] = useState(false);
+  const [partnerError, setPartnerError] = useState("");
 
   const allShops = useQuery(api.shops.listAllShops, authed && adminSecret ? { adminSecret } : "skip") as Doc<"shops">[] | undefined;
   const selectedShop = selectedShopId ? allShops?.find(s => s._id === selectedShopId) : null;
@@ -95,6 +100,27 @@ export default function SuperAdminPage() {
     return () => clearInterval(id);
   }, [authed, adminSecret]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Partner-App-Sitzung beim Start und alle 5 Min prüfen (ein Netzfehler zählt nicht als abgelaufen)
+  useEffect(() => {
+    if (!authed) return;
+    const check = () => affiliateSessionValid().then(setPartnerOk).catch(() => {});
+    check();
+    const id = setInterval(check, 5 * 60_000);
+    return () => clearInterval(id);
+  }, [authed]);
+
+  const reconnectPartner = async () => {
+    if (!partnerPin) return;
+    setPartnerBusy(true); setPartnerError("");
+    try {
+      await affiliateAdminLogin(partnerPin);
+      // Neu laden, damit alle Bereiche ihre Partner-Daten frisch holen (Anmeldung bleibt erhalten)
+      window.location.reload();
+    } catch (err: unknown) {
+      setPartnerError(errMsg(err, "Fehler"));
+    } finally { setPartnerBusy(false); }
+  };
+
   const handleLogin = async () => {
     if (!pin) return;
     setChecking(true); setPinError(null);
@@ -102,7 +128,8 @@ export default function SuperAdminPage() {
       const res = await checkPinMutation({ pin });
       if (!res.ok) { setPinError(res.error); setPin(""); return; }
       // Partner-App: eigener Sitzungs-Schlüssel (Fehler dort blockieren den Admin nicht)
-      await affiliateAdminLogin(pin).catch(() => setAffiliateAdminToken(null));
+      const partnerLoggedIn = await affiliateAdminLogin(pin).then(() => true, () => { setAffiliateAdminToken(null); return false; });
+      setPartnerOk(partnerLoggedIn);
       sessionStorage.setItem("adminSession", res.token);
       setAdminSecret(res.token);
       setPin("");
@@ -226,6 +253,22 @@ export default function SuperAdminPage() {
 
         {/* ── Inhalt ── */}
         <main className="mx-auto max-w-4xl px-5 pt-5 pb-32 lg:pb-12">
+          {!partnerOk && (
+            <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 space-y-2">
+              <p className="text-sm font-semibold text-amber-300">Verbindung zur Partner-App abgelaufen</p>
+              <p className="text-xs text-zinc-400">Finanzen, Partner, Verträge und Zahlungsstatus fehlen gerade. Gib deine PIN ein, um neu zu verbinden.</p>
+              <div className="flex gap-2">
+                <input type="password" inputMode="numeric" value={partnerPin} onChange={e => setPartnerPin(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") reconnectPartner(); }} placeholder="PIN"
+                  className="flex-1 min-w-0 rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-zinc-100" />
+                <button type="button" onClick={reconnectPartner} disabled={partnerBusy || !partnerPin}
+                  className="shrink-0 rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-900 disabled:opacity-50">
+                  {partnerBusy ? "Verbinde…" : "Neu verbinden"}
+                </button>
+              </div>
+              {partnerError && <p className="text-xs text-red-400">{partnerError}</p>}
+            </div>
+          )}
           <AnimatePresence mode="wait">
             {activeTab === "overview"  && <OverviewTab key="overview" adminSecret={adminSecret} supportOpenCount={supportOpenCount} onNavigate={goTo} onSelectShop={id => setSelectedShopId(id)} />}
             {activeTab === "shops"     && <ShopsTab key="shops" shops={allShops} adminSecret={adminSecret} initialCreate={createShopOpen} onSelectShop={id => setSelectedShopId(id)} />}
