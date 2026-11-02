@@ -52,6 +52,9 @@ export function MoreCard({ shown, total, onMore }: { shown: number; total: numbe
 // paid = freigeschaltet (Zahlungsdaten hinterlegt bzw. vom Admin aktiviert)
 export type PayStatus = { paid: boolean; payLater: boolean; tierName: string; price: number; paymentToken: string };
 
+// Zahlungsstatus je Shop aus der Partner-App. Shops ohne Eintrag haben keine
+// Abrechnung (erkennbar erst, wenn die Liste geladen ist: PAY_STATUS_LOADED).
+export const PAY_STATUS_LOADED = "__loaded";
 export function usePayStatus(adminSecret: string): Record<string, PayStatus> {
   const [map, setMap] = useState<Record<string, PayStatus>>({});
   useEffect(() => {
@@ -60,6 +63,7 @@ export function usePayStatus(adminSecret: string): Record<string, PayStatus> {
       .then((rows: any[]) => {
         const m: Record<string, PayStatus> = {};
         (rows ?? []).forEach((r: any) => { m[r.loatycardShopId] = r; });
+        Object.defineProperty(m, PAY_STATUS_LOADED, { value: true, enumerable: false });
         setMap(m);
       })
       .catch(() => {});
@@ -67,8 +71,15 @@ export function usePayStatus(adminSecret: string): Record<string, PayStatus> {
   return map;
 }
 
-export function PayBadge({ status }: { status?: PayStatus }) {
-  if (!status) return null;
+export function PayBadge({ status, loaded }: { status?: PayStatus; loaded?: boolean }) {
+  if (!status) {
+    if (!loaded) return null;
+    return (
+      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-500 shrink-0">
+        Ohne Abrechnung
+      </span>
+    );
+  }
   if (status.paid) return (
     <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-green-900/25 border border-green-800/40 text-green-400 shrink-0">
       {status.tierName ?? "Aktiv"}
@@ -83,7 +94,7 @@ export function PayBadge({ status }: { status?: PayStatus }) {
 
 export function ToggleSwitch({ active, onToggle, disabled }: { active: boolean; onToggle: () => void; disabled: boolean }) {
   return (
-    <button onClick={onToggle} disabled={disabled}
+    <button type="button" onClick={onToggle} disabled={disabled}
       style={{ minWidth: "2.5rem", height: "1.375rem" }}
       className={`relative rounded-full transition-colors flex items-center px-0.5 disabled:opacity-50 ${active ? "bg-amber-400" : "bg-zinc-700"}`}>
       <motion.div animate={{ x: active ? 18 : 0 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}

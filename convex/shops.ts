@@ -428,8 +428,12 @@ export const createShop = mutation({
     ownerName:        v.optional(v.string()),
     ownerEmail:       v.optional(v.string()),
     ownerPhone:       v.optional(v.string()),
+    // Shop ohne Abrechnung: Inhaber bekommt sofort eine Willkommens-Mail mit
+    // Login-Link. Mit Abrechnung schickt die Partner-App sie erst nach dem
+    // Hinterlegen der Zahlungsdaten (sonst käme sie doppelt).
+    sendWelcome:      v.optional(v.boolean()),
   },
-  handler: async (ctx, { adminSecret, ownerName, ownerEmail, ownerPhone, ...shopArgs }) => {
+  handler: async (ctx, { adminSecret, ownerName, ownerEmail, ownerPhone, sendWelcome, ...shopArgs }) => {
     await requireAdmin(ctx, { secret: adminSecret });
     validateRewardSettings(shopArgs);
 
@@ -462,10 +466,12 @@ export const createShop = mutation({
       createdAt: Date.now(),
     });
 
-    // Keine Willkommens-Mail mehr beim Anlegen: die Mails (Willkommen +
-    // Zahlungsbestätigung) verschickt die Affiliate-App erst nach dem
-    // Zahlungseingang (autoRecordPayment). Wer "Später zahlen" wählt,
-    // bekommt bis zur Zahlung nichts.
+    if (sendWelcome && ownerEmail) {
+      await ctx.scheduler.runAfter(0, internal.ownerMail.sendShopWelcome, {
+        shopId, ownerEmail, ownerName: ownerName ?? "", shopName: shopArgs.name,
+        adminLoginToken, slug: shopArgs.slug,
+      });
+    }
 
     return { shopId, slug: shopArgs.slug, adminLoginToken };
   },
@@ -479,6 +485,19 @@ export const listAllShops = query({
     await requireAdmin(ctx, { secret: adminSecret });
     const shops = await ctx.db.query("shops").order("desc").collect();
     return shops.map(sanitizeShop);
+  },
+});
+
+// Inhaber-Daten eines Shops (für "Abrechnung einrichten" im Vertrag-Tab)
+export const getShopOwnerAsAdmin = query({
+  args: { shopId: v.id("shops"), adminSecret: v.string() },
+  handler: async (ctx, { shopId, adminSecret }) => {
+    await requireAdmin(ctx, { secret: adminSecret });
+    const shop = await ctx.db.get(shopId);
+    const owner = shop?.ownerId ? await ctx.db.get(shop.ownerId) : null;
+    return owner
+      ? { name: owner.name, email: owner.email ?? null, phone: owner.phone ?? null, welcomeSent: !!shop?.welcomeSentAt }
+      : null;
   },
 });
 

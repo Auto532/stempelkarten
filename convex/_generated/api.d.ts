@@ -21,6 +21,7 @@ import type * as lib_pricing from "../lib/pricing.js";
 import type * as lib_stats from "../lib/stats.js";
 import type * as memberships from "../memberships.js";
 import type * as messages from "../messages.js";
+import type * as ownerMail from "../ownerMail.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as seed from "../seed.js";
 import type * as shops from "../shops.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   "lib/stats": typeof lib_stats;
   memberships: typeof memberships;
   messages: typeof messages;
+  ownerMail: typeof ownerMail;
   rateLimit: typeof rateLimit;
   seed: typeof seed;
   shops: typeof shops;

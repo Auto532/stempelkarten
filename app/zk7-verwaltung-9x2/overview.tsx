@@ -6,7 +6,7 @@ import { Award, Bell, Check, ChevronRight, Clock, LifeBuoy, Plus, PowerOff, Sear
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { PayBadge, usePayStatus, useLimit, ShowMore, type AdminTab } from "./shared";
+import { PayBadge, usePayStatus, useLimit, ShowMore, PAY_STATUS_LOADED, type AdminTab } from "./shared";
 import { ShopListItem, CreateShopForm } from "./shop";
 import { PayLaterCard } from "./AnalyticsTab";
 
@@ -137,7 +137,7 @@ export function OverviewTab({ adminSecret, supportOpenCount, onNavigate, onSelec
                   {shop.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-zinc-200 font-medium truncate flex items-center gap-2">{shop.name} <PayBadge status={payStatus[shop._id]} /></p>
+                  <p className="text-sm text-zinc-200 font-medium truncate flex items-center gap-2">{shop.name} <PayBadge status={payStatus[shop._id]} loaded={!!(payStatus as Record<string, unknown>)[PAY_STATUS_LOADED]} /></p>
                   <p className="text-[11px] text-zinc-500">{shop.customerCount} Kunden{shop.active === false ? " · deaktiviert" : ""}</p>
                 </div>
                 <ChevronRight size={14} className="text-zinc-600 shrink-0" />
@@ -244,7 +244,7 @@ export function ShopsTab({ shops, adminSecret, initialCreate = false, onSelectSh
       )}
       {visible.map((shop, i) => (
         <ShopListItem key={shop._id} shop={shop} index={i} onSelect={() => onSelectShop(shop._id)}
-          payStatus={payStatus[shop._id]} />
+          payStatus={payStatus[shop._id]} payLoaded={!!(payStatus as Record<string, unknown>)[PAY_STATUS_LOADED]} />
       ))}
       {capped && (
         <button onClick={() => setShowAll(true)}

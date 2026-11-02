@@ -7,7 +7,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { errMsg } from "@/app/lib/errMsg";
-import { affiliateQuery, affiliateMutation, AFFILIATE_APP_URL } from "./lib/affiliate";
+import { affiliateQuery, affiliateMutation, payUrlFor } from "./lib/affiliate";
 import {
   GrowthCard, MiniBarChart, PeriodSelector, periodToSince, periodToPrevSince, groupPayments,
   GLOBAL_LEVELS, globalLevelIdx, useLimit, ShowMore, useScrollLock,
@@ -33,7 +33,7 @@ export function PayLaterCard({ adminSecret }: { adminSecret: string }) {
 
   const copyLink = async (token: string) => {
     try {
-      await navigator.clipboard.writeText(`${AFFILIATE_APP_URL}/pay/${token}`);
+      await navigator.clipboard.writeText(payUrlFor(token));
       setCopied(token); setTimeout(() => setCopied(null), 2000);
     } catch {}
   };

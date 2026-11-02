@@ -91,6 +91,8 @@ export default defineSchema({
     })),
     stampValue: v.optional(v.number()),
     priceInfo: v.optional(v.string()),
+    // Willkommens-Mail an den Inhaber nachweislich verschickt (Shop ohne Abrechnung)
+    welcomeSentAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_slug", ["slug"])

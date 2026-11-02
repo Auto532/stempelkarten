@@ -86,3 +86,23 @@ export interface AffiliateDashboard {
   affiliates: { total: number; pending: number; active: number };
   commissions: { pending: number; confirmed: number; paid: number };
 }
+
+// Öffentliche Aufrufe der Partner-App OHNE Admin-Sitzung (z. B. Bezahlseite).
+// Argumente gehen unverändert raus (auch ein Feld "adminSecret" = PIN).
+export async function affiliatePublic(kind: "query" | "mutation" | "action", path: string, args: Record<string, unknown>) {
+  if (!AFFILIATE_URL) throw new Error("Partner-App nicht konfiguriert");
+  const res = await fetch(`${AFFILIATE_URL}/api/${kind}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, format: "json", args }),
+  });
+  const data = await res.json();
+  if (data.status === "error") throw affiliateError(data);
+  return data.value;
+}
+
+// Bezahllink für Inhaber: liegt in der Stempelkarten-App unter /bezahlen/…
+export function payUrlFor(token: string): string {
+  const base = typeof window !== "undefined" ? window.location.origin : "https://app.loyaltycard.info";
+  return `${base}/bezahlen/${token}`;
+}

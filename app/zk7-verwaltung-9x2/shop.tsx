@@ -15,8 +15,8 @@ import QRCode from "qrcode";
 import { QRImage } from "@/app/components/QRImage";
 import { THEME_LIST } from "@/app/me/themes/registry";
 import { STAMP_ICONS } from "@/app/me/components";
-import { affiliateQuery, affiliateMutation, AFFILIATE_APP_URL } from "./lib/affiliate";
-import { TIERS, tierRangeLabel } from "@/convex/lib/pricing";
+import { affiliateQuery, affiliateMutation, payUrlFor } from "./lib/affiliate";
+import { TIERS, tierRangeLabel, tierInfo, tierForCardCount } from "@/convex/lib/pricing";
 import { DesignEditor } from "./DesignEditor";
 import {
   PayBadge, ToggleSwitch, PeriodSelector, periodToSince, periodToPrevSince, PERIOD_LABELS, useLimit, ShowMore,
@@ -84,11 +84,12 @@ async function printQR(rawShopName: string, rawUrl: string) {
 // Zahlungsstatus je Shop aus der Affiliate-App (paymentCount des Vertrags).
 // Key = Stempelkarten-Shop-ID; fehlt ein Shop in der Map, hat er keinen Vertrag.
 
-export function ShopListItem({ shop, index, onSelect, payStatus }: {
+export function ShopListItem({ shop, index, onSelect, payStatus, payLoaded }: {
   shop: Doc<"shops">;
   index: number;
   onSelect: () => void;
   payStatus?: PayStatus;
+  payLoaded?: boolean;
 }) {
   return (
     <motion.button
@@ -109,7 +110,7 @@ export function ShopListItem({ shop, index, onSelect, payStatus }: {
               Inaktiv
             </span>
           )}
-          <PayBadge status={payStatus} />
+          <PayBadge status={payStatus} loaded={payLoaded} />
         </p>
         <p className="text-xs text-zinc-500 truncate">{shop.rewardText} · {shop.stampsRequired} Stempel</p>
       </div>
@@ -143,7 +144,7 @@ function ContractInfoCard({ shop, adminSecret }: { shop: Doc<"shops">; adminSecr
   const paid      = contract.activated;
   const fmt       = (ts: number) => new Date(ts).toLocaleDateString("de-DE");
   const periodTxt = contract.planType === "annual" ? "Jahr" : "Monat";
-  const payUrl    = contract.paymentToken ? `${AFFILIATE_APP_URL}/pay/${contract.paymentToken}` : "";
+  const payUrl    = contract.paymentToken ? payUrlFor(contract.paymentToken) : "";
 
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(payUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {}
@@ -780,6 +781,70 @@ function ShopEinstellungen({ shop, adminSecret, onDeleted }: { shop: Doc<"shops"
   );
 }
 
+// ─── NoBillingPanel ───────────────────────────────────────────────────────────
+// Shop ohne Abrechnung (Test/kostenlos): zeigt, in welcher Stufe er nach
+// Kundenzahl wäre, und richtet auf Knopfdruck die Abrechnung ein (Vertrag in
+// der Partner-App + Bezahllink). Die Startstufe richtet sich nach den Kunden.
+
+function NoBillingPanel({ shop, adminSecret, onCreated }: { shop: Doc<"shops">; adminSecret: string; onCreated: () => Promise<void> }) {
+  const stats  = useQuery(api.shops.getShopStatsAsAdmin, { shopId: shop._id, adminSecret });
+  const owner  = useQuery(api.shops.getShopOwnerAsAdmin, { shopId: shop._id, adminSecret });
+  const tokens = useQuery(api.shops.getLoginLinksForShop, { shopId: shop._id, adminSecret });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr]   = useState("");
+  const customers = stats?.billableCustomers ?? 0;
+  const tier = tierInfo(tierForCardCount(customers));
+
+  const setup = async () => {
+    setBusy(true); setErr("");
+    try {
+      await affiliateMutation("admin:createDirectShopContract", {
+        adminSecret,
+        shopName:            shop.name,
+        ownerName:           owner?.name || undefined,
+        ownerEmail:          owner?.email || undefined,
+        ownerPhone:          owner?.phone || undefined,
+        planType:            "monthly",
+        cardCount:           customers,
+        welcomeSent:         !!owner?.welcomeSent,
+        loatycardShopId:     shop._id,
+        loatycardShopSlug:   shop.slug,
+        loatycardAdminToken: tokens?.adminLoginToken,
+      });
+      await onCreated();
+    } catch (e: unknown) {
+      setErr(errMsg(e, "Abrechnung konnte nicht eingerichtet werden"));
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <motion.div key="nobilling" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+          <FileText size={14} className="text-zinc-500" />
+          <span className="text-sm font-medium text-zinc-200">Ohne Abrechnung</span>
+          <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-500">Test / kostenlos</span>
+        </div>
+        <div className="p-4 space-y-3">
+          <p className="text-sm text-zinc-300">
+            {stats === undefined ? "Lädt…" : <>{customers} Kunden · wäre <b className="text-zinc-100">{tier.name}</b> ({tier.monthly === 0 ? "kostenlos" : `€${tier.monthly}/Monat`})</>}
+          </p>
+          <p className="text-[11px] text-zinc-500 leading-relaxed">
+            Dieser Shop läuft ohne Vertrag und ohne Zahlung. Mit „Abrechnung einrichten“ wird ein Vertrag
+            angelegt (Stufe nach aktueller Kundenzahl) und du bekommst den Bezahllink für den Inhaber.
+            {owner?.email ? "" : " Hinweis: Es ist keine Inhaber-E-Mail hinterlegt, Mails zur Abrechnung können dann nicht zugestellt werden."}
+          </p>
+          {err && <p className="text-red-400 text-xs">{err}</p>}
+          <button type="button" onClick={setup} disabled={busy || stats === undefined || tokens === undefined || owner === undefined}
+            className="w-full py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 text-sm font-semibold rounded-xl transition-colors">
+            {busy ? "Richte ein…" : "Abrechnung einrichten"}
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── ShopVertragTab ───────────────────────────────────────────────────────────
 // Eigener Tab pro Shop: Vertrag im Detail — Preisstufe nach Kundenzahl,
 // Freischaltung (offen inkl. Bezahllink / aktiv inkl. Abbuchungen) und
@@ -806,15 +871,14 @@ function ShopVertragTab({ shop, adminSecret }: { shop: Doc<"shops">; adminSecret
       className="text-zinc-500 text-sm text-center py-16">Laden...</motion.div>
   );
   if (contract === null) return (
-    <div className="text-center py-16 text-zinc-600 text-sm">
-      Kein Vertrag zu diesem Shop gefunden (Alt-Shop ohne Partnerprogramm-Anbindung).
-    </div>
+    <NoBillingPanel shop={shop} adminSecret={adminSecret}
+      onCreated={async () => setContract(await affiliateQuery("admin:getContractForShop", { adminSecret, loatycardShopId: shop._id }))} />
   );
 
   const paid      = contract.activated;
   const fmt       = (ts: number) => new Date(ts).toLocaleDateString("de-DE");
   const periodTxt = contract.planType === "annual" ? "Jahr" : "Monat";
-  const payUrl    = contract.paymentToken ? `${AFFILIATE_APP_URL}/pay/${contract.paymentToken}` : "";
+  const payUrl    = contract.paymentToken ? payUrlFor(contract.paymentToken) : "";
 
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(payUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {}
@@ -1018,6 +1082,10 @@ export function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; ad
   const [ownerPhone, setOwnerPhone] = useState("");
   const [payLink, setPayLink]   = useState("");
   const [copied, setCopied]     = useState(false);
+  // Abrechnung über die Partner-App (Stripe). Aus = Shop ohne Abrechnung
+  // (Test/kostenlos), Inhaber bekommt direkt eine Willkommens-Mail.
+  const [withBilling, setWithBilling] = useState(false);
+  const [createdLinks, setCreatedLinks] = useState<{ login: string; join: string; mailed: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -1032,7 +1100,18 @@ export function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; ad
         ownerName:        ownerName  || undefined,
         ownerEmail:       ownerEmail || undefined,
         ownerPhone:       ownerPhone || undefined,
+        sendWelcome:      !withBilling,
       });
+
+      if (!withBilling) {
+        const base = window.location.origin;
+        setCreatedLinks({
+          login:  `${base}/betrieb/login/${created.adminLoginToken}`,
+          join:   `${base}/join/${created.slug}`,
+          mailed: !!ownerEmail,
+        });
+        return;
+      }
 
       // Vertrag im Partnerprogramm registrieren (Direktvertrieb, 0% Provision)
       // → Zahlung läuft über den normalen Bezahllink, Umsatz landet in den Finanzen.
@@ -1050,7 +1129,7 @@ export function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; ad
           loatycardAdminToken: created.adminLoginToken,
         });
         if (contract?.paymentToken) {
-          setPayLink(`${AFFILIATE_APP_URL}/pay/${contract.paymentToken}`);
+          setPayLink(payUrlFor(contract.paymentToken));
           return;
         }
         setError("Shop erstellt, aber kein Bezahllink erhalten (Affiliate-App nicht konfiguriert?)");
@@ -1069,6 +1148,51 @@ export function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; ad
   const copyPayLink = async () => {
     try { await navigator.clipboard.writeText(payLink); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {}
   };
+
+  if (createdLinks) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4 mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3">
+              <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h2 className="font-semibold text-zinc-100">Shop erstellt (ohne Abrechnung)</h2>
+        </div>
+        <p className="text-sm text-zinc-400">
+          Der Shop ist sofort nutzbar.{" "}
+          {createdLinks.mailed
+            ? "Der Inhaber bekommt gleich eine Willkommens-Mail mit seinem Login-Link."
+            : "Es war keine E-Mail angegeben, gib dem Inhaber den Login-Link bitte selbst."}{" "}
+          Die Abrechnung kannst du später im Vertrag-Tab des Shops einrichten.
+        </p>
+        {[
+          { label: "Login für den Inhaber (nicht weitergeben)", url: createdLinks.login },
+          { label: "Link für die Kunden", url: createdLinks.join },
+        ].map(l => (
+          <div key={l.label} className="space-y-1">
+            <p className="text-[11px] text-zinc-500">{l.label}</p>
+            <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2">
+              <code className="text-[11px] text-amber-300 flex-1 truncate">{l.url}</code>
+              <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(l.url); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {} }}
+                className="shrink-0 text-zinc-500 hover:text-amber-400 transition-colors"><Link size={13} /></button>
+            </div>
+          </div>
+        ))}
+        <div className="flex flex-col items-center gap-2 py-1">
+          <QRImage value={createdLinks.join} size={150} />
+          <p className="text-[10px] text-zinc-600">QR für die Kunden → Stempelkarte</p>
+        </div>
+        {copied && <p className="text-center text-xs text-green-400">Kopiert ✓</p>}
+        <button type="button" onClick={onDone}
+          className="w-full py-2.5 bg-amber-400 hover:bg-amber-300 text-zinc-900 text-sm font-semibold rounded-xl transition-colors">
+          Fertig
+        </button>
+      </motion.div>
+    );
+  }
 
   if (payLink) {
     return (
@@ -1186,6 +1310,18 @@ export function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; ad
       {/* Vertrag / Preisstufen */}
       <div className="pt-2 border-t border-zinc-800 space-y-2">
         <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Vertrag (Finanzen)</p>
+        <div className="flex items-center justify-between gap-3 rounded-xl p-3 bg-zinc-800 border border-zinc-700">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-zinc-100">Abrechnung über Stripe</p>
+            <p className="text-[10px] text-zinc-500 mt-0.5">
+              {withBilling
+                ? "An: Vertrag + Bezahllink, Inhaber hinterlegt Zahlungsdaten."
+                : "Aus: Shop ohne Abrechnung (Test/kostenlos). Später im Vertrag-Tab einrichtbar."}
+            </p>
+          </div>
+          <ToggleSwitch active={withBilling} onToggle={() => setWithBilling(v => !v)} disabled={loading} />
+        </div>
+        {withBilling && (
         <div className="rounded-xl p-3 bg-zinc-800 border border-zinc-700 space-y-1">
           {TIERS.map(t => (
             <div key={t.id} className="flex justify-between text-xs">
@@ -1194,9 +1330,12 @@ export function CreateShopForm({ onDone, adminSecret }: { onDone: () => void; ad
             </div>
           ))}
         </div>
-        <p className="text-[10px] text-zinc-600">
-          Monatlich, Preis nach Kundenzahl. Nach dem Erstellen bekommst du Bezahllink + QR. Der Umsatz zählt nach jeder Zahlung in den Finanzen.
-        </p>
+        )}
+        {withBilling && (
+          <p className="text-[10px] text-zinc-600">
+            Monatlich, Preis nach Kundenzahl. Nach dem Erstellen bekommst du Bezahllink + QR. Der Umsatz zählt nach jeder Zahlung in den Finanzen.
+          </p>
+        )}
       </div>
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
