@@ -52,21 +52,36 @@ function SystemHealthCard({ adminSecret }: { adminSecret: string }) {
     return () => { cancelled = true; clearInterval(id); };
   }, [convex, adminSecret, open]);
 
-  // Health-Ping (nur Antwortzeit, kein DB-Zugriff) alle 4s
+  // Online/Offline direkt aus der Verbindung (kostet keine Funktionsaufrufe).
+  // Kurze Wackler beim Deploy oder Handy-Netzwechsel erst nach 5 s als Ausfall zeigen.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const apply = (connected: boolean) => {
+      clearTimeout(timer);
+      if (connected) setOnline(true);
+      else timer = setTimeout(() => setOnline(false), 5000);
+    };
+    apply(convex.connectionState().isWebSocketConnected);
+    const unsub = convex.subscribeToConnectionState(s => apply(s.isWebSocketConnected));
+    return () => { clearTimeout(timer); unsub(); };
+  }, [convex]);
+
+  // Antwortzeit nur messen, solange der Tab sichtbar ist, und nur alle 30 s
+  // (vorher alle 4 s = über 20.000 Aufrufe pro Tag und offenem Tab).
   useEffect(() => {
     let cancelled = false;
     const doPing = async () => {
+      if (document.hidden) return;
       const t0 = performance.now();
       try {
         await convex.query(api.system.ping, {});
-        if (!cancelled) { setLatency(Math.round(performance.now() - t0)); setOnline(true); }
-      } catch {
-        if (!cancelled) setOnline(false);
-      }
+        if (!cancelled) setLatency(Math.round(performance.now() - t0));
+      } catch { /* Ausfall zeigt die Verbindungsanzeige oben */ }
     };
     doPing();
-    const id = setInterval(doPing, 4000);
-    return () => { cancelled = true; clearInterval(id); };
+    const id = setInterval(doPing, 30000);
+    document.addEventListener("visibilitychange", doPing);
+    return () => { cancelled = true; clearInterval(id); document.removeEventListener("visibilitychange", doPing); };
   }, [convex]);
 
   // Ampel-Schwellen: Convex liest max. ~16.000 Dokumente pro Query
