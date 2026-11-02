@@ -18,11 +18,13 @@ import type * as htmlEscape from "../htmlEscape.js";
 import type * as http from "../http.js";
 import type * as lib_phone from "../lib/phone.js";
 import type * as lib_pricing from "../lib/pricing.js";
+import type * as lib_stats from "../lib/stats.js";
 import type * as memberships from "../memberships.js";
 import type * as messages from "../messages.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as seed from "../seed.js";
 import type * as shops from "../shops.js";
+import type * as statsBackfill from "../statsBackfill.js";
 import type * as support from "../support.js";
 import type * as system from "../system.js";
 
@@ -43,11 +45,13 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/phone": typeof lib_phone;
   "lib/pricing": typeof lib_pricing;
+  "lib/stats": typeof lib_stats;
   memberships: typeof memberships;
   messages: typeof messages;
   rateLimit: typeof rateLimit;
   seed: typeof seed;
   shops: typeof shops;
+  statsBackfill: typeof statsBackfill;
   support: typeof support;
   system: typeof system;
 }>;

@@ -10,25 +10,24 @@ export const ping = query({
 });
 
 // Kapazitäts-Überblick fürs interne System-Monitoring im Admin.
-// stampEvents wird NICHT gezählt (große Tabelle), sondern aus den
-// Mitgliedschaften abgeleitet: jede Aktion (Stempel/Einlösung) ist genau eine
-// Zeile, also = Summe aus totalStampsEver + rewardsRedeemed.
 export const getSystemHealth = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
     await requireAdmin(ctx, { secret: adminSecret });
-    const shops = await ctx.db.query("shops").collect();
-    const customers = await ctx.db.query("customers").collect();
-    const memberships = await ctx.db.query("memberships").collect();
-    const stampEvents = memberships.reduce((s, m) => s + m.totalStampsEver + m.rewardsRedeemed, 0);
+    // Aus den Zählern statt alle Kunden/Karten zu laden (skaliert auf 1.000+ Läden)
+    const [shops, stats, customers] = await Promise.all([
+      ctx.db.query("shops").collect(),
+      ctx.db.query("shopStats").collect(),
+      ctx.db.query("appCounters").withIndex("by_key", (q) => q.eq("key", "customers")).unique(),
+    ]);
     const latest = await ctx.db.query("stampEvents").withIndex("by_timestamp").order("desc").first();
     return {
       now: Date.now(),
       counts: {
         shops: shops.length,
-        customers: customers.length,
-        memberships: memberships.length,
-        stampEvents,
+        customers: customers?.value ?? 0,
+        memberships: stats.reduce((sum, st) => sum + st.customers, 0),
+        stampEvents: stats.reduce((sum, st) => sum + st.stamps + st.rewards, 0),
       },
       lastActivity: latest?.timestamp ?? null,
     };

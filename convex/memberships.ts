@@ -5,6 +5,7 @@ import { paginationOptsValidator } from "convex/server";
 import { requireShopRole, requireAdmin } from "./auth";
 import type { Doc, Id } from "./_generated/dataModel";
 import { afterMembershipCreated } from "./billingSync";
+import { insertStampEvent, insertMembership, insertCustomer } from "./lib/stats";
 
 // Fortlaufende Kunden-Nummer pro Shop (#1, #2, …). Basis ist das Maximum der
 // vergebenen Nummern (nicht die Anzahl), damit Nummern gelöschter Kunden nie
@@ -114,7 +115,7 @@ export const createMembershipForExistingCustomer = mutation({
     if (!shop) throw new ConvexError("Shop nicht gefunden");
     await assertJoinAllowed(ctx, shop);
 
-    const membershipId = await ctx.db.insert("memberships", {
+    const membershipId = await insertMembership(ctx, {
       customerId: customer._id,
       shopId,
       memberNumber: await nextMemberNumber(ctx, shopId),
@@ -165,7 +166,7 @@ export const addStamp = mutation({
       lastStampAt: Date.now(),
     });
 
-    await ctx.db.insert("stampEvents", {
+    await insertStampEvent(ctx, {
       membershipId,
       shopId: membership.shopId,
       type: "stamp",
@@ -191,7 +192,7 @@ export const redeemReward = mutation({
       rewardsRedeemed: membership.rewardsRedeemed + 1,
     });
 
-    await ctx.db.insert("stampEvents", {
+    await insertStampEvent(ctx, {
       membershipId,
       shopId: membership.shopId,
       type: "redeem",
@@ -212,7 +213,7 @@ export const adminStampForCustomer = mutation({
       .unique();
 
     if (!customer) {
-      const id = await ctx.db.insert("customers", {
+      const id = await insertCustomer(ctx, {
         name: "Test-Kunde",
         email: "",
         qrToken,
@@ -233,7 +234,7 @@ export const adminStampForCustomer = mutation({
       .unique();
 
     if (!membership) {
-      const mId = await ctx.db.insert("memberships", {
+      const mId = await insertMembership(ctx, {
         customerId: customer._id,
         shopId,
         memberNumber: await nextMemberNumber(ctx, shopId),
@@ -256,7 +257,7 @@ export const adminStampForCustomer = mutation({
       lastStampAt: Date.now(),
     });
 
-    await ctx.db.insert("stampEvents", {
+    await insertStampEvent(ctx, {
       membershipId: membership._id,
       shopId,
       type: "stamp",
@@ -330,7 +331,7 @@ export const confirmPendingRedemption = mutation({
       rewardsRedeemed: membership.rewardsRedeemed + 1,
       pendingRedemption: undefined,
     });
-    await ctx.db.insert("stampEvents", {
+    await insertStampEvent(ctx, {
       membershipId,
       shopId: membership.shopId,
       type: "redeem",
@@ -356,7 +357,7 @@ export const adminConfirmPendingRedemption = mutation({
       rewardsRedeemed: membership.rewardsRedeemed + 1,
       pendingRedemption: undefined,
     });
-    await ctx.db.insert("stampEvents", {
+    await insertStampEvent(ctx, {
       membershipId,
       shopId: membership.shopId,
       type: "redeem",

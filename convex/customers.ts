@@ -4,6 +4,7 @@ import { normalizeEmail } from "./lib/phone";
 import { nextMemberNumber, assertJoinAllowed } from "./memberships";
 import { afterMembershipCreated } from "./billingSync";
 import { sanitizeShop } from "./auth";
+import { insertMembership, insertCustomer } from "./lib/stats";
 
 export const findCustomerByEmail = query({
   args: { email: v.string(), adminToken: v.string() },
@@ -138,7 +139,7 @@ export const registerCustomer = mutation({
       // fremde Adresse eintippt, deren Karte (Datenschutz). Ohne passenden
       // qrToken auf dem Gerät gibt es immer eine neue, leere Karte.
       qrToken = crypto.randomUUID();
-      customerId = await ctx.db.insert("customers", {
+      customerId = await insertCustomer(ctx, {
         name,
         email: normalized,
         qrToken: qrToken!,
@@ -154,7 +155,7 @@ export const registerCustomer = mutation({
       .unique();
 
     if (!existingMembership) {
-      await ctx.db.insert("memberships", {
+      await insertMembership(ctx, {
         customerId: customerId!,
         shopId: shop._id,
         memberNumber: await nextMemberNumber(ctx, shop._id),

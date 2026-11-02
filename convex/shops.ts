@@ -5,6 +5,7 @@ import { paginationOptsValidator } from "convex/server";
 import { requireAdmin, requireShopRole, sanitizeShop } from "./auth";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
+import { clearShopStats, deleteMembership, dayStart } from "./lib/stats";
 
 // ─── Eingabe-Grenzen ─────────────────────────────────────────────────────────
 // Schützt vor unsinnigen Werten (0 Stempel = Belohnung bei jedem Stempel) und
@@ -386,14 +387,17 @@ export const adminDeleteShop = mutation({
       ctx.db.query("memberships").withIndex("by_shop", (q) => q.eq("shopId", shopId)).collect(),
     ]);
 
-    for (const doc of [...stampEvents, ...messages, ...memberships]) {
+    for (const doc of [...stampEvents, ...messages]) {
       await ctx.db.delete(doc._id);
     }
+    for (const m of memberships) await deleteMembership(ctx, m);
     if (shop.ownerId) {
       const owner = await ctx.db.get(shop.ownerId);
       if (owner) await ctx.db.delete(owner._id);
     }
     await ctx.db.delete(shopId);
+    // Laden aus den Statistik-Zählern nehmen (Tagessummen bleiben als Historie)
+    await clearShopStats(ctx, shopId);
 
     // Zugehörige Design-Bilder aus dem Storage entfernen (nur die dieses Shops).
     // Fehlende/doppelte IDs werden im Helfer abgefangen; Löschfehler stören den
@@ -612,22 +616,22 @@ export const getGlobalStats = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
     await requireAdmin(ctx, { secret: adminSecret });
-    const shops = await ctx.db.query("shops").collect();
-    // Ein Durchlauf über die Mitgliedschaften (gestreamt statt alles im
-    // Speicher); die Kunden-Tabelle wird nicht mehr extra komplett geladen:
-    // Kunden = verschiedene Kunden mit mindestens einer Karte.
+    // Nur Läden + ihre Zählerzeile lesen (ausgelegt für 1.000+ Läden)
+    const [shops, stats, customerCounter] = await Promise.all([
+      ctx.db.query("shops").collect(),
+      ctx.db.query("shopStats").collect(),
+      ctx.db.query("appCounters").withIndex("by_key", (q) => q.eq("key", "customers")).first(),
+    ]);
+    const byShop = new Map(stats.map((st) => [st.shopId.toString(), st]));
     let totalStamps = 0, totalRewards = 0;
-    const customerIds = new Set<string>();
-    const countByShop = new Map<string, number>();
-    for await (const m of ctx.db.query("memberships")) {
-      totalStamps += m.totalStampsEver;
-      totalRewards += m.rewardsRedeemed;
-      customerIds.add(m.customerId.toString());
-      const k = m.shopId.toString();
-      countByShop.set(k, (countByShop.get(k) ?? 0) + 1);
-    }
-    const shopsWithCounts = shops.map((shop) => ({ ...sanitizeShop(shop), customerCount: countByShop.get(shop._id.toString()) ?? 0 }));
-    return { totalShops: shops.length, totalCustomers: customerIds.size, totalStamps, totalRewards, shops: shopsWithCounts };
+    const shopsWithCounts = shops.map((shop) => {
+      const st = byShop.get(shop._id.toString());
+      totalStamps    += st?.stamps ?? 0;
+      totalRewards   += st?.rewards ?? 0;
+      return { ...sanitizeShop(shop), customerCount: st?.customers ?? 0 };
+    });
+    // Kunden = Personen (wer in 2 Läden ist, zählt einmal)
+    return { totalShops: shops.length, totalCustomers: customerCounter?.value ?? 0, totalStamps, totalRewards, shops: shopsWithCounts };
   },
 });
 
@@ -640,70 +644,59 @@ export const getGlobalAnalyticsByPeriod = query({
   handler: async (ctx, { adminSecret, since, prevSince }) => {
     await requireAdmin(ctx, { secret: adminSecret });
     const shops = await ctx.db.query("shops").collect();
-    const shopById = new Map(shops.map(s => [s._id.toString(), s]));
 
-    // Nur die gebrauchten Events (ab prevSince für den Vergleich), gedeckelt
+    // Summen und Diagramm aus den Tagessummen (16 Zeilen pro Tag statt aller Events)
     const earliest = prevSince ?? since;
-    const allEvents = await ctx.db.query("stampEvents")
-      .withIndex("by_timestamp", q => earliest !== undefined ? q.gte("timestamp", earliest) : q)
-      .order("desc")
-      .take(MAX_ANALYTICS_EVENTS);
-
-    // EIN Durchlauf: Zeitraum, Vorzeitraum, Tage, pro Shop, pro Karte
-    const DAY_MS = 24 * 60 * 60 * 1000;
-    let stamps = 0, redeems = 0, prevStamps = 0, prevRedeems = 0;
+    const rows = await ctx.db.query("dailyTotals")
+      .withIndex("by_day_and_shard", (q) => earliest !== undefined ? q.gte("day", dayStart(earliest)) : q)
+      .order("desc") // neueste Tage zuerst, falls die Obergrenze greift
+      .take(20000);
+    let stamps = 0, redeems = 0, prevStamps = 0, prevRedeems = 0, newCustomers = 0;
     const dayMap = new Map<number, { stamps: number; redeems: number }>();
-    const perShop = new Map<string, { stamps: number; redeems: number; members: Set<string> }>();
-    const stampsByMembership = new Map<string, { id: Id<"memberships">; stamps: number }>();
-    for (const e of allEvents) {
-      const inPeriod = since === undefined || e.timestamp >= since;
+    for (const r of rows) {
+      const inPeriod = since === undefined || r.day >= dayStart(since);
       if (!inPeriod) {
-        if (prevSince !== undefined && e.timestamp >= prevSince) {
-          if (e.type === "stamp") prevStamps++; else prevRedeems++;
-        }
+        if (prevSince !== undefined && r.day >= dayStart(prevSince)) { prevStamps += r.stamps; prevRedeems += r.redeems; }
         continue;
       }
-      const isStamp = e.type === "stamp";
-      if (isStamp) stamps++; else redeems++;
-
-      const day = Math.floor(e.timestamp / DAY_MS) * DAY_MS;
-      const d = dayMap.get(day) ?? { stamps: 0, redeems: 0 };
-      if (isStamp) d.stamps++; else d.redeems++;
-      dayMap.set(day, d);
-
-      const sk = e.shopId.toString();
-      const s = perShop.get(sk) ?? { stamps: 0, redeems: 0, members: new Set<string>() };
-      if (isStamp) s.stamps++; else s.redeems++;
-      // eine Mitgliedschaft = ein Kunde in diesem Shop
-      s.members.add(e.membershipId.toString());
-      perShop.set(sk, s);
-
-      if (isStamp) {
-        const mk = e.membershipId.toString();
-        const m = stampsByMembership.get(mk) ?? { id: e.membershipId, stamps: 0 };
-        m.stamps++;
-        stampsByMembership.set(mk, m);
-      }
+      stamps += r.stamps; redeems += r.redeems; newCustomers += r.newCustomers;
+      const d = dayMap.get(r.day) ?? { stamps: 0, redeems: 0 };
+      d.stamps += r.stamps; d.redeems += r.redeems;
+      dayMap.set(r.day, d);
     }
-
     const dailyBreakdown = Array.from(dayMap.entries())
       .map(([dayStart, v]) => ({ dayStart, ...v }))
       .sort((a, b) => a.dayStart - b.dayStart)
       .slice(-60);
 
-    // Neue Kunden im Zeitraum über den eingebauten Erstellzeit-Index
-    // (statt alle Mitgliedschaften zu laden)
-    const newCustomerIds = new Set<string>();
-    const memQuery = ctx.db.query("memberships")
-      .withIndex("by_creation_time", q => since !== undefined ? q.gte("_creationTime", since) : q);
-    let scanned = 0;
-    for await (const m of memQuery) {
-      if (++scanned > 50000) break;
-      newCustomerIds.add(m.customerId.toString());
-    }
+    // Pro Laden: Gesamtwerte aus der Zählerzeile (Zeitraum je Laden wäre bei
+    // 1.000 Läden zu teuer; diese Abfrage wird in der Oberfläche nicht genutzt)
+    const shopStatRows = await ctx.db.query("shopStats").collect();
+    const statByShop = new Map(shopStatRows.map((st) => [st.shopId.toString(), st]));
+    const shopsData = shops.map((shop) => {
+      const st = statByShop.get(shop._id.toString());
+      return {
+        _id: shop._id, name: shop.name, slug: shop.slug,
+        stamps: st?.stamps ?? 0, redeems: st?.rewards ?? 0, activeCustomers: st?.customers ?? 0,
+        lastActivity: st?.lastActivity ?? null,
+      };
+    });
 
-    // Top 10 Kunden: nur diese 10 aus der Datenbank laden
-    const top10 = Array.from(stampsByMembership.values()).sort((a, b) => b.stamps - a.stamps).slice(0, 10);
+    // Top 10 Kunden aus den letzten (höchstens 3.000) Stempeln des Zeitraums
+    const recent = await ctx.db.query("stampEvents")
+      .withIndex("by_timestamp", (q) => since !== undefined ? q.gte("timestamp", since) : q)
+      .order("desc")
+      .take(3000);
+    const byMembership = new Map<string, { id: Id<"memberships">; stamps: number }>();
+    for (const e of recent) {
+      if (e.type !== "stamp") continue;
+      const k = e.membershipId.toString();
+      const m = byMembership.get(k) ?? { id: e.membershipId, stamps: 0 };
+      m.stamps++;
+      byMembership.set(k, m);
+    }
+    const shopById = new Map(shops.map((sh) => [sh._id.toString(), sh]));
+    const top10 = Array.from(byMembership.values()).sort((a, b) => b.stamps - a.stamps).slice(0, 10);
     const topCustomers = (await Promise.all(top10.map(async (t) => {
       const membership = await ctx.db.get(t.id);
       if (!membership) return null;
@@ -712,17 +705,12 @@ export const getGlobalAnalyticsByPeriod = query({
       return { name: customer.name, stamps: t.stamps, shopName: shopById.get(membership.shopId.toString())?.name ?? "" };
     }))).filter((c): c is NonNullable<typeof c> => c !== null);
 
-    const shopsData = shops.map((shop) => {
-      const s = perShop.get(shop._id.toString());
-      return { _id: shop._id, name: shop.name, slug: shop.slug, stamps: s?.stamps ?? 0, redeems: s?.redeems ?? 0, activeCustomers: s?.members.size ?? 0 };
-    });
-
     return {
       totalShops: shops.length,
       stamps,
       redeems,
-      activeShops: perShop.size,
-      newCustomers: newCustomerIds.size,
+      activeShops: shopsData.filter((x) => x.lastActivity !== null && (since === undefined || x.lastActivity >= since)).length,
+      newCustomers,
       prevStamps,
       prevRedeems,
       dailyBreakdown,
@@ -744,22 +732,18 @@ export const getAppUsageStats = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, { adminSecret }) => {
     await requireAdmin(ctx, { secret: adminSecret });
-    const customers = await ctx.db.query("customers").collect();
-    const memberships = await ctx.db.query("memberships").collect();
-    // Einmal gruppieren statt pro Kunde alle Mitgliedschaften zu filtern (war n²)
-    const byCustomer = new Map<string, { shopCount: number; totalStamps: number }>();
-    for (const m of memberships) {
-      const k = m.customerId.toString();
-      const cur = byCustomer.get(k) ?? { shopCount: 0, totalStamps: 0 };
-      cur.shopCount++;
-      cur.totalStamps += m.totalStampsEver;
-      byCustomer.set(k, cur);
-    }
-    return customers
-      .map(c => ({ name: c.name, ...(byCustomer.get(c._id.toString()) ?? { shopCount: 0, totalStamps: 0 }) }))
-      .sort((a, b) => b.shopCount - a.shopCount || b.totalStamps - a.totalStamps)
-      // Liste begrenzen: die App zeigt ohnehin nur die Spitze
-      .slice(0, 200);
+    // Nur Kunden mit Karten in 2+ Läden (Index auf shopCount), höchstens 200
+    const customers = await ctx.db.query("customers")
+      .withIndex("by_shopCount", (q) => q.gte("shopCount", 2))
+      .order("desc")
+      .take(200);
+    const rows = await Promise.all(customers.map(async (c) => {
+      const mems = await ctx.db.query("memberships")
+        .withIndex("by_customer", (q) => q.eq("customerId", c._id))
+        .take(100);
+      return { name: c.name, shopCount: c.shopCount ?? mems.length, totalStamps: mems.reduce((sum, m) => sum + m.totalStampsEver, 0) };
+    }));
+    return rows.sort((a, b) => b.shopCount - a.shopCount || b.totalStamps - a.totalStamps);
   },
 });
 

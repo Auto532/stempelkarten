@@ -102,7 +102,9 @@ export default defineSchema({
     email: v.string(),
     qrToken: v.string(),
     createdAt: v.number(),
-  }).index("by_qrToken", ["qrToken"]).index("by_email", ["email"]),
+    // Anzahl Läden, in denen der Kunde eine Karte hat (für "Kunden mit 2+ Shops")
+    shopCount: v.optional(v.number()),
+  }).index("by_qrToken", ["qrToken"]).index("by_email", ["email"]).index("by_shopCount", ["shopCount"]),
 
   memberships: defineTable({
     customerId: v.id("customers"),
@@ -122,7 +124,36 @@ export default defineSchema({
   })
     .index("by_customer", ["customerId"])
     .index("by_shop", ["shopId"])
-    .index("by_customer_and_shop", ["customerId", "shopId"]),
+    .index("by_customer_and_shop", ["customerId", "shopId"])
+    // Aktivste Karten (App-Nutzung im Admin), ohne alle Karten zu laden
+    .index("by_totalStampsEver", ["totalStampsEver"]),
+
+  // Zähler je Laden (siehe lib/stats.ts): Admin-Übersicht liest nur diese
+  // Zeilen statt aller Karten und Stempel.
+  shopStats: defineTable({
+    shopId: v.id("shops"),
+    customers: v.number(),   // Karten des Ladens
+    stamps: v.number(),
+    rewards: v.number(),
+    lastActivity: v.optional(v.number()),
+  }).index("by_shop", ["shopId"]),
+
+  // Wenige globale Zähler (z. B. "customers" = Kunden gesamt)
+  appCounters: defineTable({
+    key: v.string(),
+    value: v.number(),
+  }).index("by_key", ["key"]),
+
+  // Tagessummen für die Admin-Analytics (Diagramm + Zeitraum-Summen).
+  // Pro Tag 64 Teil-Zeilen (shard = Hash der Shop-ID), damit gleichzeitige
+  // Stempel verschiedener Läden nicht dieselbe Zeile schreiben.
+  dailyTotals: defineTable({
+    day: v.number(),        // Tagesbeginn (UTC, ms)
+    shard: v.number(),      // 0..63
+    stamps: v.number(),
+    redeems: v.number(),
+    newCustomers: v.number(),
+  }).index("by_day_and_shard", ["day", "shard"]),
 
   stampEvents: defineTable({
     membershipId: v.id("memberships"),

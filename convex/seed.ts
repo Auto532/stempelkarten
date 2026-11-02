@@ -1,5 +1,6 @@
 import { internalMutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
+import { insertCustomer, insertMembership, insertStampEvent } from "./lib/stats";
 
 export const seedBarbershop = internalMutation({
   args: {},
@@ -42,10 +43,10 @@ export const seedBarbershop = internalMutation({
 
     for (let idx = 0; idx < kunden.length; idx++) {
       const k = kunden[idx];
-      const customerId = await ctx.db.insert("customers", {
+      const customerId = await insertCustomer(ctx, {
         name: k.name, email: k.email, qrToken: k.qrToken, createdAt: Date.now(),
       });
-      const membershipId = await ctx.db.insert("memberships", {
+      const membershipId = await insertMembership(ctx, {
         customerId, shopId,
         memberNumber: idx + 1,
         currentStamps: k.stamps,
@@ -54,7 +55,7 @@ export const seedBarbershop = internalMutation({
         lastStampAt: Date.now(),
       });
       for (let i = 0; i < k.stamps; i++) {
-        await ctx.db.insert("stampEvents", {
+        await insertStampEvent(ctx, {
           membershipId, shopId, type: "stamp",
           timestamp: Date.now() - (k.stamps - i) * 86400000,
         });

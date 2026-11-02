@@ -3,6 +3,7 @@ import type { MutationCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { assertNotLocked, recordFailure, clearFailures, timingSafeEqual } from "./rateLimit";
 import { ADMIN_SESSION_MS, newSessionToken, requireAdmin } from "./auth";
+import { insertCustomer, clearAllStats } from "./lib/stats";
 
 export const checkPin = mutation({
   args: { pin: v.string() },
@@ -71,6 +72,8 @@ export const clearAllData = mutation({
   args: { adminSecret: v.string(), pin: v.string() },
   handler: async (ctx, { adminSecret, pin }) => {
     await requireAdminWithPin(ctx, adminSecret, pin);
+    // Statistik-Zähler mit leeren
+    await clearAllStats(ctx);
     const tables = ["stampEvents", "memberships", "customers", "messages", "shops", "owners"] as const;
     for (const table of tables) {
       const docs = await ctx.db.query(table).collect();
@@ -93,7 +96,7 @@ export const adminCreateTestCustomer = mutation({
       .unique();
     if (existing) return { qrToken: existing.qrToken, created: false };
 
-    await ctx.db.insert("customers", { name, email: "", qrToken, createdAt: Date.now() });
+    await insertCustomer(ctx, { name, email: "", qrToken, createdAt: Date.now() });
     return { qrToken, created: true };
   },
 });
@@ -102,6 +105,7 @@ export const clearCustomerData = mutation({
   args: { adminSecret: v.string(), pin: v.string() },
   handler: async (ctx, { adminSecret, pin }) => {
     await requireAdminWithPin(ctx, adminSecret, pin);
+    await clearAllStats(ctx);
     const tables = ["stampEvents", "memberships", "customers"] as const;
     for (const table of tables) {
       const docs = await ctx.db.query(table).collect();
@@ -116,6 +120,8 @@ export const clearCustomerData = mutation({
 export const clearAll = internalMutation({
   args: {},
   handler: async (ctx) => {
+    // Statistik-Zähler mit leeren
+    await clearAllStats(ctx);
     const tables = ["stampEvents", "memberships", "customers", "messages", "shops", "owners"] as const;
     for (const table of tables) {
       const docs = await ctx.db.query(table).collect();

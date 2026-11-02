@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Mail, Gift, ArrowRight, CheckCircle, Stamp } from "lucide-react";
+import { User, Mail, ArrowRight, CheckCircle, Stamp } from "lucide-react";
 import { getShopTheme, DEFAULT_COLORS, type ThemeColors } from "@/app/me/themes/registry";
 import { hexToRgba } from "@/app/me/components";
 import { useShopThemeSync } from "@/app/hooks/useShopThemeSync";
@@ -179,21 +179,14 @@ export default function JoinPage() {
     <div className={`min-h-screen flex flex-col px-6 py-12 max-w-sm mx-auto relative ${theme ? "z-[2]" : ""}`}>
       {theme && <theme.Background />}
 
-      {/* Header */}
+      {/* Header: mit eigenem Hintergrundfoto weiter unten, damit der Name nicht
+          auf einem Logo im Bild liegt. Der Belohnungs-Hinweis steht auf der Karte. */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }} className="mb-10 relative z-10">
+        transition={{ duration: 0.5 }}
+        className={`mb-10 relative z-10 ${shop.designConfig?.bgType === "image" && shop.designConfig?.bgImageUrl ? "mt-[26vh]" : ""}`}>
 
         <h1 className="text-3xl font-bold tracking-tight" style={{ color: c.text }}>{shop.name}</h1>
         <p className="mt-1 text-sm" style={{ color: c.accentDim }}>Digitale Stempelkarte</p>
-
-        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
-          className="mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2"
-          style={{ background: `${c.accent}18`, border: `1px solid ${c.accentDim}` }}>
-          <Gift size={14} style={{ color: c.accent }} />
-          <span className="text-xs font-medium" style={{ color: c.text }}>
-            Nach {shop.stampsRequired} Stempeln: {shop.rewardText}
-          </span>
-        </motion.div>
       </motion.div>
 
       {/* Content */}
