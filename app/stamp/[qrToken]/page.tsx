@@ -40,6 +40,8 @@ export default function StampPage() {
   const [adminPinError, setAdminPinError] = useState(false);
   const [adminSelectedShopId, setAdminSelectedShopId] = useState<Id<"shops"> | null>(null);
   const [noCredentials, setNoCredentials] = useState(false);
+  // Kunde (oder sonst jemand ohne Betriebs-Anmeldung) hat den QR-Code gescannt
+  const [customerView, setCustomerView] = useState(false);
 
   const checkPin = useMutation(api.admin.checkPin);
 
@@ -51,8 +53,12 @@ export default function StampPage() {
       setShopSlug(slug);
       setAdminRole((localStorage.getItem("adminRole") as "inhaber" | "mitarbeiter") ?? "inhaber");
       setReady(true);
-    } else {
+    } else if (localStorage.getItem("adminDevice") === "1") {
+      // TEST-ONLY: Admin-Stempel nur auf Geräten, die in der Admin-App angemeldet waren
       setNoCredentials(true);
+      setReady(true);
+    } else {
+      setCustomerView(true);
       setReady(true);
     }
   }, []);
@@ -284,7 +290,27 @@ export default function StampPage() {
     );
   }
 
-  // PIN-Eingabe wenn kein Token im Browser
+  if (customerView) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-5">
+        <div className="w-14 h-14 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center">
+          <Stamp size={26} className="text-amber-400" />
+        </div>
+        <div className="max-w-xs">
+          <h1 className="text-xl font-bold text-zinc-100">Das ist ein Stempel-Code</h1>
+          <p className="text-zinc-500 text-sm mt-1">
+            Zeig ihn im Laden vor, dort wird er gescannt und du bekommst deinen Stempel.
+          </p>
+        </div>
+        <button onClick={() => router.replace("/me")}
+          className="px-6 py-3 bg-amber-400 text-zinc-900 font-semibold rounded-2xl">
+          Zu meinen Karten
+        </button>
+      </div>
+    );
+  }
+
+  // TEST-ONLY: PIN-Eingabe für den Admin-Stempel (nur auf markierten Admin-Geräten)
   if (noCredentials) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6 gap-5">

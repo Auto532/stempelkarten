@@ -131,6 +131,9 @@ export default function SuperAdminPage() {
       const partnerLoggedIn = await affiliateAdminLogin(pin).then(() => true, () => { setAffiliateAdminToken(null); return false; });
       setPartnerOk(partnerLoggedIn);
       sessionStorage.setItem("adminSession", res.token);
+      // Markiert dieses Gerät, damit die Scan-Seite den Admin-Stempel (PIN-Feld)
+      // anbietet. Nur Sichtbarkeit, der Server verlangt weiter den PIN.
+      try { localStorage.setItem("adminDevice", "1"); } catch {}
       setAdminSecret(res.token);
       setPin("");
       setAuthed(true);
