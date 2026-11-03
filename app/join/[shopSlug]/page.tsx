@@ -176,19 +176,20 @@ export default function JoinPage() {
   const btnActive  = { background: c.gradient, color: "#18181b" };
   const btnOff     = { background: c.dark, color: c.accentFaint };
 
+  // Shopname steht oben in der Karte statt als eigene Überschrift
+  const cardHeader = (
+    <div className="pb-1">
+      <h1 className="text-2xl font-bold tracking-tight" style={{ color: c.text }}>{shop.name}</h1>
+      <p className="mt-0.5 text-sm" style={{ color: c.accentDim }}>Digitale Stempelkarte</p>
+    </div>
+  );
+
+  // Mit eigenem Hintergrundfoto sitzt die Karte unten, damit das Logo im Bild frei bleibt
+  const hasBgImage = shop.designConfig?.bgType === "image" && !!shop.designConfig?.bgImageUrl;
+
   return (
-    <div className={`min-h-screen flex flex-col px-6 py-12 max-w-sm mx-auto relative ${theme ? "z-[2]" : ""}`}>
+    <div className={`min-h-screen flex flex-col ${hasBgImage ? "justify-end" : "justify-center"} px-6 py-8 max-w-sm mx-auto relative ${theme ? "z-[2]" : ""}`}>
       {theme && <theme.Background />}
-
-      {/* Header: mit eigenem Hintergrundfoto weiter unten, damit der Name nicht
-          auf einem Logo im Bild liegt. Der Belohnungs-Hinweis steht auf der Karte. */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className={`mb-10 relative z-10 ${shop.designConfig?.bgType === "image" && shop.designConfig?.bgImageUrl ? "mt-[26vh]" : ""}`}>
-
-        <h1 className="text-3xl font-bold tracking-tight" style={{ color: c.text }}>{shop.name}</h1>
-        <p className="mt-1 text-sm" style={{ color: c.accentDim }}>Digitale Stempelkarte</p>
-      </motion.div>
 
       {/* Content */}
       <AnimatePresence mode="wait">
@@ -209,6 +210,8 @@ export default function JoinPage() {
             transition={{ delay: 0.2, duration: 0.4 }}
             className="relative z-10 rounded-2xl p-5 backdrop-blur-sm flex flex-col gap-4"
             style={{ background: hexToRgba(c.cardBg, 0.92), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}>
+
+            {cardHeader}
 
             <div className="flex items-center gap-3 rounded-xl px-4 py-3"
               style={{ background: hexToRgba(c.accent, 0.1), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}>
@@ -260,6 +263,8 @@ export default function JoinPage() {
             transition={{ delay: 0.2, duration: 0.4 }} onSubmit={handleNewSubmit}
             className="relative z-10 rounded-2xl p-5 backdrop-blur-sm flex flex-col gap-4"
             style={{ background: hexToRgba(c.cardBg, 0.92), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}>
+
+            {cardHeader}
 
             <div className="group">
               <label className="block text-xs font-medium mb-2 ml-1" style={{ color: c.accentDim }}>Dein Name</label>
