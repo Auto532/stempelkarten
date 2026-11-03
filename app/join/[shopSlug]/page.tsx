@@ -184,11 +184,11 @@ export default function JoinPage() {
     </div>
   );
 
-  // Mit eigenem Hintergrundfoto sitzt die Karte unten, damit das Logo im Bild frei bleibt
+  // Mit eigenem Hintergrundfoto etwas Abstand oben, damit das Logo im Bild frei bleibt
   const hasBgImage = shop.designConfig?.bgType === "image" && !!shop.designConfig?.bgImageUrl;
 
   return (
-    <div className={`min-h-screen flex flex-col ${hasBgImage ? "justify-end" : "justify-center"} px-6 py-8 max-w-sm mx-auto relative ${theme ? "z-[2]" : ""}`}>
+    <div className={`min-h-screen flex flex-col px-6 ${hasBgImage ? "pt-[14vh]" : "pt-10"} pb-8 max-w-sm mx-auto relative ${theme ? "z-[2]" : ""}`}>
       {theme && <theme.Background />}
 
       {/* Content */}
