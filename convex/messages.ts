@@ -3,11 +3,33 @@ import { mutation, query, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAdmin, requireShopRole } from "./auth";
 
-// Spam-Schutz: Kunden sollen dem Betrieb nicht dauerhaft Nachrichten schicken
-// können. Pro Karte gilt eine Pause zwischen Nachrichten und ein Tageslimit.
-const MSG_COOLDOWN_MS = 5 * 60_000;        // 5 Min Pause zwischen zwei Nachrichten
-const MSG_DAILY_MAX = 3;                    // max. Nachrichten pro 24 h
-const MSG_DAY_MS = 24 * 60 * 60_000;
+// Spam-Schutz: Feedback erst ab Level 2 (10 Stempel in diesem Laden) und
+// höchstens eine Nachricht pro Karte und Woche.
+export const MSG_MIN_STAMPS = 10;
+export const MSG_COOLDOWN_MS = 7 * 24 * 60 * 60_000;
+
+// Für die Seite "Mein Bereich": darf der Kunde schreiben und ab wann wieder?
+export const getFeedbackStatus = query({
+  args: { qrToken: v.string(), membershipId: v.id("memberships") },
+  handler: async (ctx, { qrToken, membershipId }) => {
+    const customer = await ctx.db
+      .query("customers")
+      .withIndex("by_qrToken", (q) => q.eq("qrToken", qrToken))
+      .unique();
+    const membership = await ctx.db.get(membershipId);
+    if (!customer || !membership || membership.customerId !== customer._id) return null;
+
+    const last = await ctx.db
+      .query("messages")
+      .withIndex("by_membership", (q) => q.eq("membershipId", membershipId))
+      .order("desc")
+      .first();
+    return {
+      minStamps: MSG_MIN_STAMPS,
+      nextAllowedAt: last ? last.createdAt + MSG_COOLDOWN_MS : null,
+    };
+  },
+});
 
 export const sendMessage = mutation({
   args: {
@@ -28,19 +50,19 @@ export const sendMessage = mutation({
     const trimmed = text.trim();
     if (!trimmed || trimmed.length > 1000) throw new ConvexError("Ungültige Nachricht");
 
-    // Rate-Limit pro Karte (begrenzte Abfrage der letzten Nachrichten)
+    if (membership.totalStampsEver < MSG_MIN_STAMPS) {
+      throw new ConvexError(`Feedback ist ab ${MSG_MIN_STAMPS} Stempeln möglich.`);
+    }
+
+    // Eine Nachricht pro Woche und Karte
     const now = Date.now();
-    const recent = await ctx.db
+    const last = await ctx.db
       .query("messages")
       .withIndex("by_membership", (q) => q.eq("membershipId", membershipId))
       .order("desc")
-      .take(MSG_DAILY_MAX + 2);
-    if (recent[0] && now - recent[0].createdAt < MSG_COOLDOWN_MS) {
-      throw new ConvexError("Bitte warte ein paar Minuten, bevor du die nächste Nachricht sendest.");
-    }
-    const inDay = recent.filter((m) => now - m.createdAt < MSG_DAY_MS).length;
-    if (inDay >= MSG_DAILY_MAX) {
-      throw new ConvexError("Du hast dein Nachrichten-Limit für heute erreicht. Bitte versuche es morgen wieder.");
+      .first();
+    if (last && now - last.createdAt < MSG_COOLDOWN_MS) {
+      throw new ConvexError("Du kannst nur eine Nachricht pro Woche senden.");
     }
 
     await ctx.db.insert("messages", {

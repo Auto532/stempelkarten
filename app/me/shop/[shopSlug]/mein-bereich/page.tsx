@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion } from "framer-motion";
-import { ArrowLeft, Stamp, Gift, Send, Check, MessageSquare, Trophy } from "lucide-react";
+import { ArrowLeft, Stamp, Gift, Send, Check, MessageSquare, Trophy, Lock, Clock } from "lucide-react";
 import { hexToRgba, readableAccent, MilestonesSection } from "../../../components";
 import { getShopTheme, DEFAULT_COLORS } from "@/app/me/themes/registry";
 import { errMsg } from "@/app/lib/errMsg";
@@ -19,15 +19,12 @@ const SHOP_LEVELS = [
   { min: 200, max: Infinity, label: "Legende"     },
 ];
 
-function formatDate(ts: number) {
-  return new Date(ts).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+function formatMonth(ts: number) {
+  return new Date(ts).toLocaleDateString("de-DE", { month: "short", year: "numeric" });
 }
 
-function monthsAgo(ts: number) {
-  const months = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24 * 30));
-  if (months < 1) return "< 1 Mon.";
-  if (months === 1) return "1 Mon.";
-  return `${months} Mon.`;
+function formatDay(ts: number) {
+  return new Date(ts).toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
 }
 
 export default function MeinBereichPage() {
@@ -53,6 +50,25 @@ export default function MeinBereichPage() {
     qrToken ? { qrToken } : "skip"
   );
 
+  const entry = data?.memberships.find(m => m.shop?.slug === shopSlug);
+  const membershipId = entry?.membership?._id;
+  // Feedback-Regeln (ab 10 Stempeln, 1 pro Woche) prüft der Server; hier nur Anzeige
+  const feedback = useQuery(
+    api.messages.getFeedbackStatus,
+    qrToken && membershipId ? { qrToken, membershipId } : "skip"
+  );
+
+  // Formular automatisch freigeben, sobald die Wochen-Sperre abläuft
+  const [now, setNow] = useState(() => Date.now());
+  const unlockAt = feedback?.nextAllowedAt ?? null;
+  useEffect(() => {
+    if (unlockAt === null) return;
+    const wait = unlockAt - Date.now();
+    if (wait <= 0) { setNow(Date.now()); return; }
+    const t = setTimeout(() => setNow(Date.now()), wait + 1000);
+    return () => clearTimeout(t);
+  }, [unlockAt]);
+
   if (!mounted || data === undefined) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -63,8 +79,6 @@ export default function MeinBereichPage() {
   }
 
   if (!qrToken || !data) { router.replace("/me"); return null; }
-
-  const entry = data.memberships.find(m => m.shop?.slug === shopSlug);
   if (!entry?.shop || !entry.membership) { router.replace("/me"); return null; }
 
   const { membership, shop, cardNumber } = entry;
@@ -75,6 +89,13 @@ export default function MeinBereichPage() {
   // Akzent (z.B. Gelb) die dunkle Textfarbe verwenden
   const a2 = readableAccent(c.accent, c.text);
 
+  // Schwebende Glasfläche (2027-Look): Milchglas, feine Kante, weicher Schatten
+  const glass = {
+    background: cb(),
+    border: `1px solid ${hexToRgba(c.accent, 0.18)}`,
+    boxShadow: "0 12px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
+  };
+
   const shopLvlIdx = SHOP_LEVELS.findIndex(l => membership.totalStampsEver <= l.max);
   const safeIdx = shopLvlIdx === -1 ? SHOP_LEVELS.length - 1 : shopLvlIdx;
   const lvlData = SHOP_LEVELS[safeIdx];
@@ -82,6 +103,11 @@ export default function MeinBereichPage() {
   const lvlProgress = lvlNext
     ? (membership.totalStampsEver - lvlData.min) / (lvlNext.min - lvlData.min)
     : 1;
+
+  const minStamps = feedback?.minStamps ?? 10;
+  const missingStamps = Math.max(0, minStamps - membership.totalStampsEver);
+  const nextAllowedAt = unlockAt;
+  const inCooldown = nextAllowedAt !== null && nextAllowedAt > now;
 
   const handleSend = async () => {
     if (!messageText.trim() || !qrToken) return;
@@ -91,7 +117,6 @@ export default function MeinBereichPage() {
       await sendMessage({ qrToken, membershipId: membership._id, text: messageText.trim() });
       setSent(true);
       setMessageText("");
-      setTimeout(() => setSent(false), 4000);
     } catch (e: unknown) {
       setSendError(errMsg(e, "Konnte nicht gesendet werden. Bitte erneut versuchen."));
     } finally {
@@ -99,85 +124,82 @@ export default function MeinBereichPage() {
     }
   };
 
-  const fade = (i: number) => ({ initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, transition: { delay: i * 0.07 } });
+  const fade = (i: number) => ({ initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { delay: i * 0.07, duration: 0.4, ease: "easeOut" as const } });
 
   return (
     <div className={`min-h-screen px-5 pt-10 pb-12 max-w-sm mx-auto flex flex-col relative ${theme ? "z-[2]" : ""}`}>
       {theme && <theme.Background />}
 
-      {/* Header */}
-      <motion.div {...fade(0)} className="flex items-center gap-3 mb-7">
-        <button onClick={() => router.back()}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors shrink-0 backdrop-blur-sm"
-          style={{ background: hexToRgba(c.accent, 0.1), border: `1px solid ${hexToRgba(c.accent, 0.2)}` }}>
-          <ArrowLeft size={16} style={{ color: a2 }} />
+      {/* Zurück: nur der Pfeil, schwebend */}
+      <motion.div {...fade(0)} className="mb-4">
+        <button onClick={() => router.back()} aria-label="Zurück"
+          className="w-11 h-11 rounded-2xl flex items-center justify-center transition-transform active:scale-95 backdrop-blur-md"
+          style={glass}>
+          <ArrowLeft size={18} style={{ color: a2 }} />
         </button>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: c.textBody }}>
-            Mein Bereich
-          </p>
-          <h1 className="text-base font-bold leading-tight" style={{ color: c.text }}>{shop.name}</h1>
-        </div>
-        {cardNumber !== undefined && (
-          <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm"
-            style={{ background: hexToRgba(c.accent, 0.12), color: c.textBody }}>
-            #{String(cardNumber).padStart(3, "0")}
-          </span>
-        )}
       </motion.div>
 
-      {/* Greeting */}
-      <motion.p {...fade(1)} className="text-2xl font-bold mb-5 leading-snug" style={{ color: c.text }}>
-        Hallo, {data.customer.name.split(" ")[0]} 👋
-      </motion.p>
+      {/* Begrüßung mit Ladenname und Kartennummer */}
+      <motion.div {...fade(1)} className="rounded-3xl px-5 py-5 mb-3 backdrop-blur-md" style={glass}>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: c.textBody }}>
+            Mein Bereich
+          </p>
+          {cardNumber !== undefined && (
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg"
+              style={{ background: hexToRgba(c.accent, 0.12), color: c.textBody }}>
+              #{String(cardNumber).padStart(3, "0")}
+            </span>
+          )}
+        </div>
+        <h1 className="text-2xl font-bold leading-snug" style={{ color: c.text }}>
+          Hallo, {data.customer.name.split(" ")[0]} 👋
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: c.textBody }}>{shop.name}</p>
+      </motion.div>
 
-      {/* Stats 3-column */}
-      <motion.div {...fade(2)} className="grid grid-cols-3 gap-3 mb-4">
+      {/* Statistik */}
+      <motion.div {...fade(2)} className="grid grid-cols-3 gap-2.5 mb-3">
         {[
-          { icon: Stamp, value: membership.totalStampsEver, label: "Stempel gesamt" },
-          { icon: Gift,  value: membership.rewardsRedeemed, label: "Eingelöst" },
-          { icon: Trophy, value: monthsAgo(membership._creationTime), label: `Seit ${formatDate(membership._creationTime)}` },
-        ].map(({ icon: Icon, value, label }) => (
-          <div key={label} className="rounded-2xl p-3 flex flex-col items-center gap-1.5 text-center backdrop-blur-sm"
-            style={{ background: cb(), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
-            <Icon size={15} style={{ color: a2 }} />
-            <p className="text-xl font-bold leading-none" style={{ color: c.text }}>{value}</p>
-            <p className="text-[9px] leading-tight" style={{ color: c.textBody }}>{label}</p>
+          { icon: Stamp,  value: String(membership.totalStampsEver), label: "Stempel gesamt", small: false },
+          { icon: Gift,   value: String(membership.rewardsRedeemed), label: "Eingelöst", small: false },
+          { icon: Trophy, value: formatMonth(membership._creationTime), label: "Mitglied seit", small: true },
+        ].map(({ icon: Icon, value, label, small }) => (
+          <div key={label} className="rounded-2xl px-2 py-3.5 flex flex-col items-center gap-1.5 text-center backdrop-blur-md"
+            style={glass}>
+            <Icon size={14} style={{ color: a2, opacity: 0.75 }} />
+            <p className={`${small ? "text-base" : "text-2xl"} font-bold leading-none min-h-6 flex items-center`} style={{ color: c.text }}>{value}</p>
+            <p className="text-[12px] leading-tight" style={{ color: c.textBody }}>{label}</p>
           </div>
         ))}
       </motion.div>
 
-      {/* Level card */}
-      <motion.div {...fade(3)} className="rounded-2xl px-5 py-4 mb-4 backdrop-blur-sm"
-        style={{ background: cb(), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded"
-              style={{ background: a2, color: a2 === c.accent ? "#0e0d0b" : c.cardBg, letterSpacing: "0.06em" }}>
-              LVL {safeIdx + 1}
-            </span>
-            <span className="text-[11px]" style={{ color: c.textBody }}>
-              {membership.totalStampsEver} Stempel
-            </span>
-          </div>
-          <span className="text-[11px] font-bold" style={{ color: c.text }}>{lvlData.label}</span>
+      {/* Level */}
+      <motion.div {...fade(3)} className="rounded-3xl px-5 py-4 mb-3 backdrop-blur-md"
+        style={{ ...glass, border: `1px solid ${hexToRgba(c.accent, 0.28)}`, boxShadow: `${glass.boxShadow}, 0 0 28px ${hexToRgba(a2, 0.12)}` }}>
+        <div className="flex items-baseline justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: c.textBody }}>
+            Level {safeIdx + 1}
+          </p>
+          <span className="text-[12px]" style={{ color: c.textBody }}>{membership.totalStampsEver} Stempel</span>
         </div>
-        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: hexToRgba(a2, 0.12) }}>
+        <p className="text-xl font-bold mt-0.5 mb-3" style={{ color: c.text }}>{lvlData.label}</p>
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: hexToRgba(a2, 0.12) }}>
           <motion.div initial={{ width: 0 }} animate={{ width: `${lvlProgress * 100}%` }}
             transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
             className="h-full rounded-full"
-            style={{ background: a2, boxShadow: `0 0 10px ${hexToRgba(a2, 0.5)}` }} />
+            style={{ background: a2, boxShadow: `0 0 12px ${hexToRgba(a2, 0.55)}` }} />
         </div>
-        {lvlNext && (
-          <p className="text-[9px] mt-1.5" style={{ color: c.textBody, opacity: 0.8 }}>
-            Nächstes Level bei {lvlNext.min} Stempeln
-          </p>
-        )}
+        <p className="text-[12px] mt-2" style={{ color: c.textBody }}>
+          {lvlNext
+            ? `Noch ${lvlNext.min - membership.totalStampsEver} Stempel bis ${lvlNext.label}`
+            : "Höchstes Level erreicht"}
+        </p>
       </motion.div>
 
       {/* Milestones */}
       {shop.milestonesEnabled && shop.milestones && (
-        <motion.div {...fade(4)} className="mb-4">
+        <motion.div {...fade(4)} className="mb-3">
           <MilestonesSection
             milestones={shop.milestones}
             totalStampsEver={membership.totalStampsEver}
@@ -189,50 +211,76 @@ export default function MeinBereichPage() {
         </motion.div>
       )}
 
-      {/* Message form */}
-      <motion.div {...fade(5)} className="rounded-2xl px-4 py-4 backdrop-blur-sm"
-        style={{ background: cb(), border: `1px solid ${hexToRgba(c.accent, 0.22)}` }}>
+      {/* Nachricht an den Laden: gesperrt / Wartezeit / frei */}
+      <motion.div {...fade(5)} className="rounded-3xl px-5 py-4 backdrop-blur-md" style={glass}>
         <div className="flex items-center gap-2 mb-3">
-          <MessageSquare size={14} style={{ color: a2 }} />
-          <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: c.textBody }}>
-            Nachricht an {shop.name}
-          </p>
+          <MessageSquare size={15} style={{ color: a2 }} />
+          <p className="text-sm font-semibold" style={{ color: c.text }}>Nachricht an {shop.name}</p>
         </div>
 
-        {sent ? (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-2 py-4 justify-center">
-            <Check size={18} className="text-green-400" />
-            <span className="text-sm text-green-400 font-medium">Nachricht gesendet!</span>
-          </motion.div>
+        {missingStamps > 0 ? (
+          <div className="flex items-start gap-3 py-1">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: hexToRgba(c.accent, 0.12) }}>
+              <Lock size={16} style={{ color: a2 }} />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: c.text }}>
+                Dir fehl{missingStamps === 1 ? "t" : "en"} noch {missingStamps} Stempel
+              </p>
+              <p className="text-[12px] mt-0.5" style={{ color: c.textBody }}>
+                Ab Level 2 ({minStamps} Stempel) kannst du dem Laden schreiben.
+              </p>
+              <div className="h-1.5 rounded-full overflow-hidden mt-2.5" style={{ background: hexToRgba(a2, 0.12) }}>
+                <div className="h-full rounded-full"
+                  style={{ width: `${(membership.totalStampsEver / minStamps) * 100}%`, background: a2 }} />
+              </div>
+            </div>
+          </div>
+        ) : inCooldown ? (
+          <div className="flex items-start gap-3 py-1">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: sent ? "rgba(74,222,128,0.12)" : hexToRgba(c.accent, 0.12) }}>
+              {sent ? <Check size={16} className="text-green-400" /> : <Clock size={16} style={{ color: a2 }} />}
+            </div>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: c.text }}>
+                {sent ? "Danke, deine Nachricht ist angekommen!" : "Du hast in den letzten 7 Tagen schon geschrieben"}
+              </p>
+              <p className="text-[12px] mt-0.5" style={{ color: c.textBody }}>
+                Nächste Nachricht möglich am {formatDay(nextAllowedAt!)}.
+              </p>
+            </div>
+          </div>
         ) : (
           <>
             <textarea
               value={messageText}
               onChange={e => { setMessageText(e.target.value); setSendError(null); }}
-              placeholder="Schreib uns etwas: Feedback, Fragen, Wünsche…"
+              placeholder="Feedback, Fragen, Wünsche…"
               maxLength={1000}
               rows={4}
-              className="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none mb-3"
+              className="w-full rounded-2xl px-3.5 py-3 text-sm resize-none focus:outline-none mb-3"
               style={{
-                background: cb(),
-                border: `1px solid ${hexToRgba(c.accent, 0.25)}`,
+                background: hexToRgba(c.cardBg, 0.6),
+                border: `1px solid ${hexToRgba(c.accent, 0.22)}`,
                 color: c.text,
               }}
             />
             {sendError && <p className="text-red-400 text-xs mb-2">{sendError}</p>}
             <button
               onClick={handleSend}
-              disabled={sending || !messageText.trim()}
-              className="w-full py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold disabled:opacity-50 transition-opacity"
-              style={{ background: c.accent, color: "#0e0d0b" }}
+              disabled={sending || !messageText.trim() || feedback === undefined}
+              className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold disabled:opacity-50 transition-all active:scale-[0.98]"
+              style={{ background: c.accent, color: "#0e0d0b", boxShadow: `0 6px 20px ${hexToRgba(c.accent, 0.25)}` }}
             >
               <Send size={14} />
               {sending ? "Senden…" : "Nachricht senden"}
             </button>
-            <p className="text-[10px] text-center mt-2" style={{ color: c.textBody, opacity: 0.7 }}>
-              {messageText.length}/1000
-            </p>
+            <div className="flex justify-between text-[11px] mt-2 px-1" style={{ color: c.textBody, opacity: 0.75 }}>
+              <span>Eine Nachricht pro Woche</span>
+              <span>{messageText.length}/1000</span>
+            </div>
           </>
         )}
       </motion.div>
